@@ -174,13 +174,13 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
           Needs Approach ({needsApproach.length})
         </TabsTrigger>
         <TabsTrigger value="stale-3">
-          Stale >3d ({stale3Days.length})
+          Stale {'>'} 3d ({stale3Days.length})
         </TabsTrigger>
         <TabsTrigger value="stale-7">
-          Stale >7d ({stale7Days.length})
+          Stale {'>'} 7d ({stale7Days.length})
         </TabsTrigger>
         <TabsTrigger value="stale-30">
-          Stale >30d ({stale30Days.length})
+          Stale {'>'} 30d ({stale30Days.length})
         </TabsTrigger>
       </TabsList>
 
