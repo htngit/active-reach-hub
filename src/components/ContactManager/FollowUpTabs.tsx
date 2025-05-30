@@ -40,7 +40,6 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     if (!user) return;
 
     try {
-      // Get all contacts that are not "Paid"
       const { data: contacts, error: contactsError } = await supabase
         .from('contacts')
         .select('*')
@@ -49,7 +48,6 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
 
       if (contactsError) throw contactsError;
 
-      // Get all activities to determine last contact time
       const { data: activities, error: activitiesError } = await supabase
         .from('activities')
         .select('contact_id, timestamp')
@@ -58,7 +56,6 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
 
       if (activitiesError) throw activitiesError;
 
-      // Create a map of contact_id to last activity timestamp
       const lastActivityMap = new Map();
       activities?.forEach(activity => {
         if (!lastActivityMap.has(activity.contact_id)) {
@@ -80,7 +77,6 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         const lastActivity = lastActivityMap.get(contact.id);
         
         if (!lastActivity) {
-          // No activities logged yet
           needsApproachList.push({ ...contact, last_activity: null });
         } else {
           const lastActivityDate = new Date(lastActivity);
@@ -113,36 +109,38 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   const ContactCard = ({ contact }: { contact: Contact }) => (
     <Card className="hover:shadow-md transition-shadow mb-2">
       <CardContent className="p-4">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div 
             className="space-y-1 cursor-pointer flex-1"
             onClick={() => onSelectContact(contact)}
           >
-            <h3 className="font-semibold">{contact.name}</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Phone className="h-3 w-3" />
-              {contact.phone_number}
+            <h3 className="font-semibold text-base sm:text-lg">{contact.name}</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Phone className="h-3 w-3 shrink-0" />
+                {contact.phone_number}
+              </div>
+              {contact.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3 w-3 shrink-0" />
+                  {contact.email}
+                </div>
+              )}
+              {contact.company && (
+                <div className="flex items-center gap-2">
+                  <Building className="h-3 w-3 shrink-0" />
+                  {contact.company}
+                </div>
+              )}
+              {contact.last_activity && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  Last contact: {new Date(contact.last_activity).toLocaleDateString()}
+                </div>
+              )}
             </div>
-            {contact.email && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Mail className="h-3 w-3" />
-                {contact.email}
-              </div>
-            )}
-            {contact.company && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Building className="h-3 w-3" />
-                {contact.company}
-              </div>
-            )}
-            {contact.last_activity && (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Clock className="h-3 w-3" />
-                Last contact: {new Date(contact.last_activity).toLocaleDateString()}
-              </div>
-            )}
           </div>
-          <div className="text-right space-y-2">
+          <div className="flex flex-col gap-2 items-start sm:items-end">
             <Badge variant="outline">{contact.status}</Badge>
             {contact.labels && contact.labels.length > 0 && (
               <div className="flex flex-wrap gap-1 justify-end">
@@ -158,9 +156,9 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
                 )}
               </div>
             )}
-            <div className="flex gap-1">
+            <div className="w-full sm:w-auto">
               <TemplateSelectionModal contact={contact}>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto min-h-[36px]">
                   <MessageCircle className="h-3 w-3 mr-1" />
                   Template Follow Up
                 </Button>
@@ -178,22 +176,22 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
 
   return (
     <Tabs defaultValue="needs-approach" className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="needs-approach">
+      <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-0">
+        <TabsTrigger value="needs-approach" className="min-h-[44px]">
           Needs Approach ({needsApproach.length})
         </TabsTrigger>
-        <TabsTrigger value="stale-3">
+        <TabsTrigger value="stale-3" className="min-h-[44px]">
           Stale {'>'} 3d ({stale3Days.length})
         </TabsTrigger>
-        <TabsTrigger value="stale-7">
+        <TabsTrigger value="stale-7" className="min-h-[44px]">
           Stale {'>'} 7d ({stale7Days.length})
         </TabsTrigger>
-        <TabsTrigger value="stale-30">
+        <TabsTrigger value="stale-30" className="min-h-[44px]">
           Stale {'>'} 30d ({stale30Days.length})
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="needs-approach" className="space-y-4">
+      <TabsContent value="needs-approach" className="mt-6">
         <div className="text-sm text-gray-600 mb-4">
           Contacts that have never been approached
         </div>
@@ -206,7 +204,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         )}
       </TabsContent>
 
-      <TabsContent value="stale-3" className="space-y-4">
+      <TabsContent value="stale-3" className="mt-6">
         <div className="text-sm text-gray-600 mb-4">
           Contacts last contacted more than 3 days ago
         </div>
@@ -219,7 +217,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         )}
       </TabsContent>
 
-      <TabsContent value="stale-7" className="space-y-4">
+      <TabsContent value="stale-7" className="mt-6">
         <div className="text-sm text-gray-600 mb-4">
           Contacts last contacted more than 7 days ago
         </div>
@@ -232,7 +230,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         )}
       </TabsContent>
 
-      <TabsContent value="stale-30" className="space-y-4">
+      <TabsContent value="stale-30" className="mt-6">
         <div className="text-sm text-gray-600 mb-4">
           Contacts last contacted more than 30 days ago
         </div>
