@@ -1,0 +1,249 @@
+
+import React, { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Mail, User, Save, AlertCircle } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+
+export const PersonalSettings = () => {
+  const { user, signOut } = useAuth();
+  const [newEmail, setNewEmail] = useState(user?.email || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  const handleUpdateEmail = async () => {
+    if (!newEmail || newEmail === user?.email) {
+      toast({
+        title: "Error",
+        description: "Please enter a new email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingEmail(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: newEmail
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email Update Initiated",
+        description: "Please check both your old and new email addresses for confirmation links.",
+      });
+      
+      setNewEmail(user?.email || '');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!currentPassword || !newPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in all password fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password Updated",
+        description: "Your password has been successfully updated",
+      });
+      
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-2xl font-bold">Personal Settings</h2>
+        <p className="text-gray-600">Manage your account settings and preferences</p>
+      </div>
+
+      {/* Account Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Account Information
+          </CardTitle>
+          <CardDescription>
+            View and update your account details
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">User ID</label>
+            <p className="text-sm text-gray-600 font-mono">{user?.id}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium">Current Email</label>
+            <p className="text-sm text-gray-600">{user?.email}</p>
+            {!user?.email_confirmed_at && (
+              <div className="flex items-center gap-1 mt-1">
+                <AlertCircle className="h-4 w-4 text-orange-500" />
+                <span className="text-sm text-orange-600">Not verified</span>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="text-sm font-medium">Account Created</label>
+            <p className="text-sm text-gray-600">
+              {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Email Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email Settings
+          </CardTitle>
+          <CardDescription>
+            Change your email address. You will need to verify the new email.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">New Email Address</label>
+            <Input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="Enter new email address"
+            />
+          </div>
+          <Button 
+            onClick={handleUpdateEmail}
+            disabled={isUpdatingEmail || newEmail === user?.email}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isUpdatingEmail ? 'Updating...' : 'Update Email'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Password Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Password Settings</CardTitle>
+          <CardDescription>
+            Change your account password
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Current Password</label>
+            <Input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Enter current password"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">New Password</label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+            />
+          </div>
+          <Button 
+            onClick={handleUpdatePassword}
+            disabled={isUpdatingPassword}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-700">Danger Zone</CardTitle>
+          <CardDescription>
+            Actions that cannot be undone
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            variant="destructive" 
+            onClick={signOut}
+          >
+            Sign Out
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

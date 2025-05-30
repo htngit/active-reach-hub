@@ -100,30 +100,36 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
 
   const handleWhatsAppContact = async () => {
     try {
-      // Make API call to custom endpoint
-      const response = await fetch(`https://example.com/api/initiate-whatsapp?phone=${contact.phone_number}`);
-      const result = await response.json();
-
-      // Log activity
+      // Format phone number for wa.me
+      const formattedPhone = formatPhoneNumber(contact.phone_number);
+      
+      // Create WhatsApp URL without message (direct contact)
+      const whatsappUrl = `https://wa.me/${formattedPhone}`;
+      
+      // Log activity to database
       const { error } = await supabase
         .from('activities')
         .insert({
           contact_id: contact.id,
           user_id: user?.id,
-          type: 'WhatsApp Attempt',
-          details: `WhatsApp contact attempt for ${contact.phone_number}`,
-          api_call_status: result.success ? 'success' : 'failure',
+          type: 'WhatsApp Direct Contact',
+          details: `Direct WhatsApp contact to ${contact.phone_number}`,
           timestamp: new Date().toISOString(),
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to log activity:', error);
+      }
 
+      // Open WhatsApp
+      window.open(whatsappUrl, '_blank');
+      
       toast({
-        title: result.success ? "Success" : "Warning",
-        description: result.message || "WhatsApp contact attempted",
-        variant: result.success ? "default" : "destructive",
+        title: "Success",
+        description: `WhatsApp opened for ${contact.name}`,
       });
 
+      // Refresh activities
       fetchActivities();
     } catch (error: any) {
       // Log failed attempt
@@ -132,20 +138,36 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
         .insert({
           contact_id: contact.id,
           user_id: user?.id,
-          type: 'WhatsApp Attempt',
+          type: 'WhatsApp Direct Contact',
           details: `Failed WhatsApp attempt: ${error.message}`,
-          api_call_status: 'failure',
           timestamp: new Date().toISOString(),
         });
 
       toast({
         title: "Error",
-        description: "WhatsApp contact failed - logged as activity",
+        description: "Failed to open WhatsApp",
         variant: "destructive",
       });
 
       fetchActivities();
     }
+  };
+
+  const formatPhoneNumber = (phoneNumber: string) => {
+    // Remove all non-numeric characters
+    let cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // If starts with +, remove it
+    if (phoneNumber.startsWith('+')) {
+      cleaned = phoneNumber.substring(1).replace(/\D/g, '');
+    }
+    
+    // If starts with 0, replace with country code (assuming Indonesia +62)
+    if (cleaned.startsWith('0')) {
+      cleaned = '62' + cleaned.substring(1);
+    }
+    
+    return cleaned;
   };
 
   const handleSaveContact = async () => {
