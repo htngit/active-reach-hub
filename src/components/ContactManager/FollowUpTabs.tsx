@@ -1,12 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, Building, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Phone, Mail, Building, Clock, MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { TemplateSelectionModal } from './TemplateSelectionModal';
 
 interface Contact {
   id: string;
@@ -110,13 +111,13 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   };
 
   const ContactCard = ({ contact }: { contact: Contact }) => (
-    <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow mb-2"
-      onClick={() => onSelectContact(contact)}
-    >
+    <Card className="hover:shadow-md transition-shadow mb-2">
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
-          <div className="space-y-1">
+          <div 
+            className="space-y-1 cursor-pointer flex-1"
+            onClick={() => onSelectContact(contact)}
+          >
             <h3 className="font-semibold">{contact.name}</h3>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Phone className="h-3 w-3" />
@@ -141,10 +142,10 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
               </div>
             )}
           </div>
-          <div className="text-right">
+          <div className="text-right space-y-2">
             <Badge variant="outline">{contact.status}</Badge>
             {contact.labels && contact.labels.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 justify-end">
                 {contact.labels.slice(0, 2).map(label => (
                   <Badge key={label} variant="secondary" className="text-xs">
                     {label}
@@ -157,6 +158,14 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
                 )}
               </div>
             )}
+            <div className="flex gap-1">
+              <TemplateSelectionModal contact={contact}>
+                <Button variant="outline" size="sm">
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  Template Follow Up
+                </Button>
+              </TemplateSelectionModal>
+            </div>
           </div>
         </div>
       </CardContent>

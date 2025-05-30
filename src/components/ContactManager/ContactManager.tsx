@@ -7,7 +7,8 @@ import { ContactList } from './ContactList';
 import { ContactDetail } from './ContactDetail';
 import { AddContactForm } from './AddContactForm';
 import { FollowUpTabs } from './FollowUpTabs';
-import { LogOut, Users, Clock } from 'lucide-react';
+import { MessageTemplates } from './MessageTemplates';
+import { LogOut, Users, Clock, MessageCircle } from 'lucide-react';
 
 interface Contact {
   id: string;
@@ -95,7 +96,7 @@ export const ContactManager = () => {
           />
         ) : (
           <Tabs defaultValue="contacts" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="contacts" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 All Contacts
@@ -103,6 +104,10 @@ export const ContactManager = () => {
               <TabsTrigger value="followups" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Follow-Ups
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Message Templates
               </TabsTrigger>
             </TabsList>
 
@@ -118,6 +123,10 @@ export const ContactManager = () => {
 
             <TabsContent value="followups" className="space-y-4">
               <FollowUpTabs onSelectContact={handleSelectContact} />
+            </TabsContent>
+
+            <TabsContent value="templates" className="space-y-4">
+              <MessageTemplates />
             </TabsContent>
           </Tabs>
         )}

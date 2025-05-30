@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Phone, Mail, Building, MapPin, MessageCircle, Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { TemplateSelectionModal } from './TemplateSelectionModal';
 
 interface Contact {
   id: string;
@@ -458,11 +458,17 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
             <CardTitle>Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button onClick={handleWhatsAppContact}>
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Contact via WhatsApp
               </Button>
+              <TemplateSelectionModal contact={contact}>
+                <Button variant="outline">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Template Follow Up
+                </Button>
+              </TemplateSelectionModal>
               <Button variant="outline" onClick={() => setShowAddActivity(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Log Activity

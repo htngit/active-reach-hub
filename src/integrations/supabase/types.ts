@@ -119,6 +119,50 @@ export type Database = {
         }
         Relationships: []
       }
+      message_template_sets: {
+        Row: {
+          associated_label_id: string
+          created_at: string
+          id: string
+          template_variation_1: string
+          template_variation_2: string
+          template_variation_3: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          associated_label_id: string
+          created_at?: string
+          id?: string
+          template_variation_1: string
+          template_variation_2: string
+          template_variation_3: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          associated_label_id?: string
+          created_at?: string
+          id?: string
+          template_variation_1?: string
+          template_variation_2?: string
+          template_variation_3?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_message_template_sets_label"
+            columns: ["associated_label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
