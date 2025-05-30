@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Phone, Mail, Building, Plus, Search, Filter, MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -67,14 +66,12 @@ export const ContactList: React.FC<ContactListProps> = ({
 
       let filteredData = data || [];
 
-      // Filter by labels if any are selected
       if (selectedLabels.length > 0) {
         filteredData = filteredData.filter(contact => 
           contact.labels && selectedLabels.some(label => contact.labels.includes(label))
         );
       }
 
-      // Filter by search term
       if (searchTerm) {
         filteredData = filteredData.filter(contact =>
           contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -134,7 +131,8 @@ export const ContactList: React.FC<ContactListProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      {/* Search and Actions Bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
@@ -144,14 +142,17 @@ export const ContactList: React.FC<ContactListProps> = ({
             className="pl-10"
           />
         </div>
-        <ExportDropdown />
-        <ImportDropdown onImportSuccess={handleImportSuccess} />
-        <Button onClick={onAddContact}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Contact
-        </Button>
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+          <ExportDropdown />
+          <ImportDropdown onImportSuccess={handleImportSuccess} />
+          <Button onClick={onAddContact} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
+        </div>
       </div>
 
+      {/* Labels Filter */}
       {availableLabels.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -173,6 +174,7 @@ export const ContactList: React.FC<ContactListProps> = ({
         </div>
       )}
 
+      {/* Contact Cards */}
       <div className="space-y-2">
         {contacts.map(contact => (
           <Card 
@@ -180,30 +182,32 @@ export const ContactList: React.FC<ContactListProps> = ({
             className="hover:shadow-md transition-shadow"
           >
             <CardContent className="p-4">
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                 <div 
                   className="space-y-1 cursor-pointer flex-1"
                   onClick={() => onSelectContact(contact)}
                 >
-                  <h3 className="font-semibold">{contact.name}</h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Phone className="h-3 w-3" />
-                    {contact.phone_number}
+                  <h3 className="font-semibold text-base sm:text-lg">{contact.name}</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      {contact.phone_number}
+                    </div>
+                    {contact.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        {contact.email}
+                      </div>
+                    )}
+                    {contact.company && (
+                      <div className="flex items-center gap-2">
+                        <Building className="h-3 w-3 shrink-0" />
+                        {contact.company}
+                      </div>
+                    )}
                   </div>
-                  {contact.email && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Mail className="h-3 w-3" />
-                      {contact.email}
-                    </div>
-                  )}
-                  {contact.company && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Building className="h-3 w-3" />
-                      {contact.company}
-                    </div>
-                  )}
                 </div>
-                <div className="text-right space-y-2">
+                <div className="flex flex-col gap-2 items-start sm:items-end">
                   <Badge variant="outline">{contact.status}</Badge>
                   {contact.labels && contact.labels.length > 0 && (
                     <div className="flex flex-wrap gap-1 justify-end">
@@ -219,9 +223,9 @@ export const ContactList: React.FC<ContactListProps> = ({
                       )}
                     </div>
                   )}
-                  <div className="flex gap-1">
+                  <div className="w-full sm:w-auto">
                     <TemplateSelectionModal contact={contact}>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto">
                         <MessageCircle className="h-3 w-3 mr-1" />
                         Template Follow Up
                       </Button>
