@@ -28,6 +28,7 @@ export const ContactManager = () => {
   const [activeTab, setActiveTab] = useState('contacts');
   const [showAddForm, setShowAddForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
 
   const handleContactSelect = (contact: Contact) => {
     setSelectedContact(contact);
@@ -45,6 +46,14 @@ export const ContactManager = () => {
 
   const handleContactUpdated = () => {
     setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleAddContact = () => {
+    setShowAddForm(true);
+  };
+
+  const handleLabelFilterChange = (labels: string[]) => {
+    setSelectedLabels(labels);
   };
 
   if (selectedContact) {
@@ -103,8 +112,10 @@ export const ContactManager = () => {
 
         <TabsContent value="contacts">
           <ContactList
-            onContactSelect={handleContactSelect}
-            refreshTrigger={refreshTrigger}
+            onSelectContact={handleContactSelect}
+            onAddContact={handleAddContact}
+            selectedLabels={selectedLabels}
+            onLabelFilterChange={handleLabelFilterChange}
           />
         </TabsContent>
 
