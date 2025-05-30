@@ -225,7 +225,7 @@ export const MessageTemplates: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Message Templates</h2>
-        <Button onClick={handleCreate} disabled={isCreating || editingId}>
+        <Button onClick={handleCreate} disabled={isCreating || editingId !== null}>
           <Plus className="h-4 w-4 mr-2" />
           Create Template Set
         </Button>
@@ -335,7 +335,7 @@ export const MessageTemplates: React.FC = () => {
                       variant="outline" 
                       size="sm" 
                       onClick={() => handleEdit(templateSet)}
-                      disabled={isCreating || editingId}
+                      disabled={isCreating || editingId !== null}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -343,7 +343,7 @@ export const MessageTemplates: React.FC = () => {
                       variant="outline" 
                       size="sm" 
                       onClick={() => handleDelete(templateSet.id)}
-                      disabled={isCreating || editingId}
+                      disabled={isCreating || editingId !== null}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
