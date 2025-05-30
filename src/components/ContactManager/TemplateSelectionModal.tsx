@@ -225,7 +225,7 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
                       {getLabelName(templateSet.associated_label_id)}
                     </Badge>
                     <div className="text-xs text-gray-500">
-                      3 variasi pesan tersedia
+                      3 variation message available
                     </div>
                   </div>
                 </CardContent>
