@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ContactList } from './ContactList';
 import { ContactDetail } from './ContactDetail';
@@ -58,7 +59,7 @@ export const ContactManager = () => {
 
   if (selectedContact) {
     return (
-      <div className="container mx-auto p-4 sm:p-6">
+      <div className="container mx-auto p-6">
         <EmailVerificationBanner />
         <ContactDetail
           contact={selectedContact}
@@ -71,7 +72,7 @@ export const ContactManager = () => {
 
   if (showAddForm) {
     return (
-      <div className="container mx-auto p-4 sm:p-6">
+      <div className="container mx-auto p-6">
         <EmailVerificationBanner />
         <AddContactForm
           onBack={handleBackToList}
@@ -82,35 +83,35 @@ export const ContactManager = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6">
+    <div className="container mx-auto p-6">
       <EmailVerificationBanner />
       
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Contact Manager</h1>
+        <h1 className="text-3xl font-bold">Contact Manager</h1>
         <p className="text-gray-600">Manage your contacts and follow-ups</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-0">
-          <TabsTrigger value="contacts" className="flex items-center gap-2 min-h-[44px]">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="contacts" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Contacts</span>
+            Contacts
           </TabsTrigger>
-          <TabsTrigger value="follow-up" className="flex items-center gap-2 min-h-[44px]">
+          <TabsTrigger value="follow-up" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
-            <span className="hidden sm:inline">Follow Up</span>
+            Follow Up
           </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-2 min-h-[44px]">
+          <TabsTrigger value="templates" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">Templates</span>
+            Message Templates
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2 min-h-[44px]">
+          <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Settings</span>
+            Settings
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="contacts" className="mt-6">
+        <TabsContent value="contacts">
           <ContactList
             onSelectContact={handleContactSelect}
             onAddContact={handleAddContact}
@@ -119,15 +120,15 @@ export const ContactManager = () => {
           />
         </TabsContent>
 
-        <TabsContent value="follow-up" className="mt-6">
+        <TabsContent value="follow-up">
           <FollowUpTabs onSelectContact={handleContactSelect} />
         </TabsContent>
 
-        <TabsContent value="templates" className="mt-6">
+        <TabsContent value="templates">
           <MessageTemplates />
         </TabsContent>
 
-        <TabsContent value="settings" className="mt-6">
+        <TabsContent value="settings">
           <PersonalSettings />
         </TabsContent>
       </Tabs>
