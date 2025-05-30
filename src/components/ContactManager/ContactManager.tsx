@@ -4,10 +4,11 @@ import { ContactList } from './ContactList';
 import { ContactDetail } from './ContactDetail';
 import { AddContactForm } from './AddContactForm';
 import { MessageTemplates } from './MessageTemplates';
+import { FollowUpTabs } from './FollowUpTabs';
 import { PersonalSettings } from '../Settings/PersonalSettings';
 import { EmailVerificationBanner } from '../Auth/EmailVerificationBanner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Plus, MessageSquare, Settings } from 'lucide-react';
+import { Users, Calendar, MessageSquare, Settings } from 'lucide-react';
 
 interface Contact {
   id: string;
@@ -96,9 +97,9 @@ export const ContactManager = () => {
             <Users className="h-4 w-4" />
             Contacts
           </TabsTrigger>
-          <TabsTrigger value="add-contact" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Contact
+          <TabsTrigger value="follow-up" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Follow Up
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -119,14 +120,8 @@ export const ContactManager = () => {
           />
         </TabsContent>
 
-        <TabsContent value="add-contact">
-          <AddContactForm
-            onBack={() => setActiveTab('contacts')}
-            onContactAdded={() => {
-              setActiveTab('contacts');
-              handleContactAdded();
-            }}
-          />
+        <TabsContent value="follow-up">
+          <FollowUpTabs onSelectContact={handleContactSelect} />
         </TabsContent>
 
         <TabsContent value="templates">
