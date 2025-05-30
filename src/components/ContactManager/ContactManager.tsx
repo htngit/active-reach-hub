@@ -93,19 +93,31 @@ export const ContactManager = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="contacts" className="flex items-center gap-2">
+          <TabsTrigger
+            value="contacts"
+            className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'contacts' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
+          >
             <Users className="h-4 w-4" />
             Contacts
           </TabsTrigger>
-          <TabsTrigger value="follow-up" className="flex items-center gap-2">
+          <TabsTrigger
+            value="follow-up"
+            className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'follow-up' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
+          >
             <Calendar className="h-4 w-4" />
             Follow Up
           </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-2">
+          <TabsTrigger
+            value="templates"
+            className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'templates' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
+          >
             <MessageSquare className="h-4 w-4" />
-            Message Templates
+            Templates
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
+          <TabsTrigger
+            value="settings"
+            className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'settings' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
+          >
             <Settings className="h-4 w-4" />
             Settings
           </TabsTrigger>

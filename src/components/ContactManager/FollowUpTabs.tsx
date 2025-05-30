@@ -31,6 +31,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   const [stale30Days, setStale30Days] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('needs-approach'); // Add activeTab state
 
   useEffect(() => {
     fetchFollowUpContacts();
@@ -177,19 +178,31 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   }
 
   return (
-    <Tabs defaultValue="needs-approach" className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="needs-approach">
+    <Tabs defaultValue="needs-approach" onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-4 h-12">
+        <TabsTrigger
+          value="needs-approach"
+          className={`transition-all duration-300 ${activeTab === 'needs-approach' ? 'text-base px-4 py-2' : 'text-sm px-2 py-1'}`}
+        >
           Needs Approach ({needsApproach.length})
         </TabsTrigger>
-        <TabsTrigger value="stale-3">
-          Stale {'>'} 3d ({stale3Days.length})
+        <TabsTrigger
+          value="stale-3"
+          className={`transition-all duration-300 ${activeTab === 'stale-3' ? 'text-base px-4 py-2' : 'text-sm px-2 py-1'}`}
+        >
+          {'>'} 3d ({stale3Days.length})
         </TabsTrigger>
-        <TabsTrigger value="stale-7">
-          Stale {'>'} 7d ({stale7Days.length})
+        <TabsTrigger
+          value="stale-7"
+          className={`transition-all duration-300 ${activeTab === 'stale-7' ? 'text-base px-4 py-2' : 'text-sm px-2 py-1'}`}
+        >
+          {'>'} 7d ({stale7Days.length})
         </TabsTrigger>
-        <TabsTrigger value="stale-30">
-          Stale {'>'} 30d ({stale30Days.length})
+        <TabsTrigger
+          value="stale-30"
+          className={`transition-all duration-300 ${activeTab === 'stale-30' ? 'text-base px-4 py-2' : 'text-sm px-2 py-1'}`}
+        >
+          {'>'} 30d ({stale30Days.length})
         </TabsTrigger>
       </TabsList>
 
