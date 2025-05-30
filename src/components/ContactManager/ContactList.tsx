@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Phone, Mail, Building, Plus, Search, Filter, MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
+import { ExportDropdown } from './ExportDropdown';
+import { ImportDropdown } from './ImportDropdown';
 
 interface Contact {
   id: string;
@@ -40,12 +43,13 @@ export const ContactList: React.FC<ContactListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { user } = useAuth();
 
   useEffect(() => {
     fetchContacts();
     fetchLabels();
-  }, [user, selectedLabels]);
+  }, [user, selectedLabels, refreshKey]);
 
   const fetchContacts = async () => {
     if (!user) return;
@@ -120,6 +124,10 @@ export const ContactList: React.FC<ContactListProps> = ({
     onLabelFilterChange(newLabels);
   };
 
+  const handleImportSuccess = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
   if (loading) {
     return <div className="p-4">Loading contacts...</div>;
   }
@@ -136,6 +144,8 @@ export const ContactList: React.FC<ContactListProps> = ({
             className="pl-10"
           />
         </div>
+        <ExportDropdown />
+        <ImportDropdown onImportSuccess={handleImportSuccess} />
         <Button onClick={onAddContact}>
           <Plus className="h-4 w-4 mr-2" />
           Add Contact
