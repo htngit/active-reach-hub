@@ -201,14 +201,14 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Pilih Template Follow-Up</DialogTitle>
+          <DialogTitle>Select a Follow-Up Template</DialogTitle>
         </DialogHeader>
         
         {loading ? (
           <div className="p-4 text-center">Loading templates...</div>
         ) : templateSets.length === 0 ? (
           <div className="p-4 text-center text-gray-500">
-            Tidak ada template yang cocok dengan label kontak ini.
+            There are no templates that match this contact label.
           </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
