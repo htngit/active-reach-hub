@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Users, MapPin, LogOut } from "lucide-react";
+import { Users, MapPin, Settings, LogOut } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -79,6 +79,14 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t">
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavLink to="/settings" className={getNavCls}>
+                <Settings className="h-4 w-4" />
+                {state !== "collapsed" && <span>Settings</span>}
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Button 

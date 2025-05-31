@@ -5,10 +5,9 @@ import { ContactDetail } from './ContactDetail';
 import { AddContactForm } from './AddContactForm';
 import { MessageTemplates } from './MessageTemplates';
 import { FollowUpTabs } from './FollowUpTabs';
-import { PersonalSettings } from '../Settings/PersonalSettings';
 import { EmailVerificationBanner } from '../Auth/EmailVerificationBanner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, MessageSquare, Settings } from 'lucide-react';
+import { Users, Calendar, MessageSquare } from 'lucide-react';
 
 interface Contact {
   id: string;
@@ -92,7 +91,7 @@ export const ContactManager = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger
             value="contacts"
             className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'contacts' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
@@ -114,13 +113,6 @@ export const ContactManager = () => {
             <MessageSquare className="h-4 w-4" />
             Templates
           </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'settings' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="contacts">
@@ -138,10 +130,6 @@ export const ContactManager = () => {
 
         <TabsContent value="templates">
           <MessageTemplates />
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <PersonalSettings />
         </TabsContent>
       </Tabs>
     </div>
