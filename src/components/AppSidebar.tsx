@@ -47,19 +47,22 @@ export function AppSidebar() {
     <Sidebar className={state === "collapsed" ? "w-14" : "w-64"} collapsible="icon">
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 px-2 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground font-bold">
-            X
+          <div className="flex h-8 w-8 items-center justify-center rounded text-primary-foreground bg-white overflow-hidden">
+            <img src="/earth.png" alt="Earth" className={`transition-all duration-300 object-contain ${state === 'collapsed' ? 'w-8 h-8' : 'w-6 h-6'}`} />
           </div>
           {state !== "collapsed" && (
-            <h1 className="text-xl font-bold text-primary">XalesIn</h1>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold text-primary">XalesIn</h1>
+              <h5 className="text-xs font-light text-primary">On Development Stage</h5>
+            </div>
           )}
         </div>
-        <SidebarTrigger className="ml-auto" />
+        <SidebarTrigger className="ml-auto"/>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
