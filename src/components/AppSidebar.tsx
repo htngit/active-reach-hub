@@ -47,7 +47,7 @@ export function AppSidebar() {
     <Sidebar className={state === "collapsed" ? "w-14" : "w-64"} collapsible="icon">
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 px-2 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded text-primary-foreground bg-white overflow-hidden">
+          <div className="flex h-8 w-8 items-center justify-center rounded text-primary-foreground overflow-hidden">
             <img src="/earth.png" alt="Earth" className={`transition-all duration-300 object-contain ${state === 'collapsed' ? 'w-8 h-8' : 'w-6 h-6'}`} />
           </div>
           {state !== "collapsed" && (
