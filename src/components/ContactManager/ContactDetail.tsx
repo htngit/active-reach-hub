@@ -44,10 +44,11 @@ const statusOptions = ['New', 'Approached', 'Follow-up Required', 'Paid', 'Lost'
 const activityTypes = ['WhatsApp Attempt', 'Call Logged', 'Email Sent', 'Meeting Note'];
 
 export const ContactDetail: React.FC<ContactDetailProps> = ({
-  contact,
+  contact: initialContact,
   onBack,
   onContactUpdated,
 }) => {
+  const [contact, setContact] = useState(initialContact);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContact, setEditedContact] = useState(contact);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -58,6 +59,12 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState(contact.status);
   const { user } = useAuth();
+
+  useEffect(() => {
+    setContact(initialContact);
+    setEditedContact(initialContact);
+    setNewStatus(initialContact.status);
+  }, [initialContact]);
 
   useEffect(() => {
     fetchActivities();
@@ -100,6 +107,31 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     }
   };
 
+  const autoUpdateStatusToApproached = async () => {
+    if (contact.status === 'New' && activities.length > 0) {
+      try {
+        const { error } = await supabase
+          .from('contacts')
+          .update({ status: 'Approached' })
+          .eq('id', contact.id);
+
+        if (error) throw error;
+
+        setContact({ ...contact, status: 'Approached' });
+        setNewStatus('Approached');
+        
+        toast({
+          title: "Status Updated",
+          description: "Contact status automatically changed to 'Approached' due to activity history",
+        });
+
+        onContactUpdated();
+      } catch (error: any) {
+        console.error('Failed to auto-update status:', error);
+      }
+    }
+  };
+
   const handleWhatsAppContact = async () => {
     try {
       // Format phone number for wa.me
@@ -131,8 +163,9 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
         description: `WhatsApp opened for ${contact.name}`,
       });
 
-      // Refresh activities
-      fetchActivities();
+      // Refresh activities and check for auto status update
+      await fetchActivities();
+      await autoUpdateStatusToApproached();
     } catch (error: any) {
       // Log failed attempt
       await supabase
@@ -191,6 +224,9 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
 
       if (error) throw error;
 
+      setContact(editedContact);
+      setNewStatus(editedContact.status);
+
       toast({
         title: "Success",
         description: "Contact updated successfully",
@@ -230,7 +266,10 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
 
       setNewActivity({ type: '', details: '' });
       setShowAddActivity(false);
-      fetchActivities();
+      
+      // Refresh activities and check for auto status update
+      await fetchActivities();
+      await autoUpdateStatusToApproached();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -298,6 +337,9 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
         .eq('id', contact.id);
 
       if (error) throw error;
+
+      // Update local state immediately
+      setContact({ ...contact, status: newStatus });
 
       toast({
         title: "Success",
