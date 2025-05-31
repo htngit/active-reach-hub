@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/Auth/LoginForm";
+import { ResetPassword } from "@/components/Auth/ResetPassword";
 import { ContactManager } from "@/components/ContactManager/ContactManager";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -39,6 +40,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<AppContent />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

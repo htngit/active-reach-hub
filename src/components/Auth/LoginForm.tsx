@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { ForgotPassword } from './ForgotPassword';
 
 export const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
 
@@ -41,6 +43,10 @@ export const LoginForm = () => {
       setLoading(false);
     }
   };
+
+  if (showForgotPassword) {
+    return <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -75,6 +81,19 @@ export const LoginForm = () => {
               {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')}
             </Button>
           </form>
+          
+          {isLogin && (
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Forgot your password?
+              </button>
+            </div>
+          )}
+          
           <div className="mt-4 text-center">
             <button
               type="button"
