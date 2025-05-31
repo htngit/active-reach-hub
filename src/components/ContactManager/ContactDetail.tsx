@@ -523,7 +523,8 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
                         size="sm"
                         onClick={() => setIsUpdatingStatus(true)}
                       >
-                        <RefreshCw className="h-3 w-3" />
+                        <h5 className="text-xs font-normal italic">Update Status</h5>
+                        <Edit className="h-3 w-3" />
                       </Button>
                     ) : (
                       <div className="flex items-center gap-2">

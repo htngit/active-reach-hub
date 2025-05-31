@@ -9,6 +9,7 @@ export const MapsDistribution = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Maps Distribution</h1>
         <p className="text-gray-600">Visualize your contact distribution and sales territories</p>
+        <p className="text-xs font-extrabold italic">On Development Stage</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -51,6 +52,8 @@ export const MapsDistribution = () => {
           <CardTitle>Interactive Map</CardTitle>
           <CardDescription>
             Geographic distribution of your contacts and sales activities
+            <br/>
+            <span className="text-xs italic">Coming Soon</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
