@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Phone, Mail, Building, MapPin, MessageCircle, Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { Phone, Mail, Building, MapPin, MessageCircle, Plus, Edit, Trash2, Save, X, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
 
@@ -55,6 +55,8 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [newLabel, setNewLabel] = useState('');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [newStatus, setNewStatus] = useState(contact.status);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -283,6 +285,36 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     }
   };
 
+  const handleStatusUpdate = async () => {
+    if (newStatus === contact.status) {
+      setIsUpdatingStatus(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .update({ status: newStatus })
+        .eq('id', contact.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Contact status updated successfully",
+      });
+
+      setIsUpdatingStatus(false);
+      onContactUpdated();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update contact status",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -440,8 +472,45 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
                     </div>
                   )}
                 </div>
-                <div className="text-right">
-                  <Badge variant="outline" className="mb-2">{contact.status}</Badge>
+                <div className="text-right space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="mb-2">{contact.status}</Badge>
+                    {!isUpdatingStatus ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsUpdatingStatus(true)}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Select value={newStatus} onValueChange={setNewStatus}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map(status => (
+                              <SelectItem key={status} value={status}>{status}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" onClick={handleStatusUpdate}>
+                          <Save className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setIsUpdatingStatus(false);
+                            setNewStatus(contact.status);
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                   {contact.labels && contact.labels.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {contact.labels.map(label => (
