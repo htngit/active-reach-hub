@@ -59,7 +59,7 @@ export const ContactManager = () => {
 
   if (selectedContact) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="p-6">
         <EmailVerificationBanner />
         <ContactDetail
           contact={selectedContact}
@@ -72,7 +72,7 @@ export const ContactManager = () => {
 
   if (showAddForm) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="p-6">
         <EmailVerificationBanner />
         <AddContactForm
           onBack={handleBackToList}
@@ -83,7 +83,7 @@ export const ContactManager = () => {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="p-6">
       <EmailVerificationBanner />
       
       <div className="mb-6">

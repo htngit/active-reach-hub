@@ -7,7 +7,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/Auth/LoginForm";
 import { ResetPassword } from "@/components/Auth/ResetPassword";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 import { ContactManager } from "@/components/ContactManager/ContactManager";
+import { MapsDistribution } from "@/components/MapsDistribution/MapsDistribution";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -28,7 +31,21 @@ const AppContent = () => {
     return <LoginForm />;
   }
 
-  return <ContactManager />;
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<ContactManager />} />
+            <Route path="/contacts" element={<ContactManager />} />
+            <Route path="/maps" element={<MapsDistribution />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </div>
+    </SidebarProvider>
+  );
 };
 
 const App = () => (
@@ -39,9 +56,8 @@ const App = () => (
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<AppContent />} />
+            <Route path="/*" element={<AppContent />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
