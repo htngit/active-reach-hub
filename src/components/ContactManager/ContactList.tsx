@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -61,7 +60,7 @@ export const ContactList: React.FC<ContactListProps> = ({
   } = useCachedContacts();
 
   // Use team data hook
-  const { teams, getTeamMemberNames } = useTeamData();
+  const { teams, getTeamMemberNames, loading: teamsLoading } = useTeamData();
 
   const fetchLabels = async () => {
     if (!user) return;
@@ -90,18 +89,20 @@ export const ContactList: React.FC<ContactListProps> = ({
       { id: user?.id || '', name: 'Me (Personal)', type: 'personal' }
     ];
 
-    teams.forEach(team => {
-      const members = getTeamMemberNames(team.id);
-      members.forEach(member => {
-        if (!owners.find(o => o.id === member.id)) {
-          owners.push({
-            id: member.id,
-            name: `${member.name} (${team.name})`,
-            type: 'team'
-          });
-        }
+    if (!teamsLoading && teams.length > 0) {
+      teams.forEach(team => {
+        const members = getTeamMemberNames(team.id);
+        members.forEach(member => {
+          if (!owners.find(o => o.id === member.id)) {
+            owners.push({
+              id: member.id,
+              name: `${member.name} (${team.name})`,
+              type: 'team'
+            });
+          }
+        });
       });
-    });
+    }
 
     return owners;
   };
@@ -162,8 +163,13 @@ export const ContactList: React.FC<ContactListProps> = ({
     return owner ? `${owner.name.split(' ')[0]} (${team?.name || 'Team'})` : 'Team Contact';
   };
 
-  if (loading) {
-    return <div className="p-4">Loading contacts...</div>;
+  if (loading || teamsLoading) {
+    return (
+      <div className="p-4 text-center">
+        <div className="text-lg">Loading contacts...</div>
+        {teamsLoading && <div className="text-sm text-gray-500 mt-2">Loading team data...</div>}
+      </div>
+    );
   }
 
   const allOwners = getAllOwners();
@@ -202,6 +208,14 @@ export const ContactList: React.FC<ContactListProps> = ({
       {error && (
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-700">{error}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshContacts}
+            className="mt-2 text-yellow-600 border-yellow-200 hover:bg-yellow-100"
+          >
+            Try Again
+          </Button>
         </div>
       )}
 
@@ -339,11 +353,24 @@ export const ContactList: React.FC<ContactListProps> = ({
         ))}
       </div>
 
-      {filteredContacts.length === 0 && (
+      {filteredContacts.length === 0 && !loading && (
         <div className="text-center py-8 text-gray-500">
-          {searchTerm || selectedLabels.length > 0 || selectedOwner !== 'all'
-            ? "No contacts found matching your filters" 
-            : "No contacts yet. Add your first contact!"}
+          {error ? (
+            <div>
+              <p>Failed to load contacts</p>
+              <Button
+                variant="outline"
+                onClick={refreshContacts}
+                className="mt-2"
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : searchTerm || selectedLabels.length > 0 || selectedOwner !== 'all' ? (
+            "No contacts found matching your filters"
+          ) : (
+            "No contacts yet. Add your first contact!"
+          )}
         </div>
       )}
     </div>

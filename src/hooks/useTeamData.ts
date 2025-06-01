@@ -34,35 +34,30 @@ export const useTeamData = () => {
     if (!user) return;
 
     try {
-      // Fetch teams where user is a member
-      const { data: teams, error: teamsError } = await supabase
-        .from('teams')
-        .select('*');
+      console.log('Fetching teams and members...');
+      
+      const { data, error } = await supabase.functions.invoke('get-user-teams');
 
-      if (teamsError) throw teamsError;
+      if (error) {
+        console.error('Error fetching team data:', error);
+        // Set empty arrays instead of throwing to prevent UI breaks
+        setTeams([]);
+        setTeamMembers([]);
+        return;
+      }
 
-      // Fetch all team members for these teams
-      const { data: members, error: membersError } = await supabase
-        .from('team_members')
-        .select('*');
-
-      if (membersError) throw membersError;
-
-      setTeams(teams || []);
-      setTeamMembers(members || []);
+      console.log('Team data received:', data);
+      setTeams(data.teams || []);
+      setTeamMembers(data.teamMembers || []);
     } catch (error) {
       console.error('Error fetching team data:', error);
+      // Set empty arrays instead of throwing to prevent UI breaks
+      setTeams([]);
+      setTeamMembers([]);
     } finally {
       setLoading(false);
     }
   };
-
-  // Get teams where current user is a member
-  const userTeams = teams.filter(team => 
-    teamMembers.some(member => 
-      member.team_id === team.id && member.user_id === user?.id
-    )
-  );
 
   // Get team members for a specific team
   const getTeamMembers = (teamId: string) => {
@@ -80,7 +75,7 @@ export const useTeamData = () => {
   };
 
   return {
-    teams: userTeams,
+    teams,
     teamMembers,
     loading,
     getTeamMembers,

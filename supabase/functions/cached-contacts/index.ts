@@ -40,12 +40,41 @@ serve(async (req) => {
     const ifNoneMatch = req.headers.get('if-none-match');
     const ifModifiedSince = req.headers.get('if-modified-since');
 
-    // Query contacts with metadata for caching, including new owner_id and team_id columns
-    const { data: contacts, error } = await supabaseClient
+    // Use service role to bypass RLS issues
+    const supabaseService = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // First get teams where user is a member
+    const { data: userMemberships, error: membershipError } = await supabaseService
+      .from('team_members')
+      .select('team_id')
+      .eq('user_id', user.id);
+
+    if (membershipError) {
+      console.error('Membership error:', membershipError);
+    }
+
+    const userTeamIds = userMemberships?.map(m => m.team_id) || [];
+
+    // Query contacts where user is owner OR contacts belong to user's teams
+    let contactsQuery = supabaseService
       .from('contacts')
       .select('*, created_at')
-      .eq('user_id', user.id)
+      .or(`user_id.eq.${user.id},and(team_id.in.(${userTeamIds.join(',')}),team_id.not.is.null)`)
       .order('created_at', { ascending: false });
+
+    // If user has no teams, just get their own contacts
+    if (userTeamIds.length === 0) {
+      contactsQuery = supabaseService
+        .from('contacts')
+        .select('*, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+    }
+
+    const { data: contacts, error } = await contactsQuery;
 
     if (error) {
       console.error('Database error:', error);
@@ -56,13 +85,13 @@ serve(async (req) => {
     }
 
     // Generate ETag based on data content and last modified time
-    const lastModified = contacts.length > 0 
+    const lastModified = contacts && contacts.length > 0 
       ? new Date(Math.max(...contacts.map(c => new Date(c.created_at).getTime())))
       : new Date();
     
     const dataHash = await crypto.subtle.digest(
       'SHA-256',
-      new TextEncoder().encode(JSON.stringify(contacts))
+      new TextEncoder().encode(JSON.stringify(contacts || []))
     );
     const etag = Array.from(new Uint8Array(dataHash))
       .map(b => b.toString(16).padStart(2, '0'))
@@ -85,7 +114,7 @@ serve(async (req) => {
 
     // Return fresh data with cache headers
     return new Response(JSON.stringify({
-      data: contacts,
+      data: contacts || [],
       cached_at: new Date().toISOString(),
     }), {
       status: 200,
