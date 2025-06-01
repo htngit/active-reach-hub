@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Phone, Mail, Building, Clock, MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
+import { useCachedContacts } from '@/hooks/useCachedContacts';
 
 interface Contact {
   id: string;
@@ -31,24 +33,23 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   const [stale30Days, setStale30Days] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('needs-approach'); // Add activeTab state
+  const [activeTab, setActiveTab] = useState('needs-approach');
+  
+  // Use cached contacts instead of direct database queries
+  const { contacts, loading: contactsLoading, error: contactsError } = useCachedContacts();
 
   useEffect(() => {
-    fetchFollowUpContacts();
-  }, [user]);
+    if (!contactsLoading && contacts.length >= 0) {
+      fetchFollowUpContacts();
+    }
+  }, [contacts, contactsLoading, user]);
 
   const fetchFollowUpContacts = async () => {
-    if (!user) return;
+    if (!user || contactsLoading) return;
 
     try {
-      // Get all contacts that are not "Paid"
-      const { data: contacts, error: contactsError } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('user_id', user.id)
-        .neq('status', 'Paid');
-
-      if (contactsError) throw contactsError;
+      // Filter contacts that are not "Paid"
+      const activeContacts = contacts.filter(contact => contact.status !== 'Paid');
 
       // Get all activities to determine last contact time
       const { data: activities, error: activitiesError } = await supabase
@@ -77,7 +78,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
       const stale7DaysList: Contact[] = [];
       const stale30DaysList: Contact[] = [];
 
-      contacts?.forEach(contact => {
+      activeContacts.forEach(contact => {
         const lastActivity = lastActivityMap.get(contact.id);
         
         if (!lastActivity) {
@@ -101,6 +102,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
       setStale7Days(stale7DaysList);
       setStale30Days(stale30DaysList);
     } catch (error: any) {
+      console.error('Error fetching follow-up contacts:', error);
       toast({
         title: "Error",
         description: "Failed to fetch follow-up contacts",
@@ -173,8 +175,16 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     </Card>
   );
 
-  if (loading) {
+  if (loading || contactsLoading) {
     return <div className="p-4">Loading follow-up data...</div>;
+  }
+
+  if (contactsError) {
+    return (
+      <div className="p-4">
+        <div className="text-red-600">Error loading contacts: {contactsError}</div>
+      </div>
+    );
   }
 
   return (
