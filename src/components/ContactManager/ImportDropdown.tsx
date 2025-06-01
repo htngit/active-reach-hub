@@ -83,6 +83,7 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
 
     const contacts = data.map(row => ({
       user_id: user.id,
+      owner_id: user.id, // Set current user as owner for imported contacts
       name: row.name || '',
       phone_number: row.phone_number || '',
       email: row.email || null,
@@ -91,7 +92,8 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
       notes: row.notes || null,
       labels: row.labels ? row.labels.split(';').map((label: string) => label.trim()).filter(Boolean) : null,
       status: row.status || 'New',
-      potential_product: row.potential_products ? row.potential_products.split(';').map((product: string) => product.trim()).filter(Boolean) : null
+      potential_product: row.potential_products ? row.potential_products.split(';').map((product: string) => product.trim()).filter(Boolean) : null,
+      team_id: null // Default to personal contacts for imports
     })).filter(contact => contact.name && contact.phone_number);
 
     if (contacts.length === 0) {

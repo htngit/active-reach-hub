@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useTeamData } from '@/hooks/useTeamData';
 
 interface AddContactFormProps {
   onBack: () => void;
@@ -32,16 +33,22 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
     status: 'New',
     labels: [] as string[],
     potential_product: [] as string[],
+    owner_id: '',
+    team_id: '',
   });
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [newLabel, setNewLabel] = useState('');
   const [newProduct, setNewProduct] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { teams, getTeamMemberNames } = useTeamData();
 
   useEffect(() => {
+    if (user) {
+      setFormData(prev => ({ ...prev, owner_id: user.id }));
+    }
     fetchLabels();
-  }, []);
+  }, [user]);
 
   const fetchLabels = async () => {
     if (!user) return;
@@ -73,12 +80,15 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
     setLoading(true);
 
     try {
+      const contactData = {
+        ...formData,
+        user_id: user?.id,
+        team_id: formData.team_id || null,
+      };
+
       const { error } = await supabase
         .from('contacts')
-        .insert({
-          ...formData,
-          user_id: user?.id,
-        });
+        .insert(contactData);
 
       if (error) throw error;
 
@@ -159,6 +169,18 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
     });
   };
 
+  const handleOwnerChange = (value: string) => {
+    if (value === 'personal') {
+      setFormData({ ...formData, owner_id: user?.id || '', team_id: '' });
+    } else {
+      // Find the team for this owner
+      const ownerTeam = teams.find(team => 
+        getTeamMemberNames(team.id).some(member => member.id === value)
+      );
+      setFormData({ ...formData, owner_id: value, team_id: ownerTeam?.id || '' });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -174,6 +196,25 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Contact Owner</label>
+              <Select value={formData.owner_id === user?.id ? 'personal' : formData.owner_id} onValueChange={handleOwnerChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select contact owner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="personal">Personal Contact</SelectItem>
+                  {teams.map(team => 
+                    getTeamMemberNames(team.id).map(member => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name} ({team.name})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">Name *</label>
               <Input
