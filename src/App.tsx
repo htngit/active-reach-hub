@@ -12,6 +12,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { ContactManager } from "@/components/ContactManager/ContactManager";
 import { MapsDistribution } from "@/components/MapsDistribution/MapsDistribution";
 import { PersonalSettings } from "@/components/Settings/PersonalSettings";
+import { TeamManagement } from "@/components/TeamManagement/TeamManagement";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -41,6 +42,7 @@ const AppContent = () => {
             <Route path="/" element={<ContactManager />} />
             <Route path="/contacts" element={<ContactManager />} />
             <Route path="/maps" element={<MapsDistribution />} />
+            <Route path="/team" element={<TeamManagement />} />
             <Route path="/settings" element={<div className="p-6"><PersonalSettings /></div>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

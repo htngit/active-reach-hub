@@ -1,15 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, Building, Plus, Search, Filter, MessageCircle, RefreshCw, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Phone, Mail, Building, Plus, Search, Filter, MessageCircle, RefreshCw, Trash2, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
 import { ExportDropdown } from './ExportDropdown';
 import { ImportDropdown } from './ImportDropdown';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
+import { useTeamData } from '@/hooks/useTeamData';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Contact {
@@ -24,6 +27,8 @@ interface Contact {
   status: string;
   potential_product?: string[];
   created_at: string;
+  owner_id?: string;
+  team_id?: string;
 }
 
 interface ContactListProps {
@@ -42,8 +47,8 @@ export const ContactList: React.FC<ContactListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
+  const [selectedOwner, setSelectedOwner] = useState<string>('all');
   const { user } = useAuth();
-  const [refreshKey, setRefreshKey] = useState(0);
   
   // Use the cached contacts hook
   const { 
@@ -54,6 +59,9 @@ export const ContactList: React.FC<ContactListProps> = ({
     refreshContacts, 
     clearCache 
   } = useCachedContacts();
+
+  // Use team data hook
+  const { teams, getTeamMemberNames } = useTeamData();
 
   const fetchLabels = async () => {
     if (!user) return;
@@ -76,9 +84,40 @@ export const ContactList: React.FC<ContactListProps> = ({
     fetchLabels();
   }, [user]);
 
-  // Filter contacts based on search term and selected labels
+  // Get all possible owners (current user + team members)
+  const getAllOwners = () => {
+    const owners = [
+      { id: user?.id || '', name: 'Me (Personal)', type: 'personal' }
+    ];
+
+    teams.forEach(team => {
+      const members = getTeamMemberNames(team.id);
+      members.forEach(member => {
+        if (!owners.find(o => o.id === member.id)) {
+          owners.push({
+            id: member.id,
+            name: `${member.name} (${team.name})`,
+            type: 'team'
+          });
+        }
+      });
+    });
+
+    return owners;
+  };
+
+  // Filter contacts based on search term, selected labels, and owner
   useEffect(() => {
     let filtered = contacts;
+
+    // Apply owner filter
+    if (selectedOwner !== 'all') {
+      if (selectedOwner === 'personal') {
+        filtered = filtered.filter(contact => !contact.team_id);
+      } else {
+        filtered = filtered.filter(contact => contact.owner_id === selectedOwner);
+      }
+    }
 
     // Apply label filter
     if (selectedLabels.length > 0) {
@@ -98,7 +137,7 @@ export const ContactList: React.FC<ContactListProps> = ({
     }
 
     setFilteredContacts(filtered);
-  }, [contacts, selectedLabels, searchTerm]);
+  }, [contacts, selectedLabels, searchTerm, selectedOwner]);
 
   const toggleLabelFilter = (label: string) => {
     const newLabels = selectedLabels.includes(label)
@@ -111,9 +150,23 @@ export const ContactList: React.FC<ContactListProps> = ({
     refreshContacts();
   };
 
+  const getOwnerDisplay = (contact: Contact) => {
+    if (!contact.team_id) {
+      return contact.owner_id === user?.id ? 'Personal' : 'Unknown';
+    }
+    
+    const team = teams.find(t => t.id === contact.team_id);
+    const members = getTeamMemberNames(contact.team_id || '');
+    const owner = members.find(m => m.id === contact.owner_id);
+    
+    return owner ? `${owner.name.split(' ')[0]} (${team?.name || 'Team'})` : 'Team Contact';
+  };
+
   if (loading) {
     return <div className="p-4">Loading contacts...</div>;
   }
+
+  const allOwners = getAllOwners();
 
   return (
     <div className="space-y-4">
@@ -173,6 +226,28 @@ export const ContactList: React.FC<ContactListProps> = ({
         </div>
       </div>
 
+      {/* Owner Filter */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          <span className="text-sm font-medium">Owner:</span>
+        </div>
+        <Select value={selectedOwner} onValueChange={setSelectedOwner}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filter by owner" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Contacts</SelectItem>
+            <SelectItem value="personal">Personal Contacts</SelectItem>
+            {allOwners.filter(o => o.type === 'team').map(owner => (
+              <SelectItem key={owner.id} value={owner.id}>
+                {owner.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Labels Filter */}
       {availableLabels.length > 0 && (
         <div className="space-y-2">
@@ -208,7 +283,12 @@ export const ContactList: React.FC<ContactListProps> = ({
                   className="space-y-1 cursor-pointer flex-1"
                   onClick={() => onSelectContact(contact)}
                 >
-                  <h3 className="font-semibold text-base sm:text-lg">{contact.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-base sm:text-lg">{contact.name}</h3>
+                    <Badge variant="outline" className="text-xs">
+                      {getOwnerDisplay(contact)}
+                    </Badge>
+                  </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <Phone className="h-3 w-3 shrink-0" />
@@ -261,7 +341,7 @@ export const ContactList: React.FC<ContactListProps> = ({
 
       {filteredContacts.length === 0 && (
         <div className="text-center py-8 text-gray-500">
-          {searchTerm || selectedLabels.length > 0 
+          {searchTerm || selectedLabels.length > 0 || selectedOwner !== 'all'
             ? "No contacts found matching your filters" 
             : "No contacts yet. Add your first contact!"}
         </div>

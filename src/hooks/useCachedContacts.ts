@@ -15,6 +15,8 @@ interface Contact {
   status: string;
   potential_product?: string[];
   created_at: string;
+  owner_id?: string;
+  team_id?: string;
 }
 
 interface CacheData {

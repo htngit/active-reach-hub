@@ -40,7 +40,7 @@ serve(async (req) => {
     const ifNoneMatch = req.headers.get('if-none-match');
     const ifModifiedSince = req.headers.get('if-modified-since');
 
-    // Query contacts with metadata for caching
+    // Query contacts with metadata for caching, including new owner_id and team_id columns
     const { data: contacts, error } = await supabaseClient
       .from('contacts')
       .select('*, created_at')
