@@ -4,16 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Copy } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-
-interface TeamInvitation {
-  id: string;
-  team_id: string;
-  email: string;
-  token: string;
-  expires_at: string;
-  used_at?: string;
-  created_at: string;
-}
+import { TeamInvitation } from '@/types/team';
 
 interface PendingInvitationsProps {
   invitations: TeamInvitation[];

@@ -3,40 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, UserPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { EditTeamDialog } from './EditTeamDialog';
 import { InviteMemberDialog } from './InviteMemberDialog';
 import { TeamMembers } from './TeamMembers';
 import { PendingInvitations } from './PendingInvitations';
-
-interface Team {
-  id: string;
-  name: string;
-  description?: string;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface TeamMember {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: string;
-  joined_at: string;
-}
-
-interface TeamInvitation {
-  id: string;
-  team_id: string;
-  email: string;
-  token: string;
-  expires_at: string;
-  used_at?: string;
-  created_at: string;
-}
+import { Team, TeamMember, TeamInvitation } from '@/types/team';
 
 interface TeamDetailsProps {
   team: Team;

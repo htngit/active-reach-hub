@@ -3,15 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
-
-interface Team {
-  id: string;
-  name: string;
-  description?: string;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Team } from '@/types/team';
 
 interface TeamListProps {
   teams: Team[];

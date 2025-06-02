@@ -1,14 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-
-interface TeamMember {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: string;
-  joined_at: string;
-}
+import { TeamMember } from '@/types/team';
 
 interface TeamMembersProps {
   members: TeamMember[];

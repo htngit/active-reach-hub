@@ -2,21 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface TeamMember {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: string;
-  joined_at: string;
-}
-
-interface Team {
-  id: string;
-  name: string;
-  description?: string;
-  owner_id: string;
-}
+import { Team, TeamMember } from '@/types/team';
 
 export const useTeamData = () => {
   const [teams, setTeams] = useState<Team[]>([]);

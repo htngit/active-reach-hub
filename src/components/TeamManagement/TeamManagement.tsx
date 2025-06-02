@@ -2,22 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useTeamData } from '@/hooks/useTeamData';
 import { CreateTeamDialog } from './CreateTeamDialog';
 import { TeamList } from './TeamList';
 import { TeamDetails } from './TeamDetails';
-
-interface Team {
-  id: string;
-  name: string;
-  description?: string;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Team } from '@/types/team';
 
 export const TeamManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);

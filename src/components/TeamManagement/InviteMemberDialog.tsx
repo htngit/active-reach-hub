@@ -6,15 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Send } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-
-interface Team {
-  id: string;
-  name: string;
-  description?: string;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Team } from '@/types/team';
 
 interface InviteMemberDialogProps {
   open: boolean;
