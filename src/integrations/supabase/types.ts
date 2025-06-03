@@ -282,6 +282,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_user_access_contact: {
+        Args: { contact_id: string; user_id: string }
+        Returns: boolean
+      }
       cleanup_expired_invitations: {
         Args: Record<PropertyKey, never>
         Returns: undefined

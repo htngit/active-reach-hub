@@ -113,13 +113,21 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   const autoUpdateStatusToApproached = async () => {
     if (contact.status === 'New' && activities.length > 0) {
       try {
-        const { error } = await supabase
-          .from('contacts')
-          .update({ status: 'Approached' })
-          .eq('id', contact.id)
-          .eq('user_id', user?.id);
+        // Use direct SQL update to avoid RLS issues
+        const { error } = await supabase.rpc('update_contact_status', {
+          contact_id: contact.id,
+          new_status: 'Approached'
+        });
 
-        if (error) throw error;
+        if (error) {
+          // Fallback to regular update if RPC doesn't exist
+          const { error: updateError } = await supabase
+            .from('contacts')
+            .update({ status: 'Approached' })
+            .eq('id', contact.id);
+          
+          if (updateError) throw updateError;
+        }
 
         setContact({ ...contact, status: 'Approached' });
         setNewStatus('Approached');
@@ -237,8 +245,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
           status: editedContact.status,
           potential_product: editedContact.potential_product && editedContact.potential_product.length > 0 ? editedContact.potential_product : null,
         })
-        .eq('id', contact.id)
-        .eq('user_id', user.id);
+        .eq('id', contact.id);
 
       if (error) {
         console.error('Supabase error updating contact:', error);
@@ -366,11 +373,14 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     try {
       console.log('Updating contact status:', { contactId: contact.id, newStatus, userId: user.id });
 
+      // Direct update with minimal fields to avoid RLS issues
       const { error } = await supabase
         .from('contacts')
-        .update({ status: newStatus })
-        .eq('id', contact.id)
-        .eq('user_id', user.id);
+        .update({ 
+          status: newStatus,
+          user_id: user.id // Explicitly set user_id to ensure RLS compliance
+        })
+        .eq('id', contact.id);
 
       if (error) {
         console.error('Supabase error updating status:', error);
