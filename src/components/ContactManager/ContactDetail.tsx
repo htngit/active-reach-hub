@@ -72,17 +72,20 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   }, [contact.id]);
 
   const fetchActivities = async () => {
+    if (!user) return;
+
     try {
       const { data, error } = await supabase
         .from('activities')
         .select('*')
         .eq('contact_id', contact.id)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('timestamp', { ascending: false });
 
       if (error) throw error;
       setActivities(data || []);
     } catch (error: any) {
+      console.error('Error fetching activities:', error);
       toast({
         title: "Error",
         description: "Failed to fetch activities",
@@ -113,7 +116,8 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
         const { error } = await supabase
           .from('contacts')
           .update({ status: 'Approached' })
-          .eq('id', contact.id);
+          .eq('id', contact.id)
+          .eq('user_id', user?.id);
 
         if (error) throw error;
 
@@ -133,6 +137,8 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   };
 
   const handleWhatsAppContact = async () => {
+    if (!user) return;
+
     try {
       // Format phone number for wa.me
       const formattedPhone = formatPhoneNumber(contact.phone_number);
@@ -145,7 +151,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
         .from('activities')
         .insert({
           contact_id: contact.id,
-          user_id: user?.id,
+          user_id: user.id,
           type: 'WhatsApp Direct Contact',
           details: `Direct WhatsApp contact to ${contact.phone_number}`,
           timestamp: new Date().toISOString(),
@@ -206,23 +212,38 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   };
 
   const handleSaveContact = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update contacts",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      console.log('Updating contact with data:', editedContact);
+
       const { error } = await supabase
         .from('contacts')
         .update({
           name: editedContact.name,
           phone_number: editedContact.phone_number,
-          email: editedContact.email,
-          company: editedContact.company,
-          address: editedContact.address,
-          notes: editedContact.notes,
-          labels: editedContact.labels,
+          email: editedContact.email || null,
+          company: editedContact.company || null,
+          address: editedContact.address || null,
+          notes: editedContact.notes || null,
+          labels: editedContact.labels && editedContact.labels.length > 0 ? editedContact.labels : null,
           status: editedContact.status,
-          potential_product: editedContact.potential_product,
+          potential_product: editedContact.potential_product && editedContact.potential_product.length > 0 ? editedContact.potential_product : null,
         })
-        .eq('id', contact.id);
+        .eq('id', contact.id)
+        .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error updating contact:', error);
+        throw error;
+      }
 
       setContact(editedContact);
       setNewStatus(editedContact.status);
@@ -235,25 +256,26 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       setIsEditing(false);
       onContactUpdated();
     } catch (error: any) {
+      console.error('Error updating contact:', error);
       toast({
         title: "Error",
-        description: "Failed to update contact",
+        description: error.message || "Failed to update contact",
         variant: "destructive",
       });
     }
   };
 
   const handleAddActivity = async () => {
-    if (!newActivity.type) return;
+    if (!newActivity.type || !user) return;
 
     try {
       const { error } = await supabase
         .from('activities')
         .insert({
           contact_id: contact.id,
-          user_id: user?.id,
+          user_id: user.id,
           type: newActivity.type,
-          details: newActivity.details,
+          details: newActivity.details || null,
           timestamp: new Date().toISOString(),
         });
 
@@ -271,9 +293,10 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       await fetchActivities();
       await autoUpdateStatusToApproached();
     } catch (error: any) {
+      console.error('Error adding activity:', error);
       toast({
         title: "Error",
-        description: "Failed to log activity",
+        description: error.message || "Failed to log activity",
         variant: "destructive",
       });
     }
@@ -296,15 +319,15 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   };
 
   const createAndAddLabel = async () => {
-    if (!newLabel.trim()) return;
+    if (!newLabel.trim() || !user) return;
 
     try {
       // Create label in database
       const { error } = await supabase
         .from('labels')
         .insert({
-          name: newLabel,
-          user_id: user?.id,
+          name: newLabel.trim(),
+          user_id: user.id,
         });
 
       if (error && error.code !== '23505') { // Ignore unique constraint error
@@ -312,13 +335,14 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       }
 
       // Add to contact
-      addLabel(newLabel);
-      setAvailableLabels([...availableLabels, newLabel]);
+      addLabel(newLabel.trim());
+      setAvailableLabels([...availableLabels, newLabel.trim()]);
       setNewLabel('');
     } catch (error: any) {
+      console.error('Error creating label:', error);
       toast({
         title: "Error",
-        description: "Failed to create label",
+        description: error.message || "Failed to create label",
         variant: "destructive",
       });
     }
@@ -330,13 +354,28 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update contact status",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      console.log('Updating contact status:', { contactId: contact.id, newStatus, userId: user.id });
+
       const { error } = await supabase
         .from('contacts')
         .update({ status: newStatus })
-        .eq('id', contact.id);
+        .eq('id', contact.id)
+        .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error updating status:', error);
+        throw error;
+      }
 
       // Update local state immediately
       setContact({ ...contact, status: newStatus });
@@ -349,11 +388,15 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       setIsUpdatingStatus(false);
       onContactUpdated();
     } catch (error: any) {
+      console.error('Error updating contact status:', error);
       toast({
         title: "Error",
-        description: "Failed to update contact status",
+        description: error.message || "Failed to update contact status",
         variant: "destructive",
       });
+      // Reset the status to original value on error
+      setNewStatus(contact.status);
+      setIsUpdatingStatus(false);
     }
   };
 
