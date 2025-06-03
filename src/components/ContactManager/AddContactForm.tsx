@@ -77,20 +77,47 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add contacts",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Prepare contact data with proper null handling
       const contactData = {
-        ...formData,
-        user_id: user?.id,
+        name: formData.name,
+        phone_number: formData.phone_number,
+        email: formData.email || null,
+        company: formData.company || null,
+        address: formData.address || null,
+        notes: formData.notes || null,
+        status: formData.status,
+        labels: formData.labels.length > 0 ? formData.labels : null,
+        potential_product: formData.potential_product.length > 0 ? formData.potential_product : null,
+        user_id: user.id,
+        owner_id: formData.owner_id || user.id,
         team_id: formData.team_id || null,
       };
 
-      const { error } = await supabase
-        .from('contacts')
-        .insert(contactData);
+      console.log('Submitting contact data:', contactData);
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('contacts')
+        .insert(contactData)
+        .select();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Contact created successfully:', data);
 
       toast({
         title: "Success",
@@ -99,9 +126,10 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
 
       onContactAdded();
     } catch (error: any) {
+      console.error('Error adding contact:', error);
       toast({
         title: "Error",
-        description: "Failed to add contact",
+        description: error.message || "Failed to add contact",
         variant: "destructive",
       });
     } finally {
@@ -126,24 +154,25 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
   };
 
   const createAndAddLabel = async () => {
-    if (!newLabel.trim()) return;
+    if (!newLabel.trim() || !user) return;
 
     try {
       const { error } = await supabase
         .from('labels')
         .insert({
-          name: newLabel,
-          user_id: user?.id,
+          name: newLabel.trim(),
+          user_id: user.id,
         });
 
       if (error && error.code !== '23505') {
         throw error;
       }
 
-      addLabel(newLabel);
-      setAvailableLabels([...availableLabels, newLabel]);
+      addLabel(newLabel.trim());
+      setAvailableLabels([...availableLabels, newLabel.trim()]);
       setNewLabel('');
     } catch (error: any) {
+      console.error('Error creating label:', error);
       toast({
         title: "Error",
         description: "Failed to create label",
@@ -286,18 +315,20 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
                     </Badge>
                   ))}
                 </div>
-                <div className="flex gap-2">
-                  <Select onValueChange={addLabel}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Add existing label" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableLabels.filter(label => !formData.labels.includes(label)).map(label => (
-                        <SelectItem key={label} value={label}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {availableLabels.length > 0 && (
+                  <div className="flex gap-2">
+                    <Select onValueChange={addLabel}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Add existing label" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableLabels.filter(label => !formData.labels.includes(label)).map(label => (
+                          <SelectItem key={label} value={label}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Input
                     placeholder="Create new label"
