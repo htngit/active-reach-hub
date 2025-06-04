@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -111,14 +112,33 @@ export const ContactList: React.FC<ContactListProps> = ({
   useEffect(() => {
     let filtered = contacts;
 
+    console.log('Filtering contacts:', { total: contacts.length, selectedOwner, user: user?.id });
+
     // Apply owner filter
     if (selectedOwner !== 'all') {
       if (selectedOwner === 'personal') {
-        filtered = filtered.filter(contact => !contact.team_id);
+        // Show personal contacts (no team_id and user owns them)
+        filtered = filtered.filter(contact => 
+          !contact.team_id && (contact.user_id === user?.id || contact.owner_id === user?.id)
+        );
       } else {
+        // Show contacts owned by specific user
         filtered = filtered.filter(contact => contact.owner_id === selectedOwner);
       }
+    } else {
+      // Show all accessible contacts (personal + team contacts)
+      const userTeamIds = teams.map(team => team.id);
+      filtered = filtered.filter(contact => {
+        // Personal contacts
+        const isPersonalContact = contact.user_id === user?.id || contact.owner_id === user?.id;
+        // Team contacts
+        const isTeamContact = contact.team_id && userTeamIds.includes(contact.team_id);
+        
+        return isPersonalContact || isTeamContact;
+      });
     }
+
+    console.log('After owner filter:', filtered.length);
 
     // Apply label filter
     if (selectedLabels.length > 0) {
@@ -137,8 +157,9 @@ export const ContactList: React.FC<ContactListProps> = ({
       );
     }
 
+    console.log('Final filtered contacts:', filtered.length);
     setFilteredContacts(filtered);
-  }, [contacts, selectedLabels, searchTerm, selectedOwner]);
+  }, [contacts, selectedLabels, searchTerm, selectedOwner, teams, user]);
 
   const toggleLabelFilter = (label: string) => {
     const newLabels = selectedLabels.includes(label)

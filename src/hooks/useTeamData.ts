@@ -22,22 +22,60 @@ export const useTeamData = () => {
     try {
       console.log('Fetching teams and members...');
       
-      const { data, error } = await supabase.functions.invoke('get-user-teams');
+      // Fetch teams where user is owner
+      const { data: ownedTeams, error: ownedTeamsError } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('owner_id', user.id);
 
-      if (error) {
-        console.error('Error fetching team data:', error);
-        // Set empty arrays instead of throwing to prevent UI breaks
-        setTeams([]);
-        setTeamMembers([]);
-        return;
+      if (ownedTeamsError) {
+        console.error('Error fetching owned teams:', ownedTeamsError);
       }
 
-      console.log('Team data received:', data);
-      setTeams(data.teams || []);
-      setTeamMembers(data.teamMembers || []);
+      // Fetch teams where user is a member
+      const { data: memberTeams, error: memberTeamsError } = await supabase
+        .from('team_members')
+        .select('team_id, teams(*)')
+        .eq('user_id', user.id);
+
+      if (memberTeamsError) {
+        console.error('Error fetching member teams:', memberTeamsError);
+      }
+
+      // Combine owned and member teams
+      const allTeams: Team[] = [
+        ...(ownedTeams || []),
+        ...(memberTeams?.map(mt => mt.teams).filter(Boolean) || [])
+      ];
+
+      // Remove duplicates by team id
+      const uniqueTeams = allTeams.filter((team, index, self) => 
+        team && index === self.findIndex(t => t.id === team.id)
+      );
+
+      console.log('All accessible teams:', uniqueTeams);
+      setTeams(uniqueTeams);
+
+      // Fetch all team members for these teams
+      if (uniqueTeams.length > 0) {
+        const teamIds = uniqueTeams.map(team => team.id);
+        const { data: allMembers, error: membersError } = await supabase
+          .from('team_members')
+          .select('*')
+          .in('team_id', teamIds);
+
+        if (membersError) {
+          console.error('Error fetching team members:', membersError);
+          setTeamMembers([]);
+        } else {
+          console.log('Team members data:', allMembers);
+          setTeamMembers(allMembers || []);
+        }
+      } else {
+        setTeamMembers([]);
+      }
     } catch (error) {
       console.error('Error fetching team data:', error);
-      // Set empty arrays instead of throwing to prevent UI breaks
       setTeams([]);
       setTeamMembers([]);
     } finally {

@@ -56,7 +56,7 @@ export const useCachedContacts = () => {
     }
   }, [user]);
 
-  // Fetch contacts with cache validation
+  // Fetch contacts directly from database without complex RLS
   const fetchContacts = useCallback(async (skipCache = false) => {
     if (!user) return;
 
@@ -65,55 +65,39 @@ export const useCachedContacts = () => {
 
     try {
       const cachedData = getCachedData();
-      const headers: Record<string, string> = {};
 
-      // Add cache headers if we have cached data and not skipping cache
+      // If we have cached data and not forcing refresh, use it
       if (cachedData && !skipCache) {
-        headers['If-None-Match'] = cachedData.etag;
-        headers['If-Modified-Since'] = cachedData.lastModified;
+        setContacts(cachedData.contacts);
+        setCacheInfo(`Using cached data from ${new Date(cachedData.cachedAt).toLocaleString()}`);
+        setLoading(false);
+        return;
       }
 
-      // Get auth token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No session found');
+      console.log('Fetching fresh contacts data...');
+
+      // Fetch all contacts - with RLS disabled, this will get all accessible contacts
+      const { data, error: fetchError } = await supabase
+        .from('contacts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (fetchError) {
+        throw fetchError;
       }
 
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+      console.log('Fresh contacts fetched:', data?.length || 0);
+      setContacts(data || []);
+      setCacheInfo(`Fresh data loaded at ${new Date().toLocaleString()}`);
 
-      // Call edge function with cache headers
-      const { data, error: functionError } = await supabase.functions.invoke('cached-contacts', {
-        headers,
-      });
-
-      if (functionError) {
-        // Check if it's a 304 Not Modified response
-        if (functionError.message?.includes('304') && cachedData) {
-          setContacts(cachedData.contacts);
-          setCacheInfo(`Using cached data from ${new Date(cachedData.cachedAt).toLocaleString()}`);
-          console.log('Using cached contacts data');
-          return;
-        }
-        throw functionError;
-      }
-
-      // Fresh data received
-      if (data?.data) {
-        setContacts(data.data);
-        setCacheInfo(`Fresh data loaded at ${new Date().toLocaleString()}`);
-
-        // Cache the fresh data if we have cache headers
-        const response = data;
-        if (response.cached_at) {
-          const newCacheData: CacheData = {
-            contacts: data.data,
-            etag: '', // Will be set by edge function response headers
-            lastModified: '', // Will be set by edge function response headers
-            cachedAt: response.cached_at,
-          };
-          setCachedData(newCacheData);
-        }
-      }
+      // Cache the fresh data
+      const newCacheData: CacheData = {
+        contacts: data || [],
+        etag: '', 
+        lastModified: '',
+        cachedAt: new Date().toISOString(),
+      };
+      setCachedData(newCacheData);
 
     } catch (err: any) {
       console.error('Error fetching contacts:', err);
