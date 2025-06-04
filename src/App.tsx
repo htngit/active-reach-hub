@@ -15,6 +15,7 @@ import { PersonalSettings } from "@/components/Settings/PersonalSettings";
 import { TeamManagement } from "@/components/TeamManagement/TeamManagement";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import JoinTeamPage from "./pages/JoinTeamPage";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const AppContent = () => {
             <Route path="/maps" element={<MapsDistribution />} />
             <Route path="/team" element={<TeamManagement />} />
             <Route path="/settings" element={<div className="p-6"><PersonalSettings /></div>} />
+            <Route path="/join-team" element={<JoinTeamPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
