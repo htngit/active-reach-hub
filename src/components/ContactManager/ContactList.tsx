@@ -29,6 +29,7 @@ interface Contact {
   created_at: string;
   owner_id?: string;
   team_id?: string;
+  user_id?: string; // Added user_id property
 }
 
 interface ContactListProps {
