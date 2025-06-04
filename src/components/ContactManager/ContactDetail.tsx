@@ -113,21 +113,13 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   const autoUpdateStatusToApproached = async () => {
     if (contact.status === 'New' && activities.length > 0) {
       try {
-        // Use direct SQL update to avoid RLS issues
-        const { error } = await supabase.rpc('update_contact_status', {
-          contact_id: contact.id,
-          new_status: 'Approached'
-        });
-
-        if (error) {
-          // Fallback to regular update if RPC doesn't exist
-          const { error: updateError } = await supabase
-            .from('contacts')
-            .update({ status: 'Approached' })
-            .eq('id', contact.id);
+        // Direct update without RPC call
+        const { error } = await supabase
+          .from('contacts')
+          .update({ status: 'Approached' })
+          .eq('id', contact.id);
           
-          if (updateError) throw updateError;
-        }
+        if (error) throw error;
 
         setContact({ ...contact, status: 'Approached' });
         setNewStatus('Approached');
@@ -373,13 +365,10 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     try {
       console.log('Updating contact status:', { contactId: contact.id, newStatus, userId: user.id });
 
-      // Direct update with minimal fields to avoid RLS issues
+      // Simple direct update
       const { error } = await supabase
         .from('contacts')
-        .update({ 
-          status: newStatus,
-          user_id: user.id // Explicitly set user_id to ensure RLS compliance
-        })
+        .update({ status: newStatus })
         .eq('id', contact.id);
 
       if (error) {
