@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,7 @@ interface Contact {
   created_at: string;
   owner_id?: string;
   team_id?: string;
-  user_id?: string; // Added user_id property
+  user_id: string; // Added user_id property to match the database schema
 }
 
 interface ContactListProps {

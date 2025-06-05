@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,7 +62,7 @@ const JoinTeamPage: React.FC = () => {
           toast({
             title: 'Success',
             description: `Successfully joined team: ${data.team_name || ''}`,
-            variant: 'success',
+            variant: 'default',
           });
           navigate('/team'); // Redirect to team management page
         } else {
