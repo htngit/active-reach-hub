@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -113,7 +114,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
   const autoUpdateStatusToApproached = async () => {
     if (contact.status === 'New' && activities.length > 0) {
       try {
-        // Direct update without RPC call
+        // Simple direct update without any RLS functions
         const { error } = await supabase
           .from('contacts')
           .update({ status: 'Approached' })
@@ -224,6 +225,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     try {
       console.log('Updating contact with data:', editedContact);
 
+      // Simple direct update without any complex RLS or functions
       const { error } = await supabase
         .from('contacts')
         .update({
@@ -365,7 +367,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     try {
       console.log('Updating contact status:', { contactId: contact.id, newStatus, userId: user.id });
 
-      // Simple direct update
+      // Simple direct update without any RLS functions or complex queries
       const { error } = await supabase
         .from('contacts')
         .update({ status: newStatus })
