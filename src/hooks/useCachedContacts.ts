@@ -1,23 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Contact {
-  id: string;
-  name: string;
-  phone_number: string;
-  email?: string;
-  company?: string;
-  address?: string;
-  notes?: string;
-  labels?: string[];
-  status: string;
-  potential_product?: string[];
-  created_at: string;
-  owner_id?: string;
-  team_id?: string;
-}
+import { Contact } from '@/types/contact';
 
 interface CacheData {
   contacts: Contact[];

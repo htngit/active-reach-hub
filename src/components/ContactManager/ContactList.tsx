@@ -13,23 +13,7 @@ import { ImportDropdown } from './ImportDropdown';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { useTeamData } from '@/hooks/useTeamData';
 import { supabase } from '@/integrations/supabase/client';
-
-interface Contact {
-  id: string;
-  name: string;
-  phone_number: string;
-  email?: string;
-  company?: string;
-  address?: string;
-  notes?: string;
-  labels?: string[];
-  status: string;
-  potential_product?: string[];
-  created_at: string;
-  owner_id?: string;
-  team_id?: string;
-  user_id: string; // Added user_id property to match the database schema
-}
+import { Contact } from '@/types/contact';
 
 interface ContactListProps {
   onSelectContact: (contact: Contact) => void;
