@@ -282,6 +282,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_team_invitation: {
+        Args: { p_token: string; p_user_id: string }
+        Returns: Json
+      }
       can_user_access_contact: {
         Args: { contact_id: string; user_id: string }
         Returns: boolean

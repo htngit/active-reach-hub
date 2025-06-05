@@ -6,6 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
+interface AcceptInvitationResponse {
+  success: boolean;
+  message: string;
+  team_name?: string;
+}
+
 const JoinTeamPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,7 +44,10 @@ const JoinTeamPage: React.FC = () => {
       }
 
       try {
-        const { data, error } = await supabase.rpc('accept_team_invitation', { p_token: token, p_user_id: user.id });
+        const { data, error } = await supabase.rpc('accept_team_invitation', { 
+          p_token: token, 
+          p_user_id: user.id 
+        }) as { data: AcceptInvitationResponse | null, error: any };
 
         if (error) {
           console.error('Error accepting invitation:', error);
