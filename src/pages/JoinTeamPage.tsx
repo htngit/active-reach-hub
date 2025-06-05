@@ -2,12 +2,7 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -28,23 +23,21 @@ const JoinTeamPage: React.FC = () => {
           description: 'No invitation token found.',
           variant: 'destructive',
         });
-        navigate('/contacts'); // Redirect to contacts or a suitable page
+        navigate('/contacts');
         return;
       }
 
       if (!user) {
-        // If user is not logged in, redirect to login with a message
         toast({
           title: 'Authentication Required',
           description: 'Please log in to accept the team invitation.',
           variant: 'default',
         });
-        navigate('/login'); // Assuming a /login route exists
+        navigate('/login');
         return;
       }
 
       try {
-        // Call Supabase RPC to accept the invitation
         const { data, error } = await supabase.rpc('accept_team_invitation', { p_token: token, p_user_id: user.id });
 
         if (error) {
@@ -64,7 +57,7 @@ const JoinTeamPage: React.FC = () => {
             description: `Successfully joined team: ${data.team_name || ''}`,
             variant: 'default',
           });
-          navigate('/team'); // Redirect to team management page
+          navigate('/team');
         } else {
           toast({
             title: 'Error',
