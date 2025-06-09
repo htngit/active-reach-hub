@@ -31,9 +31,14 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
 
     setInviting(true);
     try {
+      console.log('Starting invitation process for email:', inviteEmail);
+      
       // Generate invitation token
       const { data: tokenData, error: tokenError } = await supabase
         .rpc('generate_invitation_token');
+
+      console.log('Generated token:', tokenData);
+      console.log('Token generation error:', tokenError);
 
       if (tokenError) {
         console.error('Token generation error:', tokenError);
@@ -45,8 +50,10 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
       expiresAt.setDate(expiresAt.getDate() + 7);
       
       console.log('Creating invitation with expiration:', expiresAt.toISOString());
+      console.log('Team ID:', team.id);
+      console.log('Invited by:', user?.id);
 
-      const { error } = await supabase
+      const { data: insertData, error } = await supabase
         .from('team_invitations')
         .insert({
           team_id: team.id,
@@ -54,12 +61,27 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
           email: inviteEmail.trim(),
           token: tokenData,
           expires_at: expiresAt.toISOString(),
-        });
+        })
+        .select()
+        .single();
+
+      console.log('Invitation insert result:', insertData);
+      console.log('Invitation insert error:', error);
 
       if (error) {
         console.error('Invitation creation error:', error);
         throw error;
       }
+
+      // Verify the invitation was created correctly
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('token', tokenData)
+        .single();
+
+      console.log('Verification data:', verifyData);
+      console.log('Verification error:', verifyError);
 
       toast({
         title: "Success",

@@ -29,9 +29,14 @@ const JoinTeamPage: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const inviteToken = params.get('token');
+    
+    console.log('Raw token from URL:', inviteToken);
+    console.log('URL search params:', location.search);
+    
     setToken(inviteToken);
 
     if (!inviteToken) {
+      console.error('No token found in URL');
       toast({
         title: 'Error',
         description: 'No invitation token found.',
@@ -42,6 +47,7 @@ const JoinTeamPage: React.FC = () => {
     }
 
     if (!user) {
+      console.log('User not authenticated, redirecting to login');
       toast({
         title: 'Authentication Required',
         description: 'Please log in to accept the team invitation.',
@@ -58,6 +64,8 @@ const JoinTeamPage: React.FC = () => {
   const checkUserPasswordStatus = async () => {
     if (!user) return;
     
+    console.log('Checking user password status for user:', user.id);
+    
     // For users who signed up via invitation link, they might not have a password set
     // We'll assume they need to set a password if this is their first time accessing via invitation
     const { data: userData } = await supabase.auth.getUser();
@@ -65,6 +73,10 @@ const JoinTeamPage: React.FC = () => {
     // Check if user was created recently (within last 10 minutes) which might indicate they just signed up
     const userCreatedAt = new Date(userData.user?.created_at || '');
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    
+    console.log('User created at:', userCreatedAt);
+    console.log('Ten minutes ago:', tenMinutesAgo);
+    console.log('User needs password setup:', userCreatedAt > tenMinutesAgo);
     
     if (userCreatedAt > tenMinutesAgo) {
       setNeedsPassword(true);
@@ -128,15 +140,34 @@ const JoinTeamPage: React.FC = () => {
   };
 
   const joinTeam = async () => {
-    if (!token || !user) return;
+    if (!token || !user) {
+      console.error('Missing token or user:', { token, user: user?.id });
+      return;
+    }
 
     setIsLoading(true);
 
     try {
+      console.log('Attempting to accept invitation with token:', token);
+      console.log('User ID:', user.id);
+      
+      // First, let's check if the invitation exists in the database
+      const { data: invitationCheck, error: checkError } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('token', token)
+        .single();
+
+      console.log('Invitation check result:', invitationCheck);
+      console.log('Invitation check error:', checkError);
+
       const { data, error } = await supabase.rpc('accept_team_invitation', { 
         p_token: token, 
         p_user_id: user.id 
       }) as { data: AcceptInvitationResponse | null, error: any };
+
+      console.log('RPC response data:', data);
+      console.log('RPC response error:', error);
 
       if (error) {
         console.error('Error accepting invitation:', error);
@@ -157,6 +188,7 @@ const JoinTeamPage: React.FC = () => {
         });
         navigate('/team');
       } else {
+        console.error('RPC returned failure:', data);
         toast({
           title: 'Error',
           description: data?.message || 'Failed to accept invitation.',
