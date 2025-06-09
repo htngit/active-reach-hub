@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,13 +32,10 @@ const JoinTeamPage: React.FC = () => {
     console.log('Raw token from URL:', inviteToken);
     console.log('URL search params:', location.search);
     
-    // Decode the token if it exists
-    const decodedToken = inviteToken ? decodeURIComponent(inviteToken) : null;
-    console.log('Decoded token:', decodedToken);
-    
-    setToken(decodedToken);
+    // Don't decode the token - use it as is since it should already be properly encoded in the URL
+    setToken(inviteToken);
 
-    if (!decodedToken) {
+    if (!inviteToken) {
       console.error('No token found in URL');
       toast({
         title: 'Error',
@@ -155,9 +151,9 @@ const JoinTeamPage: React.FC = () => {
       console.log('Attempting to accept invitation with token:', token);
       console.log('User ID:', user.id);
       console.log('Token length:', token.length);
-      console.log('Token chars:', Array.from(token).map(c => c.charCodeAt(0)));
       
       // First, let's check if the invitation exists in the database
+      // Use the token as-is without any additional decoding
       const { data: invitationCheck, error: checkError } = await supabase
         .from('team_invitations')
         .select('*')
@@ -167,18 +163,18 @@ const JoinTeamPage: React.FC = () => {
       console.log('Invitation check result:', invitationCheck);
       console.log('Invitation check error:', checkError);
 
-      // Also check with .maybeSingle() to see if there are multiple matches
-      const { data: allInvitations, error: allError } = await supabase
-        .from('team_invitations')
-        .select('*')
-        .eq('token', token);
-
-      console.log('All matching invitations:', allInvitations);
-      console.log('All invitations error:', allError);
-
       // Check if invitation exists and is not expired
-      if (!invitationCheck && checkError) {
+      if (!invitationCheck) {
         console.error('No invitation found with this token');
+        
+        // Let's also try to see all invitations for debugging
+        const { data: allInvitations } = await supabase
+          .from('team_invitations')
+          .select('*')
+          .limit(5);
+        
+        console.log('Sample invitations from database:', allInvitations);
+        
         toast({
           title: 'Error',
           description: 'Invalid invitation token.',
@@ -189,7 +185,7 @@ const JoinTeamPage: React.FC = () => {
       }
 
       // Check if invitation is expired
-      if (invitationCheck && new Date(invitationCheck.expires_at) < new Date()) {
+      if (new Date(invitationCheck.expires_at) < new Date()) {
         console.error('Invitation has expired');
         toast({
           title: 'Error',
@@ -201,7 +197,7 @@ const JoinTeamPage: React.FC = () => {
       }
 
       // Check if invitation has already been used
-      if (invitationCheck && invitationCheck.used_at) {
+      if (invitationCheck.used_at) {
         console.error('Invitation has already been used');
         toast({
           title: 'Error',
