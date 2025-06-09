@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
 interface AcceptInvitationResponse {
   success: boolean;
@@ -23,27 +25,18 @@ const JoinTeamPage: React.FC = () => {
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState('');
+  const [tokenFromUrl, setTokenFromUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check if there's a token in the URL for convenience
     const params = new URLSearchParams(location.search);
-    const inviteToken = params.get('token');
+    const urlToken = params.get('token');
     
-    console.log('Raw token from URL:', inviteToken);
-    console.log('URL search params:', location.search);
-    
-    // Don't decode the token - use it as is since it should already be properly encoded in the URL
-    setToken(inviteToken);
-
-    if (!inviteToken) {
-      console.error('No token found in URL');
-      toast({
-        title: 'Error',
-        description: 'No invitation token found.',
-        variant: 'destructive',
-      });
-      navigate('/contacts');
-      return;
+    if (urlToken) {
+      console.log('Token found in URL:', urlToken);
+      setTokenFromUrl(urlToken);
+      setToken(urlToken); // Pre-fill the form
     }
 
     if (!user) {
@@ -80,9 +73,6 @@ const JoinTeamPage: React.FC = () => {
     
     if (userCreatedAt > tenMinutesAgo) {
       setNeedsPassword(true);
-    } else {
-      // User already has account, proceed with invitation acceptance
-      joinTeam();
     }
   };
 
@@ -125,8 +115,6 @@ const JoinTeamPage: React.FC = () => {
       });
 
       setNeedsPassword(false);
-      // Now proceed with joining the team
-      joinTeam();
     } catch (error: any) {
       console.error('Error setting password:', error);
       toast({
@@ -139,25 +127,40 @@ const JoinTeamPage: React.FC = () => {
     }
   };
 
-  const joinTeam = async () => {
-    if (!token || !user) {
-      console.error('Missing token or user:', { token, user: user?.id });
+  const handleTokenSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!token.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter an invitation token.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'User not authenticated.',
+        variant: 'destructive',
+      });
       return;
     }
 
     setIsLoading(true);
 
     try {
-      console.log('Attempting to accept invitation with token:', token);
+      const trimmedToken = token.trim();
+      console.log('Attempting to join team with token:', trimmedToken);
       console.log('User ID:', user.id);
-      console.log('Token length:', token.length);
+      console.log('Token length:', trimmedToken.length);
       
       // First, let's check if the invitation exists in the database
-      // Use the token as-is without any additional decoding
       const { data: invitationCheck, error: checkError } = await supabase
         .from('team_invitations')
         .select('*')
-        .eq('token', token)
+        .eq('token', trimmedToken)
         .single();
 
       console.log('Invitation check result:', invitationCheck);
@@ -180,7 +183,6 @@ const JoinTeamPage: React.FC = () => {
           description: 'Invalid invitation token.',
           variant: 'destructive',
         });
-        navigate('/contacts');
         return;
       }
 
@@ -192,7 +194,6 @@ const JoinTeamPage: React.FC = () => {
           description: 'This invitation has expired.',
           variant: 'destructive',
         });
-        navigate('/contacts');
         return;
       }
 
@@ -204,12 +205,11 @@ const JoinTeamPage: React.FC = () => {
           description: 'This invitation has already been used.',
           variant: 'destructive',
         });
-        navigate('/contacts');
         return;
       }
 
       const { data, error } = await supabase.rpc('accept_team_invitation', { 
-        p_token: token, 
+        p_token: trimmedToken, 
         p_user_id: user.id 
       }) as { data: AcceptInvitationResponse | null, error: any };
 
@@ -223,7 +223,6 @@ const JoinTeamPage: React.FC = () => {
           description: `Failed to accept invitation: ${error.message}`,
           variant: 'destructive',
         });
-        navigate('/contacts');
         return;
       }
 
@@ -241,7 +240,6 @@ const JoinTeamPage: React.FC = () => {
           description: data?.message || 'Failed to accept invitation.',
           variant: 'destructive',
         });
-        navigate('/contacts');
       }
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -250,7 +248,6 @@ const JoinTeamPage: React.FC = () => {
         description: 'An unexpected error occurred.',
         variant: 'destructive',
       });
-      navigate('/contacts');
     } finally {
       setIsLoading(false);
     }
@@ -306,11 +303,49 @@ const JoinTeamPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
-      <p className="mt-4 text-lg text-gray-700 dark:text-gray-300">
-        {isLoading ? 'Joining team...' : 'Processing invitation...'}
-      </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Join Team</CardTitle>
+          <CardDescription>
+            Enter your invitation token to join the team.
+            {tokenFromUrl && (
+              <span className="block mt-2 text-sm text-blue-600">
+                We found a token in the URL and pre-filled it for you.
+              </span>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleTokenSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="token">Invitation Token</Label>
+              <Input
+                id="token"
+                type="text"
+                placeholder="Enter your invitation token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                required
+                className="mt-1"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                This token was provided in your invitation email or link.
+              </p>
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading || !token.trim()}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Joining team...
+                </>
+              ) : (
+                'Join Team'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
