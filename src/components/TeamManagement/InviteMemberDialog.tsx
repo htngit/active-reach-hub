@@ -40,8 +40,11 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
         throw tokenError;
       }
 
+      // Create expiration date (7 days from now)
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      console.log('Creating invitation with expiration:', expiresAt.toISOString());
 
       const { error } = await supabase
         .from('team_invitations')
@@ -58,8 +61,15 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
         throw error;
       }
 
+      toast({
+        title: "Success",
+        description: "Invitation sent successfully!",
+        variant: "default",
+      });
+
       setInviteEmail('');
       onInvitationSent();
+      onOpenChange(false);
     } catch (error: any) {
       console.error('Error sending invitation:', error);
       toast({
