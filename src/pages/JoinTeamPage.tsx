@@ -33,9 +33,13 @@ const JoinTeamPage: React.FC = () => {
     console.log('Raw token from URL:', inviteToken);
     console.log('URL search params:', location.search);
     
-    setToken(inviteToken);
+    // Decode the token if it exists
+    const decodedToken = inviteToken ? decodeURIComponent(inviteToken) : null;
+    console.log('Decoded token:', decodedToken);
+    
+    setToken(decodedToken);
 
-    if (!inviteToken) {
+    if (!decodedToken) {
       console.error('No token found in URL');
       toast({
         title: 'Error',
@@ -150,6 +154,8 @@ const JoinTeamPage: React.FC = () => {
     try {
       console.log('Attempting to accept invitation with token:', token);
       console.log('User ID:', user.id);
+      console.log('Token length:', token.length);
+      console.log('Token chars:', Array.from(token).map(c => c.charCodeAt(0)));
       
       // First, let's check if the invitation exists in the database
       const { data: invitationCheck, error: checkError } = await supabase
@@ -160,6 +166,51 @@ const JoinTeamPage: React.FC = () => {
 
       console.log('Invitation check result:', invitationCheck);
       console.log('Invitation check error:', checkError);
+
+      // Also check with .maybeSingle() to see if there are multiple matches
+      const { data: allInvitations, error: allError } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('token', token);
+
+      console.log('All matching invitations:', allInvitations);
+      console.log('All invitations error:', allError);
+
+      // Check if invitation exists and is not expired
+      if (!invitationCheck && checkError) {
+        console.error('No invitation found with this token');
+        toast({
+          title: 'Error',
+          description: 'Invalid invitation token.',
+          variant: 'destructive',
+        });
+        navigate('/contacts');
+        return;
+      }
+
+      // Check if invitation is expired
+      if (invitationCheck && new Date(invitationCheck.expires_at) < new Date()) {
+        console.error('Invitation has expired');
+        toast({
+          title: 'Error',
+          description: 'This invitation has expired.',
+          variant: 'destructive',
+        });
+        navigate('/contacts');
+        return;
+      }
+
+      // Check if invitation has already been used
+      if (invitationCheck && invitationCheck.used_at) {
+        console.error('Invitation has already been used');
+        toast({
+          title: 'Error',
+          description: 'This invitation has already been used.',
+          variant: 'destructive',
+        });
+        navigate('/contacts');
+        return;
+      }
 
       const { data, error } = await supabase.rpc('accept_team_invitation', { 
         p_token: token, 

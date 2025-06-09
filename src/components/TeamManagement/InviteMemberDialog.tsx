@@ -52,6 +52,7 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
       console.log('Creating invitation with expiration:', expiresAt.toISOString());
       console.log('Team ID:', team.id);
       console.log('Invited by:', user?.id);
+      console.log('Raw token before insert:', tokenData);
 
       const { data: insertData, error } = await supabase
         .from('team_invitations')
@@ -82,6 +83,12 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
 
       console.log('Verification data:', verifyData);
       console.log('Verification error:', verifyError);
+
+      // Create the invitation link with URL encoding
+      const encodedToken = encodeURIComponent(tokenData);
+      const invitationLink = `${window.location.origin}/join-team?token=${encodedToken}`;
+      console.log('Generated invitation link:', invitationLink);
+      console.log('Encoded token:', encodedToken);
 
       toast({
         title: "Success",
