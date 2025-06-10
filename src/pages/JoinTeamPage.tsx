@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -152,42 +151,39 @@ const JoinTeamPage: React.FC = () => {
 
     try {
       const trimmedToken = token.trim();
-      console.log('Attempting to join team with token:', trimmedToken);
+      console.log('Processing token:', trimmedToken);
       console.log('User ID:', user.id);
-      console.log('Token length:', trimmedToken.length);
       
-      // First, let's check if the invitation exists in the database
-      const { data: invitationCheck, error: checkError } = await supabase
+      // First, fetch the invitation from the database using the token
+      const { data: invitation, error: fetchError } = await supabase
         .from('team_invitations')
-        .select('*')
+        .select(`
+          *,
+          teams:team_id (
+            id,
+            name,
+            description,
+            owner_id
+          )
+        `)
         .eq('token', trimmedToken)
         .single();
 
-      console.log('Invitation check result:', invitationCheck);
-      console.log('Invitation check error:', checkError);
+      console.log('Invitation fetch result:', invitation);
+      console.log('Invitation fetch error:', fetchError);
 
-      // Check if invitation exists and is not expired
-      if (!invitationCheck) {
+      if (fetchError || !invitation) {
         console.error('No invitation found with this token');
-        
-        // Let's also try to see all invitations for debugging
-        const { data: allInvitations } = await supabase
-          .from('team_invitations')
-          .select('*')
-          .limit(5);
-        
-        console.log('Sample invitations from database:', allInvitations);
-        
         toast({
           title: 'Error',
-          description: 'Invalid invitation token.',
+          description: 'Invalid invitation token. Please check your token and try again.',
           variant: 'destructive',
         });
         return;
       }
 
       // Check if invitation is expired
-      if (new Date(invitationCheck.expires_at) < new Date()) {
+      if (new Date(invitation.expires_at) < new Date()) {
         console.error('Invitation has expired');
         toast({
           title: 'Error',
@@ -198,7 +194,7 @@ const JoinTeamPage: React.FC = () => {
       }
 
       // Check if invitation has already been used
-      if (invitationCheck.used_at) {
+      if (invitation.used_at) {
         console.error('Invitation has already been used');
         toast({
           title: 'Error',
@@ -208,44 +204,65 @@ const JoinTeamPage: React.FC = () => {
         return;
       }
 
-      const { data, error } = await supabase.rpc('accept_team_invitation', { 
-        p_token: trimmedToken, 
-        p_user_id: user.id 
-      }) as { data: AcceptInvitationResponse | null, error: any };
+      // Check if user is already a member of this team
+      const { data: existingMember, error: memberCheckError } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('team_id', invitation.team_id)
+        .eq('user_id', user.id)
+        .single();
 
-      console.log('RPC response data:', data);
-      console.log('RPC response error:', error);
-
-      if (error) {
-        console.error('Error accepting invitation:', error);
+      if (existingMember) {
+        console.log('User is already a member of this team');
         toast({
-          title: 'Error',
-          description: `Failed to accept invitation: ${error.message}`,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (data && data.success) {
-        toast({
-          title: 'Success',
-          description: `Successfully joined team: ${data.team_name || ''}`,
+          title: 'Info',
+          description: 'You are already a member of this team.',
           variant: 'default',
         });
         navigate('/team');
-      } else {
-        console.error('RPC returned failure:', data);
-        toast({
-          title: 'Error',
-          description: data?.message || 'Failed to accept invitation.',
-          variant: 'destructive',
-        });
+        return;
       }
-    } catch (err) {
+
+      // Add user to team_members
+      const { error: memberInsertError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: invitation.team_id,
+          user_id: user.id,
+          role: 'member'
+        });
+
+      if (memberInsertError) {
+        console.error('Error adding user to team:', memberInsertError);
+        throw memberInsertError;
+      }
+
+      // Mark invitation as used
+      const { error: updateError } = await supabase
+        .from('team_invitations')
+        .update({ used_at: new Date().toISOString() })
+        .eq('id', invitation.id);
+
+      if (updateError) {
+        console.error('Error marking invitation as used:', updateError);
+        // This is not critical, continue with success
+      }
+
+      console.log('Successfully joined team:', invitation.teams?.name);
+      
+      toast({
+        title: 'Success',
+        description: `Successfully joined team: ${invitation.teams?.name || 'Unknown Team'}`,
+        variant: 'default',
+      });
+
+      navigate('/team');
+
+    } catch (err: any) {
       console.error('Unexpected error:', err);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred.',
+        description: err.message || 'An unexpected error occurred.',
         variant: 'destructive',
       });
     } finally {
