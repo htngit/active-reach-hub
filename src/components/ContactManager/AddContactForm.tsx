@@ -229,19 +229,12 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Contact Owner</label>
-              <Select value={formData.owner_id === user?.id ? 'personal' : formData.owner_id} onValueChange={handleOwnerChange}>
+              <Select value={formData.owner_id} onValueChange={handleOwnerChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select contact owner" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="personal">Personal Contact</SelectItem>
-                  {teams.map(team => 
-                    getTeamMemberNames(team.id).map(member => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {getUserNameById(member.id)} ({team.name})
-                      </SelectItem>
-                    ))
-                  )}
+                  <SelectItem key={user?.id} value={user?.id}>Personal Contact</SelectItem>
                 </SelectContent>
               </Select>
             </div>
