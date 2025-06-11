@@ -21,6 +21,7 @@ const JoinTeamPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true); // Add state for auth loading
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -38,19 +39,33 @@ const JoinTeamPage: React.FC = () => {
       setToken(urlToken); // Pre-fill the form
     }
 
-    if (!user) {
-      console.log('User not authenticated, redirecting to login');
-      toast({
-        title: 'Authentication Required',
-        description: 'Please log in to accept the team invitation.',
-        variant: 'default',
-      });
-      navigate('/login');
-      return;
-    }
+    // Give Supabase Auth time to process any tokens in the URL
+    const processAuth = async () => {
+      try {
+        // Small delay to ensure Supabase Auth has time to process any tokens
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Now check authentication status
+        if (!user) {
+          console.log('User not authenticated, redirecting to login');
+          toast({
+            title: 'Authentication Required',
+            description: 'Please log in to accept the team invitation.',
+            variant: 'default',
+          });
+          navigate('/login');
+          return;
+        }
 
-    // Check if user needs to set up password
-    checkUserPasswordStatus();
+        // Check if user needs to set up password
+        await checkUserPasswordStatus();
+      } finally {
+        // Mark auth loading as complete
+        setAuthLoading(false);
+      }
+    };
+
+    processAuth();
   }, [location.search, navigate, user, toast]);
 
   const checkUserPasswordStatus = async () => {
@@ -59,18 +74,24 @@ const JoinTeamPage: React.FC = () => {
     console.log('Checking user password status for user:', user.id);
     
     // For users who signed up via invitation link, they might not have a password set
-    // We'll assume they need to set a password if this is their first time accessing via invitation
     const { data: userData } = await supabase.auth.getUser();
     
-    // Check if user was created recently (within last 10 minutes) which might indicate they just signed up
+    // Check if email is confirmed but user was created recently
+    // This is a better indicator for users who just clicked an invitation link
     const userCreatedAt = new Date(userData.user?.created_at || '');
+    const emailConfirmedAt = userData.user?.email_confirmed_at;
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     
     console.log('User created at:', userCreatedAt);
+    console.log('Email confirmed at:', emailConfirmedAt);
     console.log('Ten minutes ago:', tenMinutesAgo);
-    console.log('User needs password setup:', userCreatedAt > tenMinutesAgo);
     
-    if (userCreatedAt > tenMinutesAgo) {
+    // User needs password setup if they were created recently AND their email is confirmed
+    // This typically happens when they sign up via an invitation link
+    const needsPasswordSetup = userCreatedAt > tenMinutesAgo && emailConfirmedAt;
+    console.log('User needs password setup:', needsPasswordSetup);
+    
+    if (needsPasswordSetup) {
       setNeedsPassword(true);
     }
   };
@@ -80,189 +101,108 @@ const JoinTeamPage: React.FC = () => {
     
     if (password !== confirmPassword) {
       toast({
-        title: 'Error',
-        description: 'Passwords do not match.',
+        title: 'Password Mismatch',
+        description: 'The passwords you entered do not match.',
         variant: 'destructive',
       });
       return;
     }
-
+    
     if (password.length < 6) {
       toast({
-        title: 'Error',
+        title: 'Password Too Short',
         description: 'Password must be at least 6 characters long.',
         variant: 'destructive',
       });
       return;
     }
-
-    setIsLoading(true);
-
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Password created successfully!',
-        variant: 'default',
-      });
-
-      setNeedsPassword(false);
-    } catch (error: any) {
-      console.error('Error setting password:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to set password: ${error.message}`,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    
+    // The password validation is already handled in handleAcceptInvitation
+    // Just call it directly to process both password update and team joining
+    await handleAcceptInvitation();
   };
 
-  const handleTokenSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!token.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter an invitation token.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handleAcceptInvitation = async () => {
     if (!user) {
       toast({
-        title: 'Error',
-        description: 'User not authenticated.',
+        title: 'Authentication Required',
+        description: 'Please log in to accept the team invitation.',
+        variant: 'default',
+      });
+      navigate('/login');
+      return;
+    }
+
+    if (needsPassword && (password !== confirmPassword || password.length < 6)) {
+      toast({
+        title: 'Password Error',
+        description: 'Passwords must match and be at least 6 characters long.',
         variant: 'destructive',
       });
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      const trimmedToken = token.trim();
-      console.log('Processing token:', trimmedToken);
-      console.log('User ID:', user.id);
+      setIsLoading(true);
+
+      // If user needs to set a password, update it first
+      if (needsPassword && password) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: password,
+        });
+
+        if (passwordError) {
+          throw new Error(`Error setting password: ${passwordError.message}`);
+        }
+
+        toast({
+          title: 'Password Set',
+          description: 'Your password has been set successfully.',
+        });
+      }
+
+      // Get the final token from URL or input field
+      const finalToken = tokenFromUrl || token;
+      if (!finalToken) {
+        throw new Error('No invitation token provided');
+      }
+
+      console.log('Accepting invitation with token:', finalToken);
       
-      // First, fetch the invitation from the database using the token
-      const { data: invitation, error: fetchError } = await supabase
-        .from('team_invitations')
-        .select(`
-          *,
-          teams:team_id (
-            id,
-            name,
-            description,
-            owner_id
-          )
-        `)
-        .eq('token', trimmedToken)
-        .single();
-
-      console.log('Invitation fetch result:', invitation);
-      console.log('Invitation fetch error:', fetchError);
-
-      if (fetchError || !invitation) {
-        console.error('No invitation found with this token');
-        toast({
-          title: 'Error',
-          description: 'Invalid invitation token. Please check your token and try again.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Check if invitation is expired
-      if (new Date(invitation.expires_at) < new Date()) {
-        console.error('Invitation has expired');
-        toast({
-          title: 'Error',
-          description: 'This invitation has expired.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Check if invitation has already been used
-      if (invitation.used_at) {
-        console.error('Invitation has already been used');
-        toast({
-          title: 'Error',
-          description: 'This invitation has already been used.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Check if user is already a member of this team
-      const { data: existingMember, error: memberCheckError } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('team_id', invitation.team_id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (existingMember) {
-        console.log('User is already a member of this team');
-        toast({
-          title: 'Info',
-          description: 'You are already a member of this team.',
-          variant: 'default',
-        });
-        navigate('/team');
-        return;
-      }
-
-      // Add user to team_members
-      const { error: memberInsertError } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: invitation.team_id,
-          user_id: user.id,
-          role: 'member'
+      // Use the RPC function to accept the invitation
+      // This handles all validation and database updates in a single transaction
+      const { data: result, error: rpcError } = await supabase
+        .rpc('accept_team_invitation', {
+          p_token: finalToken,
+          p_user_id: user.id
         });
 
-      if (memberInsertError) {
-        console.error('Error adding user to team:', memberInsertError);
-        throw memberInsertError;
+      if (rpcError) {
+        throw new Error(rpcError.message || 'Error accepting invitation');
       }
 
-      // Mark invitation as used
-      const { error: updateError } = await supabase
-        .from('team_invitations')
-        .update({ used_at: new Date().toISOString() })
-        .eq('id', invitation.id);
-
-      if (updateError) {
-        console.error('Error marking invitation as used:', updateError);
-        // This is not critical, continue with success
+      if (!result || !result.success) {
+        throw new Error(result?.message || 'Failed to accept invitation');
       }
 
-      console.log('Successfully joined team:', invitation.teams?.name);
-      
+      // Success! Redirect to the team page
       toast({
-        title: 'Success',
-        description: `Successfully joined team: ${invitation.teams?.name || 'Unknown Team'}`,
-        variant: 'default',
+        title: 'Team Joined',
+        description: result.message || 'You have successfully joined the team!',
       });
 
-      navigate('/team');
-
-    } catch (err: any) {
-      console.error('Unexpected error:', err);
+      // Navigate to the team page
+      if (result.team_id) {
+        navigate(`/teams/${result.team_id}`);
+      } else {
+        // Fallback to teams list if team_id is not returned
+        navigate('/teams');
+      }
+    } catch (error: any) {
+      console.error('Error accepting invitation:', error);
       toast({
         title: 'Error',
-        description: err.message || 'An unexpected error occurred.',
+        description: error.message || 'An error occurred while accepting the invitation.',
         variant: 'destructive',
       });
     } finally {
@@ -319,6 +259,25 @@ const JoinTeamPage: React.FC = () => {
     );
   }
 
+  // Show loading indicator while authentication is being processed
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Checking Authentication</CardTitle>
+            <CardDescription>
+              Please wait while we verify your account...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center py-6">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
       <Card className="w-full max-w-md">
@@ -334,7 +293,7 @@ const JoinTeamPage: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleTokenSubmit} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); handleAcceptInvitation(); }} className="space-y-4">
             <div>
               <Label htmlFor="token">Invitation Token</Label>
               <Input
