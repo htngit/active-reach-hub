@@ -9,6 +9,7 @@ import { LoginForm } from "@/components/Auth/LoginForm";
 import { ResetPassword } from "@/components/Auth/ResetPassword";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { MobileNav } from "@/components/MobileNav";
 import { ContactManager } from "@/components/ContactManager/ContactManager";
 import { MapsDistribution } from "@/components/MapsDistribution/MapsDistribution";
 import { PersonalSettings } from "@/components/Settings/PersonalSettings";
@@ -38,6 +39,7 @@ const AppContent = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
+        <MobileNav />
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<ContactManager />} />
