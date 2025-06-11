@@ -110,16 +110,9 @@ export const ContactList: React.FC<ContactListProps> = ({
         filtered = filtered.filter(contact => contact.owner_id === selectedOwner);
       }
     } else {
-      // Show all accessible contacts (personal + team contacts)
-      const userTeamIds = teams.map(team => team.id);
-      filtered = filtered.filter(contact => {
-        // Personal contacts
-        const isPersonalContact = contact.user_id === user?.id || contact.owner_id === user?.id;
-        // Team contacts
-        const isTeamContact = contact.team_id && userTeamIds.includes(contact.team_id);
-        
-        return isPersonalContact || isTeamContact;
-      });
+      // If 'all' is selected, all contacts fetched via RLS are already accessible.
+      // No further filtering needed based on owner here.
+      filtered = contacts;
     }
 
     console.log('After owner filter:', filtered.length);
