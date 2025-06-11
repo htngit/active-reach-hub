@@ -15,8 +15,10 @@ export const PersonalSettings = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState(user?.user_metadata?.name || '');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
 
   const handleUpdateEmail = async () => {
     if (!newEmail || newEmail === user?.email) {
@@ -108,6 +110,39 @@ export const PersonalSettings = () => {
     }
   };
 
+  const handleUpdateName = async () => {
+    if (!name.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingName(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { name: name.trim() }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Name Updated",
+        description: "Your name has been successfully updated",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingName(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -130,6 +165,25 @@ export const PersonalSettings = () => {
           <div>
             <label className="text-sm font-medium">User ID</label>
             <p className="text-sm text-gray-600 font-mono">{user?.id}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Name</label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+              />
+              <Button 
+                onClick={handleUpdateName}
+                disabled={isUpdatingName}
+                size="sm"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isUpdatingName ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium">Current Email</label>

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useTeamData } from '@/hooks/useTeamData';
+import { useUserData } from '@/hooks/useUserData';
 
 interface AddContactFormProps {
   onBack: () => void;
@@ -42,6 +43,7 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { teams, getTeamMemberNames } = useTeamData();
+  const { getUserNameById } = useUserData();
 
   useEffect(() => {
     if (user) {
@@ -236,7 +238,7 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
                   {teams.map(team => 
                     getTeamMemberNames(team.id).map(member => (
                       <SelectItem key={member.id} value={member.id}>
-                        {member.name} ({team.name})
+                        {getUserNameById(member.id)} ({team.name})
                       </SelectItem>
                     ))
                   )}

@@ -9,6 +9,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  getUserName: (userId?: string) => string;
+  updateUserName: (name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,8 +66,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (error) throw error;
   };
 
+  const getUserName = (userId?: string) => {
+    // If no userId is provided, use the current user
+    const targetUser = userId ? undefined : user;
+    
+    if (targetUser) {
+      // Try to get name from user metadata
+      const metadata = targetUser.user_metadata;
+      if (metadata && metadata.name) {
+        return metadata.name;
+      }
+      // Fallback to email
+      if (targetUser.email) {
+        return targetUser.email.split('@')[0];
+      }
+    }
+    
+    // For other users or if current user has no name/email
+    if (userId) {
+      // Return a shortened version of the ID for now
+      // This will be replaced by the useUserData hook
+      return `User ${userId.substring(0, 8)}...`;
+    }
+    
+    // Final fallback
+    return 'Unknown User';
+  };
+
+  const updateUserName = async (name: string) => {
+    if (!user) throw new Error('No user logged in');
+    
+    const { error } = await supabase.auth.updateUser({
+      data: { name }
+    });
+    
+    if (error) throw error;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, getUserName, updateUserName }}>
       {children}
     </AuthContext.Provider>
   );

@@ -12,6 +12,7 @@ import { ExportDropdown } from './ExportDropdown';
 import { ImportDropdown } from './ImportDropdown';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { useTeamData } from '@/hooks/useTeamData';
+import { useUserData } from '@/hooks/useUserData';
 import { supabase } from '@/integrations/supabase/client';
 import { Contact } from '@/types/contact';
 
@@ -33,6 +34,7 @@ export const ContactList: React.FC<ContactListProps> = ({
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [selectedOwner, setSelectedOwner] = useState<string>('all');
   const { user } = useAuth();
+  const { getUserNameById } = useUserData();
   
   // Use the cached contacts hook
   const { 
@@ -151,14 +153,11 @@ export const ContactList: React.FC<ContactListProps> = ({
 
   const getOwnerDisplay = (contact: Contact) => {
     if (!contact.team_id) {
-      return contact.owner_id === user?.id ? 'Personal' : 'Unknown';
+      return contact.owner_id === user?.id ? 'Personal' : getUserNameById(contact.owner_id);
     }
     
     const team = teams.find(t => t.id === contact.team_id);
-    const members = getTeamMemberNames(contact.team_id || '');
-    const owner = members.find(m => m.id === contact.owner_id);
-    
-    return owner ? `${owner.name.split(' ')[0]} (${team?.name || 'Team'})` : 'Team Contact';
+    return `${getUserNameById(contact.owner_id)} (${team?.name || 'Team'})`;
   };
 
   if (loading || teamsLoading) {

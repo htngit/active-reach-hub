@@ -1,14 +1,16 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Team, TeamMember } from '@/types/team';
+import { useUserData } from './useUserData';
 
 export const useTeamData = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { getUserNameById, fetchMultipleUsers } = useUserData();
 
   useEffect(() => {
     if (user) {
@@ -70,6 +72,12 @@ export const useTeamData = () => {
         } else {
           console.log('Team members data:', allMembers);
           setTeamMembers(allMembers || []);
+          
+          // Pre-fetch user data for all team members
+          if (allMembers && allMembers.length > 0) {
+            const userIds = allMembers.map(member => member.user_id);
+            fetchMultipleUsers(userIds);
+          }
         }
       } else {
         setTeamMembers([]);
@@ -88,15 +96,15 @@ export const useTeamData = () => {
     return teamMembers.filter(member => member.team_id === teamId);
   };
 
-  // Get team member names (simplified - in real app you'd join with profiles)
-  const getTeamMemberNames = (teamId: string) => {
+  // Get team member names using the useUserData hook
+  const getTeamMemberNames = useCallback((teamId: string) => {
     const members = getTeamMembers(teamId);
     return members.map(member => ({
       id: member.user_id,
-      name: `User ${member.user_id.substring(0, 8)}...`, // Simplified name
+      name: getUserNameById(member.user_id),
       role: member.role
     }));
-  };
+  }, [teamMembers, getUserNameById]);
 
   return {
     teams,
