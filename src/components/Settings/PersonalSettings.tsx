@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -16,9 +16,30 @@ export const PersonalSettings = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState(user?.user_metadata?.name || '');
+  const [username, setUsername] = useState('');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingName, setIsUpdatingName] = useState(false);
+  const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
+
+  // Fetch current username from profiles table when component mounts
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && !error) {
+          setUsername(data.username || '');
+        }
+      }
+    };
+    
+    fetchUsername();
+  }, [user]);
 
   const handleUpdateEmail = async () => {
     if (!newEmail || newEmail === user?.email) {
@@ -143,6 +164,58 @@ export const PersonalSettings = () => {
     }
   };
 
+  const handleUpdateUsername = async () => {
+    if (!username.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a username",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Basic validation for username format
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(username)) {
+      toast({
+        title: "Error",
+        description: "Username can only contain letters, numbers, and underscores",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingUsername(true);
+    try {
+      // Update the username in the profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username: username.trim() })
+        .eq('id', user?.id);
+
+      if (error) {
+        // Check if it's a unique constraint violation
+        if (error.code === '23505') {
+          throw new Error('This username is already taken. Please choose another one.');
+        }
+        throw error;
+      }
+
+      toast({
+        title: "Username Updated",
+        description: "Your username has been successfully updated",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingUsername(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -184,6 +257,26 @@ export const PersonalSettings = () => {
                 {isUpdatingName ? 'Saving...' : 'Save'}
               </Button>
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Username</label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+              />
+              <Button 
+                onClick={handleUpdateUsername}
+                disabled={isUpdatingUsername}
+                size="sm"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isUpdatingUsername ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Username can only contain letters, numbers, and underscores</p>
           </div>
           <div>
             <label className="text-sm font-medium">Current Email</label>
