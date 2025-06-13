@@ -15,30 +15,34 @@ export const PersonalSettings = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState(user?.user_metadata?.name || '');
+  const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingName, setIsUpdatingName] = useState(false);
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
 
-  // Fetch current username from profiles table when component mounts
+  // Fetch current profile data from profiles table when component mounts
   useEffect(() => {
-    const fetchUsername = async () => {
+    const fetchProfileData = async () => {
       if (user) {
         const { data, error } = await supabase
           .from('profiles')
-          .select('username')
+          .select('username, full_name')
           .eq('id', user.id)
           .single();
         
         if (data && !error) {
           setUsername(data.username || '');
+          setName(data.full_name || user?.user_metadata?.name || '');
+        } else {
+          // Fallback to user metadata if profile data is not available
+          setName(user?.user_metadata?.name || '');
         }
       }
     };
     
-    fetchUsername();
+    fetchProfileData();
   }, [user]);
 
   const handleUpdateEmail = async () => {
@@ -143,11 +147,20 @@ export const PersonalSettings = () => {
 
     setIsUpdatingName(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Update the full_name in the profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ full_name: name.trim() })
+        .eq('id', user?.id);
+
+      if (profileError) throw profileError;
+      
+      // Also update the name in user metadata for backward compatibility
+      const { error: authError } = await supabase.auth.updateUser({
         data: { name: name.trim() }
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
       toast({
         title: "Name Updated",
