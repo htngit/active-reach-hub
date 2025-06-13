@@ -33,6 +33,11 @@ interface Activity {
   details?: string;
   timestamp: string;
   api_call_status?: string;
+  user_id: string;
+  profiles?: {
+    full_name: string | null;
+    username: string | null;
+  };
 }
 
 interface ContactDetailProps {
@@ -76,20 +81,49 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // Fetch all activities for this contact
+      const { data: activitiesData, error: activitiesError } = await supabase
         .from('activities')
         .select('*')
         .eq('contact_id', contact.id)
-        .eq('user_id', user.id)
         .order('timestamp', { ascending: false });
 
-      if (error) throw error;
-      setActivities(data || []);
+      if (activitiesError) throw activitiesError;
+      
+      // If we have activities, fetch the profile information separately
+      if (activitiesData && activitiesData.length > 0) {
+        // Get unique user_ids from activities
+        const userIds = [...new Set(activitiesData.map(activity => activity.user_id))];
+        
+        // Fetch profiles for these users
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, username')
+          .in('id', userIds);
+          
+        if (profilesError) throw profilesError;
+        
+        // Create a map of user_id to profile data
+        const profilesMap = (profilesData || []).reduce((map, profile) => {
+          map[profile.id] = profile;
+          return map;
+        }, {} as Record<string, any>);
+        
+        // Combine activities with profile data
+        const activitiesWithProfiles = activitiesData.map(activity => ({
+          ...activity,
+          profiles: profilesMap[activity.user_id] || null
+        }));
+        
+        setActivities(activitiesWithProfiles);
+      } else {
+        setActivities([]);
+      }
     } catch (error: any) {
       console.error('Error fetching activities:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch activities",
+        description: "Failed to fetch activities: " + (error.message || JSON.stringify(error)),
         variant: "destructive",
       });
     }
@@ -701,7 +735,14 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
                 <div key={activity.id} className="border-l-2 border-gray-200 pl-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-medium">{activity.type}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{activity.type}</h4>
+                        {activity.user_id !== user?.id && (
+                          <Badge variant="outline" className="text-xs">
+                            {activity.profiles?.full_name || activity.profiles?.username || 'Team member'}
+                          </Badge>
+                        )}
+                      </div>
                       {activity.details && (
                         <p className="text-gray-600 text-sm">{activity.details}</p>
                       )}
