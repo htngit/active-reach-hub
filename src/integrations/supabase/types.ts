@@ -177,6 +177,56 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          price: number
+          status: string
+          stock: number
+          team_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          price: number
+          status?: string
+          stock?: number
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          price?: number
+          status?: string
+          stock?: number
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -315,6 +365,14 @@ export type Database = {
       }
       can_user_access_contact: {
         Args: { contact_id: string; user_id: string }
+        Returns: boolean
+      }
+      can_user_manage_product: {
+        Args: { product_id: string; user_id: string }
+        Returns: boolean
+      }
+      can_user_view_product: {
+        Args: { product_id: string; user_id: string }
         Returns: boolean
       }
       cleanup_expired_invitations: {
