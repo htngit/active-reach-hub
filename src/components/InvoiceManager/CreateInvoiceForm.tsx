@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useInvoiceData } from '@/hooks/useInvoiceData';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
@@ -81,11 +82,18 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
   };
 
   const selectProduct = (index: number, productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      updateItem(index, 'product_id', productId);
-      updateItem(index, 'description', product.name);
-      updateItem(index, 'unit_price', product.price || 0);
+    if (productId === 'custom') {
+      // Reset to custom item
+      updateItem(index, 'product_id', undefined);
+      updateItem(index, 'description', '');
+      updateItem(index, 'unit_price', 0);
+    } else {
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        updateItem(index, 'product_id', productId);
+        updateItem(index, 'description', product.name);
+        updateItem(index, 'unit_price', product.price || 0);
+      }
     }
   };
 
@@ -233,14 +241,14 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                   <div>
                     <label className="block text-sm font-medium mb-1">Product (Optional)</label>
                     <Select 
-                      value={item.product_id || ''} 
+                      value={item.product_id || 'custom'} 
                       onValueChange={(value) => selectProduct(index, value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select product" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Custom Item</SelectItem>
+                        <SelectItem value="custom">Custom Item</SelectItem>
                         {teamProducts.map(product => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.name} - ${product.price?.toFixed(2) || '0.00'}
