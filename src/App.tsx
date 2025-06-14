@@ -9,7 +9,6 @@ import AppSidebar from "@/components/AppSidebar";
 import { SidebarTrigger } from "@/components/SidebarTrigger";
 import Index from "./pages/Index";
 import { LoginForm } from "./components/Auth/LoginForm";
-import { ForgotPassword } from "./components/Auth/ForgotPassword";
 import { ResetPassword } from "./components/Auth/ResetPassword";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -34,7 +33,6 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<LoginForm />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/join-team" element={<JoinTeamPage />} />
               <Route path="/*" element={
