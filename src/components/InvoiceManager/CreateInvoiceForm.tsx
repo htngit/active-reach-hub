@@ -105,11 +105,14 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
 
   const availableContacts = getFilteredContacts();
 
-  // Filter contacts by selected team - fixed logic
+  // Fixed contact filtering logic - show all user's contacts regardless of team selection
   const teamContacts = selectedTeamId === 'personal' 
-    ? availableContacts.filter(contact => !contact.team_id) // Personal contacts (no team_id)
+    ? availableContacts.filter(contact => !contact.team_id) // Only personal contacts (no team_id)
     : selectedTeamId
-    ? availableContacts.filter(contact => contact.team_id === selectedTeamId) // Specific team contacts
+    ? [
+        ...availableContacts.filter(contact => contact.team_id === selectedTeamId), // Team contacts
+        ...availableContacts.filter(contact => !contact.team_id) // Plus personal contacts
+      ]
     : availableContacts; // All contacts if no team selected
 
   const teamProducts = products.filter(product => 
@@ -210,20 +213,6 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
         </Button>
         <h1 className="text-2xl font-bold">Create Invoice</h1>
       </div>
-
-      {/* Debug info for troubleshooting */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="p-4">
-          <div className="text-sm text-blue-700">
-            <div>Total contacts loaded: {contacts.length}</div>
-            <div>Available contacts: {availableContacts.length}</div>
-            <div>Team contacts: {teamContacts.length}</div>
-            <div>Selected team: {selectedTeamId || 'None'}</div>
-            <div>User ID: {user?.id}</div>
-            <div>Contact sample: {JSON.stringify(contacts.slice(0, 1), null, 2)}</div>
-          </div>
-        </CardContent>
-      </Card>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
