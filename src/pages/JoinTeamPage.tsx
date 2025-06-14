@@ -176,8 +176,8 @@ const JoinTeamPage: React.FC = () => {
         throw new Error(rpcError.message || 'Error accepting invitation');
       }
 
-      // Type assertion for the RPC result
-      const invitationResult = result as AcceptInvitationResponse;
+      // Type assertion for the RPC result - convert through unknown first
+      const invitationResult = result as unknown as AcceptInvitationResponse;
 
       if (!invitationResult || !invitationResult.success) {
         throw new Error(invitationResult?.message || 'Failed to accept invitation');
