@@ -59,9 +59,9 @@ export const useCachedContacts = () => {
         return;
       }
 
-      console.log('Fetching fresh contacts data...');
+      console.log('Fetching fresh contacts data with updated RLS policies...');
 
-      // Fetch all contacts - RLS will handle filtering based on user access
+      // Fetch all contacts - RLS will now properly handle team owner access
       const { data, error: fetchError } = await supabase
         .from('contacts')
         .select(`
@@ -79,16 +79,18 @@ export const useCachedContacts = () => {
 
       console.log('Fresh contacts fetched:', data?.length || 0);
       console.log('User ID:', user.id);
-      console.log('Sample contacts:', data?.slice(0, 3).map(c => ({
+      console.log('Sample contacts with ownership info:', data?.slice(0, 3).map(c => ({
         id: c.id,
         name: c.name,
         owner_id: c.owner_id,
+        user_id: c.user_id,
         team_id: c.team_id,
-        user_id: c.user_id
+        is_mine: c.user_id === user.id,
+        is_owned_by_me: c.owner_id === user.id
       })));
 
       setContacts(data || []);
-      setCacheInfo(`Fresh data loaded at ${new Date().toLocaleString()}`);
+      setCacheInfo(`Fresh data loaded at ${new Date().toLocaleString()} - ${data?.length || 0} contacts accessible`);
 
       // Cache the fresh data
       const newCacheData: CacheData = {
@@ -118,14 +120,18 @@ export const useCachedContacts = () => {
 
   // Force refresh (skip cache)
   const refreshContacts = useCallback(() => {
+    // Clear cache first to ensure fresh data
+    if (user) {
+      localStorage.removeItem(`contacts_cache_${user.id}`);
+    }
     fetchContacts(true);
-  }, [fetchContacts]);
+  }, [fetchContacts, user]);
 
   // Clear cache
   const clearCache = useCallback(() => {
     if (user) {
       localStorage.removeItem(`contacts_cache_${user.id}`);
-      setCacheInfo('Cache cleared');
+      setCacheInfo('Cache cleared - will fetch fresh data on next load');
     }
   }, [user]);
 

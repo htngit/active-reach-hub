@@ -73,7 +73,12 @@ export const ContactList: React.FC<ContactListProps> = ({
   useEffect(() => {
     let filtered = contacts;
 
-    console.log('Filtering contacts:', { total: contacts.length, user: user?.id });
+    console.log('Filtering contacts:', { 
+      total: contacts.length, 
+      user: user?.id,
+      myContacts: contacts.filter(c => c.user_id === user?.id).length,
+      teamMemberContacts: contacts.filter(c => c.user_id !== user?.id).length
+    });
 
     // Apply label filter
     if (selectedLabels.length > 0) {
@@ -108,12 +113,19 @@ export const ContactList: React.FC<ContactListProps> = ({
   };
 
   const getOwnerDisplay = (contact: Contact) => {
-    if (!contact.team_id) {
-      return contact.owner_id === user?.id ? 'My Contact' : getUserNameById(contact.owner_id);
+    if (contact.user_id === user?.id) {
+      return 'My Contact';
     }
     
+    // This is a team member's contact that I can see as team owner
+    const ownerName = getUserNameById(contact.user_id);
     const team = teams.find(t => t.id === contact.team_id);
-    return `${getUserNameById(contact.owner_id)} (${team?.name || 'Team'})`;
+    
+    if (team) {
+      return `${ownerName} (${team.name})`;
+    }
+    
+    return `${ownerName} (Team Member)`;
   };
 
   if (loading || teamsLoading) {
@@ -228,7 +240,10 @@ export const ContactList: React.FC<ContactListProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-base sm:text-lg">{contact.name}</h3>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge 
+                      variant={contact.user_id === user?.id ? "default" : "outline"} 
+                      className="text-xs"
+                    >
                       {getOwnerDisplay(contact)}
                     </Badge>
                   </div>
