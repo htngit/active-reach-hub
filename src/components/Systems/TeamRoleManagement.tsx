@@ -26,10 +26,10 @@ const ROLE_DESCRIPTIONS = [
     description: 'Manage team members and their data',
     capabilities: [
       'Manage assigned team members',
+      'Invite new team members',
       'View and edit subordinate data',
       'Create and manage contacts for team',
-      'Generate reports for managed team',
-      'Limited administrative functions'
+      'Generate reports for managed team'
     ]
   },
   {
@@ -103,6 +103,7 @@ export const TeamRoleManagement: React.FC = () => {
         </h4>
         <ul className="text-sm text-amber-800 space-y-1">
           <li>• Only team owners can assign and modify roles</li>
+          <li>• Managers can invite new members but cannot assign roles</li>
           <li>• Managers can only manage members (not other managers)</li>
           <li>• Role changes take effect immediately</li>
           <li>• Each team must have at least one owner</li>

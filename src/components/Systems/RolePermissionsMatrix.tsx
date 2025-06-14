@@ -18,7 +18,7 @@ const PERMISSIONS = [
     permissions: [
       { name: 'Create Teams', owner: true, manager: false, member: false },
       { name: 'Delete Teams', owner: true, manager: false, member: false },
-      { name: 'Invite Members', owner: true, manager: false, member: false },
+      { name: 'Invite Members', owner: true, manager: true, member: false },
       { name: 'Assign Roles', owner: true, manager: false, member: false },
     ]
   },
