@@ -13,8 +13,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { SidebarTrigger } from "@/components/SidebarTrigger";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import AppSidebar from './components/AppSidebar';
-import { SidebarProvider } from './contexts/SidebarContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Index from './pages/Index';
 import { ContactManager } from './components/ContactManager/ContactManager';
@@ -34,10 +34,10 @@ function App() {
         <AuthProvider>
           <div className="min-h-screen bg-background font-sans antialiased">
             <SidebarProvider>
-              <div className="relative flex min-h-screen w-full">
+              <div className="flex min-h-screen w-full">
                 <AppSidebar />
                 <div className="flex flex-1 flex-col">
-                  <header className="flex h-16 shrink-0 items-center gap-2 px-4">
+                  <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
                     <SidebarTrigger className="-ml-1" />
                     <Separator orientation="vertical" className="mr-2 h-4" />
                     <Breadcrumb>

@@ -1,20 +1,5 @@
 
 import React from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/hooks/useSidebar";
 import {
@@ -25,11 +10,21 @@ import {
   FileText,
   Building2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 
 const AppSidebar = () => {
-  const { user, signOut } = useAuth();
-  const { sidebarOpen, closeSidebar } = useSidebar();
+  const { signOut } = useAuth();
+  const location = useLocation();
 
   const navItems = [
     {
@@ -65,43 +60,39 @@ const AppSidebar = () => {
   ];
 
   return (
-    <Sheet open={sidebarOpen} onOpenChange={closeSidebar}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="p-0">
-          Open
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-80">
-        <SheetHeader className="text-left">
-          <SheetTitle>Menu</SheetTitle>
-          <SheetDescription>
-            Navigate your CRM and manage your data.
-          </SheetDescription>
-        </SheetHeader>
-        <NavigationMenu>
-          <NavigationMenuList>
-            {navItems.map((item) => (
-              <NavigationMenuItem key={item.title}>
-                <Link to={item.url} onClick={closeSidebar}>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.title}
-                  </Button>
-                </Link>
-              </NavigationMenuItem>
-            ))}
-          </NavigationMenuList>
-        </NavigationMenu>
-        <Separator className="my-4" />
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={signOut}
-        >
-          Log Out
-        </Button>
-      </SheetContent>
-    </Sheet>
+    <Sidebar>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>CRM Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location.pathname === item.url}>
+                    <Link to={item.url}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={signOut}>
+                  Log Out
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   );
 };
 

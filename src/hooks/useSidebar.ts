@@ -1,2 +1,2 @@
 
-export { useSidebar } from '@/contexts/SidebarContext';
+export { useSidebar } from '@/components/ui/sidebar';
