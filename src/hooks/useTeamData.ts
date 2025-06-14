@@ -106,12 +106,20 @@ export const useTeamData = () => {
     }));
   }, [teamMembers, getUserNameById]);
 
+  // Check if user is a team owner
+  const isTeamOwner = useCallback((teamId: string) => {
+    if (!user || !teams.length) return false;
+    const team = teams.find(t => t.id === teamId);
+    return team ? team.owner_id === user.id : false;
+  }, [user, teams]);
+
   return {
     teams,
     teamMembers,
     loading,
     getTeamMembers,
     getTeamMemberNames,
-    refetch: fetchTeamsAndMembers
+    refetch: fetchTeamsAndMembers,
+    isTeamOwner
   };
 };

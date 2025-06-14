@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Users, MapPin, Settings, LogOut, UsersRound } from "lucide-react";
+import { Users, MapPin, Settings, LogOut, UsersRound, ShoppingBag } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -23,6 +23,7 @@ const menuItems = [
   { title: "Contact Manager", url: "/contacts", icon: Users },
   { title: "Maps Distribution", url: "/maps", icon: MapPin },
   { title: "My Team", url: "/team", icon: UsersRound },
+  { title: "Products", url: "/products", icon: ShoppingBag },
 ];
 
 export function AppSidebar() {
