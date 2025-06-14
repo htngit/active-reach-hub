@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useInvoiceData } from '@/hooks/useInvoiceData';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, FileText, Calendar, DollarSign, User, Building } from 'lucide-react';
+import { ArrowLeft, FileText, Calendar, DollarSign, User, Building, Download } from 'lucide-react';
 import { Invoice, InvoiceItem, InvoiceActivity } from '@/types/invoice';
 import { format } from 'date-fns';
 
@@ -26,6 +25,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [activities, setActivities] = useState<InvoiceActivity[]>([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   
   const { updateInvoiceStatus, fetchInvoiceItems, fetchInvoiceActivities } = useInvoiceData();
   const { contacts } = useCachedContacts();
@@ -59,6 +59,103 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
     }
   };
 
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    try {
+      // Create a simple HTML content for the PDF
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Invoice ${invoice.invoice_number}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .invoice-info { margin-bottom: 20px; }
+            .contact-info { margin-bottom: 20px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .items-table th { background-color: #f2f2f2; }
+            .totals { text-align: right; margin-top: 20px; }
+            .total-row { font-weight: bold; border-top: 2px solid #333; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Invoice ${invoice.invoice_number}</h1>
+            <p>Created: ${format(new Date(invoice.created_at), 'MMM dd, yyyy')}</p>
+            ${invoice.due_date ? `<p>Due: ${format(new Date(invoice.due_date), 'MMM dd, yyyy')}</p>` : ''}
+          </div>
+          
+          <div class="contact-info">
+            <h3>Bill To:</h3>
+            <p><strong>${contact?.name || 'N/A'}</strong></p>
+            ${contact?.phone_number ? `<p>${contact.phone_number}</p>` : ''}
+            ${contact?.email ? `<p>${contact.email}</p>` : ''}
+            ${contact?.company ? `<p>${contact.company}</p>` : ''}
+            ${contact?.address ? `<p>${contact.address}</p>` : ''}
+          </div>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td>${item.description}</td>
+                  <td>${item.quantity}</td>
+                  <td>$${item.unit_price.toFixed(2)}</td>
+                  <td>$${item.total_price.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <p>Subtotal: $${invoice.subtotal.toFixed(2)}</p>
+            ${invoice.tax_rate && invoice.tax_rate > 0 ? `<p>Tax (${invoice.tax_rate}%): $${(invoice.tax_amount || 0).toFixed(2)}</p>` : ''}
+            <p class="total-row">Total: $${invoice.total.toFixed(2)}</p>
+          </div>
+
+          ${invoice.notes ? `
+            <div style="margin-top: 30px;">
+              <h3>Notes:</h3>
+              <p>${invoice.notes}</p>
+            </div>
+          ` : ''}
+        </body>
+        </html>
+      `;
+
+      // Create a blob with the HTML content
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create a temporary link element and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Invoice-${invoice.invoice_number}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'draft': return 'bg-gray-100 text-gray-800';
@@ -84,6 +181,14 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {isDownloading ? 'Downloading...' : 'Download Invoice'}
+          </Button>
           <Badge className={getStatusColor(invoice.status)}>
             {invoice.status}
           </Badge>
@@ -107,7 +212,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Invoice Info */}
         <Card>
           <CardHeader>
             <CardTitle>Invoice Information</CardTitle>
@@ -133,7 +237,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
           </CardContent>
         </Card>
 
-        {/* Contact Info */}
         <Card>
           <CardHeader>
             <CardTitle>Contact Information</CardTitle>
@@ -163,7 +266,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
         </Card>
       </div>
 
-      {/* Invoice Items */}
       <Card>
         <CardHeader>
           <CardTitle>Invoice Items</CardTitle>
@@ -209,7 +311,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
         </CardContent>
       </Card>
 
-      {/* Notes */}
       {invoice.notes && (
         <Card>
           <CardHeader>
@@ -221,7 +322,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
         </Card>
       )}
 
-      {/* Activities */}
       <Card>
         <CardHeader>
           <CardTitle>Activity History</CardTitle>
