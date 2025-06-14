@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Phone, Mail, Building, MapPin, MessageCircle, Plus, Edit, Trash2, Save, X, RefreshCw, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
@@ -434,6 +435,48 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     }
   };
 
+  const handleDeleteContact = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to delete contacts",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log('Deleting contact:', contact.id);
+
+      // Delete the contact - cascading deletes will handle related data
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', contact.id);
+
+      if (error) {
+        console.error('Supabase error deleting contact:', error);
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Contact deleted successfully",
+      });
+
+      // Go back to contact list and refresh
+      onContactUpdated();
+      onBack();
+    } catch (error: any) {
+      console.error('Error deleting contact:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete contact",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -442,10 +485,38 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
         </Button>
         <div className="flex gap-2">
           {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            <>
+              <Button onClick={() => setIsEditing(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{contact.name}"? This action cannot be undone. 
+                      All activities, invoices, and related data for this contact will also be deleted.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDeleteContact}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete Contact
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           ) : (
             <>
               <Button onClick={handleSaveContact}>
