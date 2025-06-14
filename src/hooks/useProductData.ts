@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,7 +54,6 @@ export const useProductData = () => {
     }
   }, [user, teamsLoading, fetchProducts]);
 
-  // --- FIX: Ensure price and stock are always provided for product inserts!
   const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => {
     if (!user) return null;
 
@@ -65,16 +63,17 @@ export const useProductData = () => {
         throw new Error('Only team owners can add products');
       }
 
-      // Ensure price and stock are present (default to 0 if missing)
-      const price = product.price !== undefined && product.price !== null ? product.price : 0;
+      // Ensure stock is present (default to 0 if missing), price can be null
       const stock = product.stock !== undefined && product.stock !== null ? product.stock : 0;
 
       const newProduct = {
         ...product,
-        price,
+        price: product.price || null,
         stock,
         created_by: user.id,
       };
+
+      console.log('Inserting product:', newProduct);
 
       const { data, error: insertError } = await supabase
         .from('products')

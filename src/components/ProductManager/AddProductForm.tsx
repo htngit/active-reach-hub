@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useProductData } from '@/hooks/useProductData';
 import { useTeamData } from '@/hooks/useTeamData';
@@ -23,8 +24,8 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
   const initialFormState = {
     name: '',
     description: '',
-    price: undefined as number | undefined,
-    stock: undefined as number | undefined,
+    price: null as number | null,
+    stock: 0,
     status: 'Draft',
     category: '',
     team_id: '',
@@ -42,9 +43,17 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => {
-      if (name === 'price' || name === 'stock') {
-        // Only convert to number if value is not empty
-        const numValue = value === '' ? undefined : parseFloat(value);
+      if (name === 'price') {
+        // Convert to number or null if empty
+        const numValue = value === '' ? null : parseFloat(value);
+        return {
+          ...prev,
+          [name]: numValue,
+        };
+      }
+      if (name === 'stock') {
+        // Convert to number, default to 0 if empty
+        const numValue = value === '' ? 0 : parseInt(value);
         return {
           ...prev,
           [name]: numValue,
@@ -200,15 +209,16 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="price">Price</Label>
+                <Label htmlFor="price">Price (optional)</Label>
                 <Input
                   id="price"
                   name="price"
                   type="number"
-                  value={formData.price === undefined ? '' : formData.price}
+                  value={formData.price === null ? '' : formData.price}
                   onChange={handleInputChange}
                   min={0}
                   step="0.01"
+                  placeholder="Leave empty if no price"
                 />
               </div>
               <div className="space-y-2">
@@ -217,7 +227,7 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
                   id="stock"
                   name="stock"
                   type="number"
-                  value={formData.stock === undefined ? '' : formData.stock}
+                  value={formData.stock}
                   onChange={handleInputChange}
                   min={0}
                 />

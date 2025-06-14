@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useProductData } from '@/hooks/useProductData';
 import { useTeamData } from '@/hooks/useTeamData';
@@ -63,8 +64,8 @@ export const ProductList: React.FC<ProductListProps> = ({
     return team ? team.name : 'Unknown Team';
   };
 
-  // Format price
-  const formatPrice = (price?: number) => {
+  // Format price - handle null/undefined properly
+  const formatPrice = (price?: number | null) => {
     if (price === undefined || price === null) return '-';
     return `$${price.toFixed(2)}`;
   };

@@ -185,7 +185,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
-          price: number
+          price: number | null
           status: string
           stock: number
           team_id: string | null
@@ -198,7 +198,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
-          price: number
+          price?: number | null
           status?: string
           stock?: number
           team_id?: string | null
@@ -211,7 +211,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
-          price?: number
+          price?: number | null
           status?: string
           stock?: number
           team_id?: string | null
