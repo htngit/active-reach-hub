@@ -49,6 +49,6 @@ export const PendingInvitations: React.FC<PendingInvitationsProps> = ({ invitati
           ))}
         </div>
       </CardContent>
-    </Dialog>
+    </Card>
   );
 };
