@@ -68,51 +68,26 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
     }
   }, [contacts]);
 
-  // Filter contacts based on user access
-  const getFilteredContacts = () => {
-    if (!user) return [];
-
-    console.log('Filtering contacts for user:', user.id);
-    console.log('Total contacts:', contacts.length);
-    
-    const filteredContacts = contacts.filter(contact => {
-      // User owns the contact directly
-      const isOwner = contact.owner_id === user.id;
-      // User created the contact
-      const isCreator = contact.user_id === user.id;
-      // Contact is in a team and user has access to that team
-      const hasTeamAccess = contact.team_id && (
-        teams.some(team => team.id === contact.team_id && team.owner_id === user.id) ||
-        teams.some(team => team.id === contact.team_id) // User is already in teams they have access to
-      );
-
-      console.log(`Contact ${contact.name}:`, {
-        contactId: contact.id,
-        isOwner,
-        isCreator,
-        hasTeamAccess,
-        contactOwnerId: contact.owner_id,
-        contactUserId: contact.user_id,
-        contactTeamId: contact.team_id
-      });
-
-      return isOwner || isCreator || hasTeamAccess;
-    });
-
-    console.log('Filtered contacts:', filteredContacts.length);
-    return filteredContacts;
-  };
-
-  const availableContacts = getFilteredContacts();
-
-  // Fixed contact filtering logic - show team contacts and personal contacts appropriately
+  // Show all team contacts that user has access to (already filtered by RLS)
   const teamContacts = selectedTeamId === 'personal' 
-    ? availableContacts.filter(contact => !contact.team_id) // Only personal contacts (no team_id)
+    ? contacts.filter(contact => !contact.team_id) // Only personal contacts (no team_id)
     : selectedTeamId
-    ? availableContacts.filter(contact => 
-        contact.team_id === selectedTeamId || !contact.team_id // Team contacts OR personal contacts
-      )
-    : availableContacts; // All contacts if no team selected
+    ? contacts.filter(contact => contact.team_id === selectedTeamId) // All team contacts user has access to
+    : contacts; // All contacts if no team selected
+
+  console.log('Team contacts debug:', {
+    selectedTeamId,
+    totalContacts: contacts.length,
+    teamContacts: teamContacts.length,
+    userId: user?.id,
+    contactsPreview: teamContacts.slice(0, 3).map(c => ({
+      id: c.id,
+      name: c.name,
+      owner_id: c.owner_id,
+      team_id: c.team_id,
+      user_id: c.user_id
+    }))
+  });
 
   const teamProducts = products.filter(product => 
     selectedTeamId && selectedTeamId !== 'personal' ? product.team_id === selectedTeamId : true

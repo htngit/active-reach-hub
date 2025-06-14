@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -111,10 +112,6 @@ export const ContactList: React.FC<ContactListProps> = ({
         // Show contacts owned by specific user
         filtered = filtered.filter(contact => contact.owner_id === selectedOwner);
       }
-    } else {
-      // If 'all' is selected, all contacts fetched via RLS are already accessible.
-      // No further filtering needed based on owner here.
-      filtered = contacts;
     }
 
     console.log('After owner filter:', filtered.length);

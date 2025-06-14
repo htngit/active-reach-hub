@@ -61,7 +61,7 @@ export const useCachedContacts = () => {
 
       console.log('Fetching fresh contacts data...');
 
-      // Fetch contacts with better filtering - get all contacts accessible to the user
+      // Fetch all contacts - RLS will handle filtering based on user access
       const { data, error: fetchError } = await supabase
         .from('contacts')
         .select(`
@@ -79,7 +79,13 @@ export const useCachedContacts = () => {
 
       console.log('Fresh contacts fetched:', data?.length || 0);
       console.log('User ID:', user.id);
-      console.log('Sample contacts:', data?.slice(0, 3));
+      console.log('Sample contacts:', data?.slice(0, 3).map(c => ({
+        id: c.id,
+        name: c.name,
+        owner_id: c.owner_id,
+        team_id: c.team_id,
+        user_id: c.user_id
+      })));
 
       setContacts(data || []);
       setCacheInfo(`Fresh data loaded at ${new Date().toLocaleString()}`);
