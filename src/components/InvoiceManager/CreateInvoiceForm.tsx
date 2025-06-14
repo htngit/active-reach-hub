@@ -40,7 +40,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { createInvoice } = useInvoiceData();
-  const { contacts, loading: contactsLoading } = useCachedContacts();
+  const { contacts, loading: contactsLoading, refreshContacts } = useCachedContacts();
   const { products } = useProductData();
   const { teams } = useTeamData();
   const { user } = useAuth();
@@ -68,13 +68,18 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
     }
   }, [contacts]);
 
-  // Filter contacts based on selected team - show all contacts that RLS allows
+  // Force refresh contacts when component mounts to ensure we have latest data
+  useEffect(() => {
+    refreshContacts();
+  }, [refreshContacts]);
+
+  // Filter contacts based on selected team
   const getTeamContacts = () => {
     if (selectedTeamId === 'personal') {
-      // Show personal contacts (no team_id)
-      return contacts.filter(contact => !contact.team_id);
+      // Show personal contacts (no team_id) that user owns or created
+      return contacts.filter(contact => !contact.team_id && (contact.owner_id === user?.id || contact.user_id === user?.id));
     } else if (selectedTeamId) {
-      // Show all contacts for the selected team that user has access to
+      // Show all contacts for the selected team (RLS handles access control)
       return contacts.filter(contact => contact.team_id === selectedTeamId);
     } else {
       // Show all contacts if no team selected
@@ -89,6 +94,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
     totalContacts: contacts.length,
     teamContacts: teamContacts.length,
     userId: user?.id,
+    userIsTeamOwner: selectedTeamId ? teams.find(t => t.id === selectedTeamId)?.owner_id === user?.id : false,
     contactsPreview: teamContacts.slice(0, 5).map(c => ({
       id: c.id,
       name: c.name,
@@ -240,11 +246,15 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                     )}
                   </SelectContent>
                 </Select>
-                {teamContacts.length > 0 && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {teamContacts.length} contact{teamContacts.length !== 1 ? 's' : ''} available
-                  </div>
-                )}
+                <div className="text-xs text-gray-500 mt-1">
+                  {teamContacts.length} contact{teamContacts.length !== 1 ? 's' : ''} available
+                  {selectedTeamId && (
+                    <span className="ml-2">
+                      (Personal: {contacts.filter(c => !c.team_id).length}, 
+                      Team: {contacts.filter(c => c.team_id === selectedTeamId).length})
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             
