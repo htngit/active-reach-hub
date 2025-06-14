@@ -10,8 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useTeamData } from '@/hooks/useTeamData';
-import { useUserData } from '@/hooks/useUserData';
 
 interface AddContactFormProps {
   onBack: () => void;
@@ -34,21 +32,14 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
     status: 'New',
     labels: [] as string[],
     potential_product: [] as string[],
-    owner_id: '',
-    team_id: '',
   });
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [newLabel, setNewLabel] = useState('');
   const [newProduct, setNewProduct] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const { teams, getTeamMemberNames } = useTeamData();
-  const { getUserNameById } = useUserData();
 
   useEffect(() => {
-    if (user) {
-      setFormData(prev => ({ ...prev, owner_id: user.id }));
-    }
     fetchLabels();
   }, [user]);
 
@@ -91,7 +82,7 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
     setLoading(true);
 
     try {
-      // Prepare contact data with proper null handling
+      // Simplified contact data - no team categorization, just user ownership
       const contactData = {
         name: formData.name,
         phone_number: formData.phone_number,
@@ -102,9 +93,9 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
         status: formData.status,
         labels: formData.labels.length > 0 ? formData.labels : null,
         potential_product: formData.potential_product.length > 0 ? formData.potential_product : null,
-        user_id: user.id,
-        owner_id: formData.owner_id || user.id,
-        team_id: formData.team_id || null,
+        user_id: user.id, // User who created the contact
+        owner_id: user.id, // User who owns the contact
+        team_id: null, // No team assignment - RLS will handle team access
       };
 
       console.log('Submitting contact data:', contactData);
@@ -200,18 +191,6 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
     });
   };
 
-  const handleOwnerChange = (value: string) => {
-    if (value === 'personal') {
-      setFormData({ ...formData, owner_id: user?.id || '', team_id: '' });
-    } else {
-      // Find the team for this owner
-      const ownerTeam = teams.find(team => 
-        getTeamMemberNames(team.id).some(member => member.id === value)
-      );
-      setFormData({ ...formData, owner_id: value, team_id: ownerTeam?.id || '' });
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -227,18 +206,6 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Contact Owner</label>
-              <Select value={formData.owner_id} onValueChange={handleOwnerChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select contact owner" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key={user?.id} value={user?.id}>Personal Contact</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">Name *</label>
               <Input

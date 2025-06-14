@@ -58,44 +58,26 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
     const contactId = urlParams.get('contact');
     if (contactId && contacts.find(c => c.id === contactId)) {
       setSelectedContactId(contactId);
-      // Auto-select the team of the pre-selected contact
-      const contact = contacts.find(c => c.id === contactId);
-      if (contact?.team_id) {
-        setSelectedTeamId(contact.team_id);
-      } else {
-        setSelectedTeamId('personal');
+      // Find the team for invoice creation
+      if (teams.length > 0) {
+        setSelectedTeamId(teams[0].id);
       }
     }
-  }, [contacts]);
+  }, [contacts, teams]);
 
   // Force refresh contacts when component mounts to ensure we have latest data
   useEffect(() => {
     refreshContacts();
   }, [refreshContacts]);
 
-  // Filter contacts based on selected team
-  const getTeamContacts = () => {
-    if (selectedTeamId === 'personal') {
-      // Show personal contacts (no team_id) that user owns or created
-      return contacts.filter(contact => !contact.team_id && (contact.owner_id === user?.id || contact.user_id === user?.id));
-    } else if (selectedTeamId) {
-      // Show all contacts for the selected team (RLS handles access control)
-      return contacts.filter(contact => contact.team_id === selectedTeamId);
-    } else {
-      // Show all contacts if no team selected
-      return contacts;
-    }
-  };
+  // All available contacts (RLS handles filtering)
+  const availableContacts = contacts;
 
-  const teamContacts = getTeamContacts();
-
-  console.log('Team contacts debug:', {
-    selectedTeamId,
+  console.log('Contact access debug:', {
     totalContacts: contacts.length,
-    teamContacts: teamContacts.length,
+    selectedTeamId,
     userId: user?.id,
-    userIsTeamOwner: selectedTeamId ? teams.find(t => t.id === selectedTeamId)?.owner_id === user?.id : false,
-    contactsPreview: teamContacts.slice(0, 5).map(c => ({
+    contactsPreview: contacts.slice(0, 5).map(c => ({
       id: c.id,
       name: c.name,
       owner_id: c.owner_id,
@@ -105,7 +87,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
   });
 
   const teamProducts = products.filter(product => 
-    selectedTeamId && selectedTeamId !== 'personal' ? product.team_id === selectedTeamId : true
+    selectedTeamId ? product.team_id === selectedTeamId : true
   );
 
   const addItem = () => {
@@ -147,16 +129,13 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Updated validation to handle personal team selection
-    const effectiveTeamId = selectedTeamId === 'personal' ? teams[0]?.id : selectedTeamId;
-    
-    if (!selectedContactId || (!effectiveTeamId && selectedTeamId !== 'personal') || items.length === 0) return;
+    if (!selectedContactId || !selectedTeamId || items.length === 0) return;
 
     setIsSubmitting(true);
     try {
       const invoiceData: CreateInvoiceRequest = {
         contact_id: selectedContactId,
-        team_id: effectiveTeamId || teams[0]?.id, // Use first team if personal selected
+        team_id: selectedTeamId,
         items: items.map(item => ({
           product_id: item.product_id || undefined,
           description: item.description,
@@ -217,7 +196,6 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                     <SelectValue placeholder="Select team" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="personal">Personal Contacts</SelectItem>
                     {teams.map(team => (
                       <SelectItem key={team.id} value={team.id}>
                         {team.name}
@@ -233,27 +211,20 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                     <SelectValue placeholder="Select contact" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teamContacts.map(contact => (
+                    {availableContacts.map(contact => (
                       <SelectItem key={contact.id} value={contact.id}>
                         {contact.name} - {contact.phone_number}
-                        {contact.team_id ? ` (Team: ${teams.find(t => t.id === contact.team_id)?.name || 'Unknown'})` : ' (Personal)'}
                       </SelectItem>
                     ))}
-                    {teamContacts.length === 0 && (
+                    {availableContacts.length === 0 && (
                       <SelectItem value="no-contacts" disabled>
-                        No contacts available for this selection
+                        No contacts available
                       </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
                 <div className="text-xs text-gray-500 mt-1">
-                  {teamContacts.length} contact{teamContacts.length !== 1 ? 's' : ''} available
-                  {selectedTeamId && (
-                    <span className="ml-2">
-                      (Personal: {contacts.filter(c => !c.team_id).length}, 
-                      Team: {contacts.filter(c => c.team_id === selectedTeamId).length})
-                    </span>
-                  )}
+                  {availableContacts.length} contact{availableContacts.length !== 1 ? 's' : ''} available
                 </div>
               </div>
             </div>
@@ -408,7 +379,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
         </Card>
 
         <div className="flex gap-4">
-          <Button type="submit" disabled={isSubmitting || !selectedContactId || (!selectedTeamId && teamContacts.length === 0)}>
+          <Button type="submit" disabled={isSubmitting || !selectedContactId || !selectedTeamId}>
             {isSubmitting ? 'Creating...' : 'Create Invoice'}
           </Button>
           <Button type="button" variant="outline" onClick={onBack}>
