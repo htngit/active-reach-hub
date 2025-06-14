@@ -8,12 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-
-interface AcceptInvitationResponse {
-  success: boolean;
-  message: string;
-  team_name?: string;
-}
+import { AcceptInvitationResponse } from '@/types/team';
 
 const JoinTeamPage: React.FC = () => {
   const location = useLocation();
@@ -181,19 +176,22 @@ const JoinTeamPage: React.FC = () => {
         throw new Error(rpcError.message || 'Error accepting invitation');
       }
 
-      if (!result || !result.success) {
-        throw new Error(result?.message || 'Failed to accept invitation');
+      // Type assertion for the RPC result
+      const invitationResult = result as AcceptInvitationResponse;
+
+      if (!invitationResult || !invitationResult.success) {
+        throw new Error(invitationResult?.message || 'Failed to accept invitation');
       }
 
       // Success! Redirect to the team page
       toast({
         title: 'Team Joined',
-        description: result.message || 'You have successfully joined the team!',
+        description: invitationResult.message || 'You have successfully joined the team!',
       });
 
       // Navigate to the team page
-      if (result.team_id) {
-        navigate(`/teams/${result.team_id}`);
+      if (invitationResult.team_id) {
+        navigate(`/teams/${invitationResult.team_id}`);
       } else {
         // Fallback to teams list if team_id is not returned
         navigate('/teams');

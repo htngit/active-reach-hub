@@ -1,4 +1,3 @@
-
 export interface Team {
   id: string;
   name: string;
@@ -24,4 +23,11 @@ export interface TeamInvitation {
   expires_at: string;
   used_at?: string;
   created_at: string;
+}
+
+export interface AcceptInvitationResponse {
+  success: boolean;
+  message: string;
+  team_name?: string;
+  team_id?: string;
 }
