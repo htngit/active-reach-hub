@@ -109,6 +109,155 @@ export type Database = {
           },
         ]
       }
+      invoice_activities: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          details: string | null
+          id: string
+          invoice_id: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          invoice_id: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          invoice_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_activities_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          invoice_id: string
+          product_id: string | null
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          invoice_id: string
+          product_id?: string | null
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          invoice_id?: string
+          product_id?: string | null
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          contact_id: string
+          created_at: string | null
+          created_by: string
+          due_date: string | null
+          id: string
+          invoice_number: string
+          notes: string | null
+          status: string
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          team_id: string
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string | null
+          created_by: string
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          team_id: string
+          total?: number
+          updated_at?: string | null
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string | null
+          created_by?: string
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          team_id?: string
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       labels: {
         Row: {
           color: string | null
@@ -380,6 +529,10 @@ export type Database = {
         Returns: undefined
       }
       generate_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

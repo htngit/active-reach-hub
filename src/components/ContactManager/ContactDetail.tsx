@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Phone, Mail, Building, MapPin, MessageCircle, Plus, Edit, Trash2, Save, X, RefreshCw } from 'lucide-react';
+import { Phone, Mail, Building, MapPin, MessageCircle, Plus, Edit, Trash2, Save, X, RefreshCw, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
 
@@ -681,6 +680,13 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
                   Template Follow Up
                 </Button>
               </TemplateSelectionModal>
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.href = `/invoices?contact=${contact.id}`}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Create Invoice
+              </Button>
               <Button variant="outline" onClick={() => setShowAddActivity(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Log Activity
