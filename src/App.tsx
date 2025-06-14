@@ -16,6 +16,7 @@ import { SidebarTrigger } from "@/components/SidebarTrigger";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import AppSidebar from './components/AppSidebar';
 import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import Index from './pages/Index';
 import { ContactManager } from './components/ContactManager/ContactManager';
 import ProductPage from './pages/ProductPage';
@@ -83,30 +84,39 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <div className="min-h-screen bg-background font-sans antialiased">
-            <SidebarProvider>
-              <div className="flex min-h-screen w-full">
-                <AppSidebar />
-                <div className="flex flex-1 flex-col">
-                  <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator orientation="vertical" className="mr-2 h-4" />
-                    <DynamicBreadcrumb />
-                  </header>
-                  <main className="flex-1 p-4">
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/contacts" element={<ContactManager />} />
-                      <Route path="/products" element={<ProductPage />} />
-                      <Route path="/invoices" element={<InvoicePage />} />
-                      <Route path="/teams" element={<TeamManagement />} />
-                      <Route path="/settings" element={<PersonalSettings />} />
-                      <Route path="/join-team/:token" element={<JoinTeamPage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </main>
-                </div>
-              </div>
-            </SidebarProvider>
+            <Routes>
+              {/* JoinTeamPage is public - users might not be logged in when clicking invitation links */}
+              <Route path="/join-team/:token" element={<JoinTeamPage />} />
+              
+              {/* All other routes are protected */}
+              <Route path="/*" element={
+                <ProtectedRoute>
+                  <SidebarProvider>
+                    <div className="flex min-h-screen w-full">
+                      <AppSidebar />
+                      <div className="flex flex-1 flex-col">
+                        <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
+                          <SidebarTrigger className="-ml-1" />
+                          <Separator orientation="vertical" className="mr-2 h-4" />
+                          <DynamicBreadcrumb />
+                        </header>
+                        <main className="flex-1 p-4">
+                          <Routes>
+                            <Route path="/" element={<Index />} />
+                            <Route path="/contacts" element={<ContactManager />} />
+                            <Route path="/products" element={<ProductPage />} />
+                            <Route path="/invoices" element={<InvoicePage />} />
+                            <Route path="/teams" element={<TeamManagement />} />
+                            <Route path="/settings" element={<PersonalSettings />} />
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    </div>
+                  </SidebarProvider>
+                </ProtectedRoute>
+              } />
+            </Routes>
           </div>
           <Toaster />
         </AuthProvider>
