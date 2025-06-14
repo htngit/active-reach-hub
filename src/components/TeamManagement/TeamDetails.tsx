@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { UserPlus, Users, Building, Mail, Phone, Globe, MapPin, CreditCard } from 'lucide-react';
-import { Team } from '@/types/team';
+import { Team, TeamMember, TeamInvitation } from '@/types/team';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamData } from '@/hooks/useTeamData';
 import { TeamMembers } from './TeamMembers';
@@ -28,11 +28,53 @@ export const TeamDetails: React.FC<TeamDetailsProps> = ({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [invitationRefreshKey, setInvitationRefreshKey] = useState(0);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<TeamInvitation[]>([]);
   const { user } = useAuth();
   const { canManageTeam, isTeamOwner } = useTeamData();
 
   const canManageThisTeam = canManageTeam(team.id);
   const isOwner = isTeamOwner(team.id);
+
+  // Fetch team members
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', team.id);
+
+      if (error) {
+        console.error('Error fetching team members:', error);
+      } else {
+        setTeamMembers(data || []);
+      }
+    };
+
+    fetchTeamMembers();
+  }, [team.id]);
+
+  // Fetch pending invitations
+  useEffect(() => {
+    const fetchPendingInvitations = async () => {
+      if (!canManageThisTeam) return;
+
+      const { data, error } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('team_id', team.id)
+        .is('used_at', null)
+        .gt('expires_at', new Date().toISOString());
+
+      if (error) {
+        console.error('Error fetching pending invitations:', error);
+      } else {
+        setPendingInvitations(data || []);
+      }
+    };
+
+    fetchPendingInvitations();
+  }, [team.id, canManageThisTeam, invitationRefreshKey]);
 
   const handleInvitationSent = () => {
     setInvitationRefreshKey(prev => prev + 1);
@@ -186,14 +228,11 @@ export const TeamDetails: React.FC<TeamDetailsProps> = ({
       <Separator />
 
       {/* Team Members */}
-      <TeamMembers team={team} />
+      <TeamMembers members={teamMembers} />
 
       {/* Pending Invitations - Only show to managers and owners */}
       {canManageThisTeam && (
-        <PendingInvitations 
-          team={team} 
-          refreshKey={invitationRefreshKey}
-        />
+        <PendingInvitations invitations={pendingInvitations} />
       )}
 
       {/* Dialogs */}

@@ -89,9 +89,8 @@ export const TeamManagement = () => {
           <div className="lg:col-span-2">
             <TeamDetails
               team={selectedTeam}
-              user={user}
+              onBack={() => setSelectedTeam(null)}
               onTeamUpdated={handleTeamUpdated}
-              onTeamDeleted={handleTeamDeleted}
             />
           </div>
         )}
