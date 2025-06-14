@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, FileText, Calendar, DollarSign, User, Building, Download } from 'lucide-react';
 import { Invoice, InvoiceItem, InvoiceActivity } from '@/types/invoice';
 import { format } from 'date-fns';
+import html2pdf from 'html2pdf.js';
 
 interface InvoiceDetailProps {
   invoice: Invoice;
@@ -62,95 +63,90 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     try {
-      // Create a simple HTML content for the PDF
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Invoice ${invoice.invoice_number}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .invoice-info { margin-bottom: 20px; }
-            .contact-info { margin-bottom: 20px; }
-            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            .items-table th { background-color: #f2f2f2; }
-            .totals { text-align: right; margin-top: 20px; }
-            .total-row { font-weight: bold; border-top: 2px solid #333; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Invoice ${invoice.invoice_number}</h1>
-            <p>Created: ${format(new Date(invoice.created_at), 'MMM dd, yyyy')}</p>
-            ${invoice.due_date ? `<p>Due: ${format(new Date(invoice.due_date), 'MMM dd, yyyy')}</p>` : ''}
+      // Create a temporary div element for the PDF content
+      const element = document.createElement('div');
+      element.innerHTML = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
+          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
+            <h1 style="color: #333; margin-bottom: 10px;">Invoice ${invoice.invoice_number}</h1>
+            <p style="margin: 5px 0;">Created: ${format(new Date(invoice.created_at), 'MMM dd, yyyy')}</p>
+            ${invoice.due_date ? `<p style="margin: 5px 0;">Due: ${format(new Date(invoice.due_date), 'MMM dd, yyyy')}</p>` : ''}
           </div>
           
-          <div class="contact-info">
-            <h3>Bill To:</h3>
-            <p><strong>${contact?.name || 'N/A'}</strong></p>
-            ${contact?.phone_number ? `<p>${contact.phone_number}</p>` : ''}
-            ${contact?.email ? `<p>${contact.email}</p>` : ''}
-            ${contact?.company ? `<p>${contact.company}</p>` : ''}
-            ${contact?.address ? `<p>${contact.address}</p>` : ''}
+          <div style="margin-bottom: 30px;">
+            <h3 style="color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Bill To:</h3>
+            <div style="margin-top: 10px;">
+              <p style="margin: 3px 0; font-weight: bold;">${contact?.name || 'N/A'}</p>
+              ${contact?.phone_number ? `<p style="margin: 3px 0;">${contact.phone_number}</p>` : ''}
+              ${contact?.email ? `<p style="margin: 3px 0;">${contact.email}</p>` : ''}
+              ${contact?.company ? `<p style="margin: 3px 0;">${contact.company}</p>` : ''}
+              ${contact?.address ? `<p style="margin: 3px 0;">${contact.address}</p>` : ''}
+            </div>
           </div>
 
-          <table class="items-table">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
             <thead>
-              <tr>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
+              <tr style="background-color: #f8f9fa;">
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Description</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Qty</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: right;">Unit Price</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: right;">Total</th>
               </tr>
             </thead>
             <tbody>
               ${items.map(item => `
                 <tr>
-                  <td>${item.description}</td>
-                  <td>${item.quantity}</td>
-                  <td>$${item.unit_price.toFixed(2)}</td>
-                  <td>$${item.total_price.toFixed(2)}</td>
+                  <td style="border: 1px solid #ddd; padding: 12px;">${item.description}</td>
+                  <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${item.quantity}</td>
+                  <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">$${item.unit_price.toFixed(2)}</td>
+                  <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">$${item.total_price.toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
-          <div class="totals">
-            <p>Subtotal: $${invoice.subtotal.toFixed(2)}</p>
-            ${invoice.tax_rate && invoice.tax_rate > 0 ? `<p>Tax (${invoice.tax_rate}%): $${(invoice.tax_amount || 0).toFixed(2)}</p>` : ''}
-            <p class="total-row">Total: $${invoice.total.toFixed(2)}</p>
+          <div style="text-align: right; margin-top: 20px;">
+            <div style="display: inline-block; min-width: 200px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>Subtotal:</span>
+                <span>$${invoice.subtotal.toFixed(2)}</span>
+              </div>
+              ${invoice.tax_rate && invoice.tax_rate > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <span>Tax (${invoice.tax_rate}%):</span>
+                  <span>$${(invoice.tax_amount || 0).toFixed(2)}</span>
+                </div>
+              ` : ''}
+              <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 2px solid #333; padding-top: 10px; font-size: 18px;">
+                <span>Total:</span>
+                <span>$${invoice.total.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
 
           ${invoice.notes ? `
-            <div style="margin-top: 30px;">
-              <h3>Notes:</h3>
-              <p>${invoice.notes}</p>
+            <div style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px;">
+              <h3 style="color: #333; margin-bottom: 10px;">Notes:</h3>
+              <p style="line-height: 1.5;">${invoice.notes}</p>
             </div>
           ` : ''}
-        </body>
-        </html>
+        </div>
       `;
 
-      // Create a blob with the HTML content
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create a temporary link element and trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Invoice-${invoice.invoice_number}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up the URL object
-      URL.revokeObjectURL(url);
+      // Configure html2pdf options
+      const options = {
+        margin: 1,
+        filename: `Invoice-${invoice.invoice_number}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      // Generate and download PDF
+      await html2pdf().set(options).from(element).save();
       
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error('Error generating PDF:', error);
     } finally {
       setIsDownloading(false);
     }
@@ -296,7 +292,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
             {invoice.tax_rate && invoice.tax_rate > 0 && (
               <div className="flex justify-between">
-                <span>Tax ({invoice.tax_rate}%):</span>
+                <span>Tax (${invoice.tax_rate}%):</span>
                 <span>${(invoice.tax_amount || 0).toFixed(2)}</span>
               </div>
             )}
