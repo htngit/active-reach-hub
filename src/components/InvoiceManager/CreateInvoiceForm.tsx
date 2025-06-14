@@ -105,14 +105,13 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
 
   const availableContacts = getFilteredContacts();
 
-  // Fixed contact filtering logic - show all user's contacts regardless of team selection
+  // Fixed contact filtering logic - show team contacts and personal contacts appropriately
   const teamContacts = selectedTeamId === 'personal' 
     ? availableContacts.filter(contact => !contact.team_id) // Only personal contacts (no team_id)
     : selectedTeamId
-    ? [
-        ...availableContacts.filter(contact => contact.team_id === selectedTeamId), // Team contacts
-        ...availableContacts.filter(contact => !contact.team_id) // Plus personal contacts
-      ]
+    ? availableContacts.filter(contact => 
+        contact.team_id === selectedTeamId || !contact.team_id // Team contacts OR personal contacts
+      )
     : availableContacts; // All contacts if no team selected
 
   const teamProducts = products.filter(product => 
