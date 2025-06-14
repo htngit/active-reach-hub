@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useProductData } from '@/hooks/useProductData';
 import { useTeamData } from '@/hooks/useTeamData';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Product } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addProduct } = useProductData();
   const { teams, isTeamOwner } = useTeamData();
+  const { symbol } = useCurrency();
   const { toast } = useToast();
 
   // Filter teams where user is owner
@@ -209,7 +211,7 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="price">Price (optional)</Label>
+                <Label htmlFor="price">Price ({symbol}) (optional)</Label>
                 <Input
                   id="price"
                   name="price"

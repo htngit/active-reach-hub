@@ -1,15 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useProductData } from '@/hooks/useProductData';
 import { useTeamData } from '@/hooks/useTeamData';
-import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Product } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Plus, Search, Package, DollarSign, Archive } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProductListProps {
   onSelectProduct: (product: Product) => void;
@@ -20,114 +21,100 @@ export const ProductList: React.FC<ProductListProps> = ({
   onSelectProduct,
   onAddProduct,
 }) => {
+  const { products, loading } = useProductData();
+  const { teams } = useTeamData();
+  const { formatCurrency } = useCurrency();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState<string>('all');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const { user } = useAuth();
-  const { products, loading, error } = useProductData();
-  const { teams, loading: teamsLoading } = useTeamData();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [teamFilter, setTeamFilter] = useState<string>('all');
 
-  // Get unique categories from products
-  const categories = [...new Set(products.map(product => product.category).filter(Boolean))];
+  // Filter products based on search term, status, and team
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.category?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || product.status === statusFilter;
+    const matchesTeam = teamFilter === 'all' || product.team_id === teamFilter;
+    
+    return matchesSearch && matchesStatus && matchesTeam;
+  });
 
-  // Filter products based on search term, selected team, and category
-  useEffect(() => {
-    let filtered = [...products];
-
-    // Filter by search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(term) ||
-        (product.description && product.description.toLowerCase().includes(term)) ||
-        (product.category && product.category.toLowerCase().includes(term))
-      );
-    }
-
-    // Filter by team
-    if (selectedTeam !== 'all') {
-      filtered = filtered.filter(product => product.team_id === selectedTeam);
-    }
-
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => product.category === selectedCategory);
-    }
-
-    setFilteredProducts(filtered);
-  }, [products, searchTerm, selectedTeam, selectedCategory]);
-
-  // Get team name by ID
   const getTeamName = (teamId: string) => {
     const team = teams.find(t => t.id === teamId);
-    return team ? team.name : 'Unknown Team';
+    return team?.name || 'Unknown Team';
   };
 
-  // Format price - handle null/undefined properly
-  const formatPrice = (price?: number | null) => {
-    if (price === undefined || price === null) return '-';
-    return `$${price.toFixed(2)}`;
-  };
-
-  // Get status badge variant
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'published':
-        return <Badge className="bg-green-500">Published</Badge>;
-      case 'draft':
-        return <Badge variant="outline">Draft</Badge>;
-      case 'inactive':
-        return <Badge variant="secondary">Inactive</Badge>;
-      case 'out of stock':
-        return <Badge variant="destructive">Out of Stock</Badge>;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Published':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'Draft':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Inactive':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Out of Stock':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
-        return <Badge>{status}</Badge>;
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  if (loading || teamsLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+      <div className="space-y-4">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-[150px]" />
+          <Skeleton className="h-10 w-[120px]" />
+        </div>
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-red-500">Error loading products: {error}</p>
-      </div>
-    );
-  }
+        {/* Filters Skeleton */}
+        <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+          <Skeleton className="h-10 flex-1" />
+          <Skeleton className="h-10 w-[180px]" />
+          <Skeleton className="h-10 w-[180px]" />
+        </div>
 
-  if (teams.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <p className="text-center text-gray-500">You need to be part of a team to access products.</p>
-        <Button variant="outline" onClick={() => window.location.href = '/team'}>
-          Go to Teams
-        </Button>
+        {/* Product Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(9)].map((_, i) => (
+            <div key={i} className="border rounded-lg p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <Skeleton className="h-5 w-[150px]" />
+                <Skeleton className="h-6 w-[60px]" />
+              </div>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-[80%]" />
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-4 w-[60px]" />
+                <Skeleton className="h-6 w-[80px]" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Products</h2>
-        <div className="flex items-center space-x-2">
-          <Button onClick={onAddProduct} disabled={!teams.some(team => team.owner_id === user?.id)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Product Manager</h1>
+          <p className="text-gray-600">Manage your products and inventory</p>
         </div>
+        <Button onClick={onAddProduct}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Product
+        </Button>
       </div>
 
+      {/* Filters */}
       <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search products..."
             value={searchTerm}
@@ -135,10 +122,23 @@ export const ProductList: React.FC<ProductListProps> = ({
             className="pl-10"
           />
         </div>
+        
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="Published">Published</SelectItem>
+            <SelectItem value="Draft">Draft</SelectItem>
+            <SelectItem value="Inactive">Inactive</SelectItem>
+            <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by Team" />
+        <Select value={teamFilter} onValueChange={setTeamFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by team" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Teams</SelectItem>
@@ -149,26 +149,79 @@ export const ProductList: React.FC<ProductListProps> = ({
             ))}
           </SelectContent>
         </Select>
-
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
+      {/* Product Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{products.length}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Published</CardTitle>
+            <Package className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {products.filter(p => p.status === 'Published').length}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Draft</CardTitle>
+            <Archive className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {products.filter(p => p.status === 'Draft').length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
+            <Archive className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {products.filter(p => p.status === 'Out of Stock').length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Products Grid */}
       {filteredProducts.length === 0 ? (
-        <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">No products found</p>
-        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <Package className="h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2">
+              {products.length === 0 ? 'No products yet' : 'No products found'}
+            </h3>
+            <p className="text-gray-500 mb-4 text-center">
+              {products.length === 0 
+                ? 'Get started by adding your first product'
+                : 'Try adjusting your search or filter criteria'
+              }
+            </p>
+            {products.length === 0 && (
+              <Button onClick={onAddProduct}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Product
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProducts.map((product) => (
@@ -177,17 +230,37 @@ export const ProductList: React.FC<ProductListProps> = ({
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => onSelectProduct(product)}
             >
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium truncate">{product.name}</h3>
-                  {getStatusBadge(product.status)}
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
+                  <Badge className={getStatusColor(product.status)}>
+                    {product.status}
+                  </Badge>
                 </div>
-                <p className="text-sm text-gray-500 mb-2 line-clamp-2">
-                  {product.description || 'No description'}
-                </p>
-                <div className="flex justify-between items-center text-sm">
-                  <span>{formatPrice(product.price)}</span>
-                  <Badge variant="outline">{getTeamName(product.team_id)}</Badge>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {product.description && (
+                  <p className="text-gray-600 text-sm line-clamp-2">{product.description}</p>
+                )}
+                
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-500">
+                    Team: {getTeamName(product.team_id)}
+                  </div>
+                  {product.category && (
+                    <Badge variant="outline" className="text-xs">
+                      {product.category}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-500">
+                    Stock: {product.stock}
+                  </div>
+                  <div className="text-lg font-semibold">
+                    {product.price ? formatCurrency(product.price) : 'No price set'}
+                  </div>
                 </div>
               </CardContent>
             </Card>

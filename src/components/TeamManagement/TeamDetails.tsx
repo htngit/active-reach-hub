@@ -1,210 +1,220 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, UserPlus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { UserPlus, Users, Building, Mail, Phone, Globe, MapPin, CreditCard } from 'lucide-react';
+import { Team } from '@/types/team';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTeamData } from '@/hooks/useTeamData';
+import { TeamMembers } from './TeamMembers';
 import { EditTeamDialog } from './EditTeamDialog';
 import { InviteMemberDialog } from './InviteMemberDialog';
-import { TeamMembers } from './TeamMembers';
 import { PendingInvitations } from './PendingInvitations';
-import { Team, TeamMember, TeamInvitation } from '@/types/team';
 
 interface TeamDetailsProps {
   team: Team;
-  user: any;
+  onBack: () => void;
   onTeamUpdated: () => void;
-  onTeamDeleted: () => void;
 }
 
 export const TeamDetails: React.FC<TeamDetailsProps> = ({
   team,
-  user,
+  onBack,
   onTeamUpdated,
-  onTeamDeleted
 }) => {
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [showInviteForm, setShowInviteForm] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [invitationRefreshKey, setInvitationRefreshKey] = useState(0);
+  const { user } = useAuth();
+  const { canManageTeam, isTeamOwner } = useTeamData();
 
-  useEffect(() => {
-    if (team) {
-      fetchTeamData();
-    }
-  }, [team]);
-
-  const fetchTeamData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        fetchTeamMembers(),
-        fetchTeamInvitations()
-      ]);
-    } catch (error) {
-      console.error('Error fetching team data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTeamMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', team.id);
-
-      if (error) throw error;
-      setMembers(data || []);
-    } catch (error: any) {
-      console.error('Error fetching team members:', error);
-    }
-  };
-
-  const fetchTeamInvitations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('team_invitations')
-        .select('*')
-        .eq('team_id', team.id)
-        .is('used_at', null)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setInvitations(data || []);
-    } catch (error: any) {
-      console.error('Error fetching team invitations:', error);
-    }
-  };
-
-  const handleDeleteTeam = async () => {
-    if (!confirm('Are you sure you want to delete this team? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', team.id);
-
-      if (error) throw error;
-      onTeamDeleted();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to delete team",
-        variant: "destructive",
-      });
-    }
-  };
+  const canManageThisTeam = canManageTeam(team.id);
+  const isOwner = isTeamOwner(team.id);
 
   const handleInvitationSent = () => {
-    fetchTeamInvitations();
-    toast({
-      title: "Success",
-      description: "Invitation sent successfully",
-    });
+    setInvitationRefreshKey(prev => prev + 1);
+    onTeamUpdated();
   };
-
-  const isOwner = team.owner_id === user?.id;
-
-  if (loading) {
-    return <div className="p-4">Loading team details...</div>;
-  }
 
   return (
     <div className="space-y-6">
-      {/* Team Info */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" onClick={onBack}>
+            ← Back to Teams
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">{team.name}</h1>
+            <p className="text-gray-600">{team.description}</p>
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          {/* Managers and owners can invite members */}
+          {canManageThisTeam && (
+            <Button onClick={() => setIsInviteDialogOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite Member
+            </Button>
+          )}
+          {/* Only owners can edit team details */}
+          {isOwner && (
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>
+              Edit Team
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Company Information */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{team.name}</CardTitle>
-              {team.description && (
-                <p className="text-gray-600 mt-1">{team.description}</p>
-              )}
-            </div>
-            {isOwner && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowEditForm(true)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDeleteTeam}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+          <CardTitle className="flex items-center gap-2">
+            <Building className="h-5 w-5" />
+            Company Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {team.company_legal_name && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">Legal Name</label>
+                <p className="font-medium">{team.company_legal_name}</p>
+              </div>
+            )}
+            {team.tax_id && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">Tax ID</label>
+                <p className="font-medium">{team.tax_id}</p>
               </div>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="text-sm">
-              <span className="font-medium">Created:</span>{' '}
-              {new Date(team.created_at).toLocaleDateString()}
-            </div>
-            <div className="text-sm">
-              <span className="font-medium">Members:</span> {members.length}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Team Members */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Team Members</CardTitle>
-            {isOwner && (
-              <Button size="sm" onClick={() => setShowInviteForm(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invite Member
-              </Button>
+          {(team.company_address || team.city || team.state || team.postal_code || team.country) && (
+            <div>
+              <label className="text-sm font-medium text-gray-600 flex items-center gap-1">
+                <MapPin className="h-4 w-4" />
+                Address
+              </label>
+              <div className="space-y-1">
+                {team.company_address && <p>{team.company_address}</p>}
+                <p>
+                  {[team.city, team.state, team.postal_code, team.country]
+                    .filter(Boolean)
+                    .join(', ')}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {team.company_email && (
+              <div>
+                <label className="text-sm font-medium text-gray-600 flex items-center gap-1">
+                  <Mail className="h-4 w-4" />
+                  Email
+                </label>
+                <p>{team.company_email}</p>
+              </div>
+            )}
+            {team.company_phone && (
+              <div>
+                <label className="text-sm font-medium text-gray-600 flex items-center gap-1">
+                  <Phone className="h-4 w-4" />
+                  Phone
+                </label>
+                <p>{team.company_phone}</p>
+              </div>
+            )}
+            {team.website && (
+              <div>
+                <label className="text-sm font-medium text-gray-600 flex items-center gap-1">
+                  <Globe className="h-4 w-4" />
+                  Website
+                </label>
+                <a href={team.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  {team.website}
+                </a>
+              </div>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
-          <TeamMembers members={members} />
         </CardContent>
       </Card>
 
-      {/* Pending Invitations */}
-      {isOwner && invitations.length > 0 && (
-        <PendingInvitations invitations={invitations} />
+      {/* Banking Information */}
+      {(team.bank_name || team.bank_account || team.bank_account_holder || team.swift_code) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Banking Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {team.bank_name && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Bank Name</label>
+                  <p className="font-medium">{team.bank_name}</p>
+                </div>
+              )}
+              {team.bank_account && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Account Number</label>
+                  <p className="font-medium">{team.bank_account}</p>
+                </div>
+              )}
+              {team.bank_account_holder && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Account Holder</label>
+                  <p className="font-medium">{team.bank_account_holder}</p>
+                </div>
+              )}
+              {team.swift_code && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">SWIFT Code</label>
+                  <p className="font-medium">{team.swift_code}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Separator />
+
+      {/* Team Members */}
+      <TeamMembers team={team} />
+
+      {/* Pending Invitations - Only show to managers and owners */}
+      {canManageThisTeam && (
+        <PendingInvitations 
+          team={team} 
+          refreshKey={invitationRefreshKey}
+        />
       )}
 
       {/* Dialogs */}
-      <EditTeamDialog
-        open={showEditForm}
-        onOpenChange={setShowEditForm}
-        team={team}
-        onTeamUpdated={() => {
-          setShowEditForm(false);
-          onTeamUpdated();
-        }}
-      />
+      {isOwner && (
+        <EditTeamDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          team={team}
+          onTeamUpdated={onTeamUpdated}
+        />
+      )}
 
-      <InviteMemberDialog
-        open={showInviteForm}
-        onOpenChange={setShowInviteForm}
-        team={team}
-        user={user}
-        onInvitationSent={() => {
-          setShowInviteForm(false);
-          handleInvitationSent();
-        }}
-      />
+      {canManageThisTeam && user && (
+        <InviteMemberDialog
+          open={isInviteDialogOpen}
+          onOpenChange={setIsInviteDialogOpen}
+          team={team}
+          user={user}
+          onInvitationSent={handleInvitationSent}
+        />
+      )}
     </div>
   );
 };

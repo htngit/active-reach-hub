@@ -59,7 +59,11 @@ export const useInvoiceFormLogic = ({
         due_date: data.due_date || null,
         tax_rate: data.tax_rate || 0,
         notes: data.notes || null,
-        items: data.items,
+        items: data.items.map(item => ({
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+        })),
       });
 
       if (success) {
