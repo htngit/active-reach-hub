@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -13,10 +14,11 @@ import { AcceptInvitationResponse } from '@/types/team';
 const JoinTeamPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const params = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true); // Add state for auth loading
+  const [authLoading, setAuthLoading] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,12 +26,23 @@ const JoinTeamPage: React.FC = () => {
   const [tokenFromUrl, setTokenFromUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if there's a token in the URL for convenience
-    const params = new URLSearchParams(location.search);
-    const urlToken = params.get('token');
+    // Extract token from URL path parameter or query parameter
+    let urlToken: string | null = null;
+    
+    // First try URL path parameter
+    if (params.token) {
+      urlToken = decodeURIComponent(params.token);
+      console.log('Token found in URL path:', urlToken);
+    } else {
+      // Fallback to query parameter for backwards compatibility
+      const searchParams = new URLSearchParams(location.search);
+      urlToken = searchParams.get('token');
+      if (urlToken) {
+        console.log('Token found in query parameter:', urlToken);
+      }
+    }
     
     if (urlToken) {
-      console.log('Token found in URL:', urlToken);
       setTokenFromUrl(urlToken);
       setToken(urlToken); // Pre-fill the form
     }
@@ -42,18 +55,11 @@ const JoinTeamPage: React.FC = () => {
         
         // Now check authentication status
         if (!user) {
-          console.log('User not authenticated, redirecting to login');
-          toast({
-            title: 'Authentication Required',
-            description: 'Please log in to accept the team invitation.',
-            variant: 'default',
-          });
-          navigate('/login');
-          return;
+          console.log('User not authenticated, they need to log in first');
+        } else {
+          // Check if user needs to set up password
+          await checkUserPasswordStatus();
         }
-
-        // Check if user needs to set up password
-        await checkUserPasswordStatus();
       } finally {
         // Mark auth loading as complete
         setAuthLoading(false);
@@ -61,7 +67,7 @@ const JoinTeamPage: React.FC = () => {
     };
 
     processAuth();
-  }, [location.search, navigate, user, toast]);
+  }, [location.search, params.token, user]);
 
   const checkUserPasswordStatus = async () => {
     if (!user) return;
@@ -124,7 +130,7 @@ const JoinTeamPage: React.FC = () => {
         description: 'Please log in to accept the team invitation.',
         variant: 'default',
       });
-      navigate('/login');
+      navigate('/');
       return;
     }
 
@@ -189,13 +195,8 @@ const JoinTeamPage: React.FC = () => {
         description: invitationResult.message || 'You have successfully joined the team!',
       });
 
-      // Navigate to the team page
-      if (invitationResult.team_id) {
-        navigate(`/teams/${invitationResult.team_id}`);
-      } else {
-        // Fallback to teams list if team_id is not returned
-        navigate('/teams');
-      }
+      // Navigate to the teams page
+      navigate('/teams');
     } catch (error: any) {
       console.error('Error accepting invitation:', error);
       toast({
@@ -263,13 +264,42 @@ const JoinTeamPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Checking Authentication</CardTitle>
+            <CardTitle>Processing Invitation</CardTitle>
             <CardDescription>
-              Please wait while we verify your account...
+              Please wait while we process your team invitation...
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center py-6">
             <Loader2 className="h-8 w-8 animate-spin" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If user is not authenticated, show message to log in first
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Authentication Required</CardTitle>
+            <CardDescription>
+              You need to log in first to accept this team invitation.
+              {tokenFromUrl && (
+                <span className="block mt-2 text-sm text-blue-600">
+                  Your invitation token has been saved and will be processed after you log in.
+                </span>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => navigate('/')} 
+              className="w-full"
+            >
+              Go to Login
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -282,42 +312,60 @@ const JoinTeamPage: React.FC = () => {
         <CardHeader>
           <CardTitle>Join Team</CardTitle>
           <CardDescription>
-            Enter your invitation token to join the team.
-            {tokenFromUrl && (
-              <span className="block mt-2 text-sm text-blue-600">
-                We found a token in the URL and pre-filled it for you.
-              </span>
+            {tokenFromUrl ? (
+              'Ready to join the team! Click the button below to accept the invitation.'
+            ) : (
+              'Enter your invitation token to join the team.'
             )}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={(e) => { e.preventDefault(); handleAcceptInvitation(); }} className="space-y-4">
-            <div>
-              <Label htmlFor="token">Invitation Token</Label>
-              <Input
-                id="token"
-                type="text"
-                placeholder="Enter your invitation token"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                required
-                className="mt-1"
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                This token was provided in your invitation email or link.
-              </p>
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading || !token.trim()}>
+          {!tokenFromUrl && (
+            <form onSubmit={(e) => { e.preventDefault(); handleAcceptInvitation(); }} className="space-y-4">
+              <div>
+                <Label htmlFor="token">Invitation Token</Label>
+                <Input
+                  id="token"
+                  type="text"
+                  placeholder="Enter your invitation token"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  This token was provided in your invitation email or link.
+                </p>
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading || !token.trim()}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Joining team...
+                  </>
+                ) : (
+                  'Join Team'
+                )}
+              </Button>
+            </form>
+          )}
+          
+          {tokenFromUrl && (
+            <Button 
+              onClick={handleAcceptInvitation} 
+              className="w-full" 
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Joining team...
                 </>
               ) : (
-                'Join Team'
+                'Accept Invitation & Join Team'
               )}
             </Button>
-          </form>
+          )}
         </CardContent>
       </Card>
     </div>

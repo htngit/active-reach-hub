@@ -84,15 +84,15 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
       console.log('Verification data:', verifyData);
       console.log('Verification error:', verifyError);
 
-      // Create the invitation link - token is already base64 encoded, just URL encode special characters
-      const invitationLink = `${window.location.origin}/join-team?token=${encodeURIComponent(tokenData)}`;
+      // Create the invitation link using URL path parameter
+      const invitationLink = `${window.location.origin}/join-team/${encodeURIComponent(tokenData)}`;
       console.log('Generated invitation link:', invitationLink);
       console.log('Original token:', tokenData);
       console.log('URL encoded token:', encodeURIComponent(tokenData));
 
       toast({
         title: "Success",
-        description: "Invitation sent successfully!",
+        description: `Invitation sent! Share this link: ${invitationLink}`,
         variant: "default",
       });
 

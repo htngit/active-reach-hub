@@ -12,7 +12,8 @@ interface PendingInvitationsProps {
 
 export const PendingInvitations: React.FC<PendingInvitationsProps> = ({ invitations }) => {
   const copyInvitationLink = (token: string) => {
-    const link = `${window.location.origin}/join-team?token=${token}`;
+    // Use URL path parameter instead of query parameter
+    const link = `${window.location.origin}/join-team/${encodeURIComponent(token)}`;
     navigator.clipboard.writeText(link);
     
     toast({
@@ -48,6 +49,6 @@ export const PendingInvitations: React.FC<PendingInvitationsProps> = ({ invitati
           ))}
         </div>
       </CardContent>
-    </Card>
+    </Dialog>
   );
 };

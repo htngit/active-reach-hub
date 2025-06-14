@@ -48,7 +48,7 @@ const DynamicBreadcrumb = () => {
       case '/settings':
         return { title: 'Settings', parent: 'Account' };
       default:
-        if (path.startsWith('/join-team/')) {
+        if (path.startsWith('/join-team')) {
           return { title: 'Join Team', parent: 'Teams' };
         }
         return { title: 'Page Not Found', parent: null };
@@ -86,7 +86,9 @@ function App() {
           <div className="min-h-screen bg-background font-sans antialiased">
             <Routes>
               {/* JoinTeamPage is public - users might not be logged in when clicking invitation links */}
+              {/* Support both URL path parameter and query parameter for backwards compatibility */}
               <Route path="/join-team/:token" element={<JoinTeamPage />} />
+              <Route path="/join-team" element={<JoinTeamPage />} />
               
               {/* All other routes are protected */}
               <Route path="/*" element={
