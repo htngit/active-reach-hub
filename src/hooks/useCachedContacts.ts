@@ -61,11 +61,16 @@ export const useCachedContacts = () => {
 
       console.log('Fetching fresh contacts data...');
 
-      // Fetch contacts with RLS policies in place
-      // This will automatically filter based on the user's permissions
+      // Fetch contacts with better filtering - get all contacts accessible to the user
       const { data, error: fetchError } = await supabase
         .from('contacts')
-        .select('*')
+        .select(`
+          *,
+          teams:team_id (
+            name,
+            owner_id
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (fetchError) {
@@ -73,6 +78,9 @@ export const useCachedContacts = () => {
       }
 
       console.log('Fresh contacts fetched:', data?.length || 0);
+      console.log('User ID:', user.id);
+      console.log('Sample contacts:', data?.slice(0, 3));
+
       setContacts(data || []);
       setCacheInfo(`Fresh data loaded at ${new Date().toLocaleString()}`);
 
