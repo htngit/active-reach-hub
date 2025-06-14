@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Sheet,
@@ -15,8 +16,6 @@ import {
 } from "@/components/ui/navigation-menu";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { SidebarTrigger } from "@/components/SidebarTrigger";
-import { SidebarProvider } from "@/contexts/SidebarContext";
 import { useSidebar } from "@/hooks/useSidebar";
 import {
   Home,
@@ -29,7 +28,7 @@ import {
 import { Link } from "react-router-dom";
 
 const AppSidebar = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const { sidebarOpen, closeSidebar } = useSidebar();
 
   const navItems = [
@@ -97,7 +96,7 @@ const AppSidebar = () => {
         <Button
           variant="outline"
           className="w-full justify-start"
-          onClick={logout}
+          onClick={signOut}
         >
           Log Out
         </Button>

@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
-import { Separator } from "@/components/ui/separator"
+import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,25 +11,25 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { SidebarTrigger } from "@/components/ui/sidebar-trigger"
-import { AppSidebar } from './components/AppSidebar';
+} from "@/components/ui/breadcrumb";
+import { SidebarTrigger } from "@/components/SidebarTrigger";
+import AppSidebar from './components/AppSidebar';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { AuthProvider } from './contexts/AuthContext';
-import Index from './pages';
-import ContactManager from './components/ContactManager/ContactManager';
+import Index from './pages/Index';
+import { ContactManager } from './components/ContactManager/ContactManager';
 import ProductPage from './pages/ProductPage';
 import TeamManagement from './pages/TeamManagement';
 import PersonalSettings from './pages/PersonalSettings';
 import NotFound from './pages/NotFound';
 import JoinTeamPage from './pages/JoinTeamPage';
-import { Home, Users, Package, FileText, Building2, Settings } from 'lucide-react';
-
 import InvoicePage from './pages/InvoicePage';
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <QueryClient>
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
           <div className="min-h-screen bg-background font-sans antialiased">
@@ -72,7 +73,7 @@ function App() {
           <Toaster />
         </AuthProvider>
       </BrowserRouter>
-    </QueryClient>
+    </QueryClientProvider>
   );
 }
 
