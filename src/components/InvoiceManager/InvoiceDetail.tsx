@@ -8,10 +8,32 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, FileText, Calendar, DollarSign, User, Building, Download } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  FileText, 
+  Calendar, 
+  DollarSign, 
+  User, 
+  Building, 
+  Download, 
+  Edit, 
+  AlertTriangle 
+} from 'lucide-react';
 import { Invoice, InvoiceItem, InvoiceActivity } from '@/types/invoice';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
+import { EditInvoiceForm } from './EditInvoiceForm';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from '@/components/ui/alert-dialog';
 
 interface InvoiceDetailProps {
   invoice: Invoice;
@@ -28,8 +50,10 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const [activities, setActivities] = useState<InvoiceActivity[]>([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [isVoiding, setIsVoiding] = useState(false);
   
-  const { updateInvoiceStatus, fetchInvoiceItems, fetchInvoiceActivities } = useInvoiceData();
+  const { updateInvoiceStatus, fetchInvoiceItems, fetchInvoiceActivities, isTeamOwner } = useInvoiceData();
   const { contacts } = useCachedContacts();
   const { getUserNameById } = useUserData();
   const { teams } = useTeamData();
@@ -37,6 +61,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const contact = contacts.find(c => c.id === invoice.contact_id);
   const company = teams.find(t => t.id === invoice.team_id);
   const statusOptions = ['Draft', 'Sent', 'Viewed', 'Paid', 'Overdue'];
+  const canEdit = isTeamOwner(invoice.team_id) && invoice.status !== 'Paid' && invoice.status !== 'Void';
 
   useEffect(() => {
     const loadInvoiceData = async () => {
@@ -61,6 +86,23 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
     } finally {
       setIsUpdatingStatus(false);
     }
+  };
+
+  const handleVoidInvoice = async () => {
+    setIsVoiding(true);
+    try {
+      const success = await updateInvoiceStatus(invoice.id, 'Void');
+      if (success) {
+        onInvoiceUpdated();
+      }
+    } finally {
+      setIsVoiding(false);
+    }
+  };
+
+  const handleEditComplete = () => {
+    setShowEditForm(false);
+    onInvoiceUpdated();
   };
 
   const handleDownloadPDF = async () => {
@@ -187,9 +229,21 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
       case 'viewed': return 'bg-yellow-100 text-yellow-800';
       case 'paid': return 'bg-green-100 text-green-800';
       case 'overdue': return 'bg-red-100 text-red-800';
+      case 'void': return 'bg-slate-100 text-slate-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (showEditForm) {
+    return (
+      <EditInvoiceForm
+        invoice={invoice}
+        items={items}
+        onBack={() => setShowEditForm(false)}
+        onInvoiceUpdated={handleEditComplete}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -213,27 +267,79 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             <Download className="h-4 w-4 mr-2" />
             {isDownloading ? 'Downloading...' : 'Download Invoice'}
           </Button>
+          
+          {canEdit && (
+            <Button variant="outline" onClick={() => setShowEditForm(true)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Invoice
+            </Button>
+          )}
+          
+          {canEdit && invoice.status !== 'Void' && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="text-red-600 border-red-600 hover:bg-red-50">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Void Invoice
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Void Invoice</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to void this invoice? This action cannot be undone.
+                    Voided invoices cannot be edited or paid.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleVoidInvoice}
+                    disabled={isVoiding}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {isVoiding ? 'Voiding...' : 'Void Invoice'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          
           <Badge className={getStatusColor(invoice.status)}>
             {invoice.status}
           </Badge>
-          <Select
-            value={invoice.status}
-            onValueChange={handleStatusUpdate}
-            disabled={isUpdatingStatus}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map(status => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          
+          {invoice.status !== 'Void' && (
+            <Select
+              value={invoice.status}
+              onValueChange={handleStatusUpdate}
+              disabled={isUpdatingStatus}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map(status => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
+
+      {invoice.status === 'Void' && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="font-medium">This invoice has been voided and cannot be modified or paid.</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -327,7 +433,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             </div>
             {invoice.tax_rate && invoice.tax_rate > 0 && (
               <div className="flex justify-between">
-                <span>Tax (${invoice.tax_rate}%):</span>
+                <span>Tax ({invoice.tax_rate}%):</span>
                 <span>${(invoice.tax_amount || 0).toFixed(2)}</span>
               </div>
             )}

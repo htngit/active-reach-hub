@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -155,6 +154,120 @@ export const useInvoiceData = () => {
     }
   };
 
+  const updateInvoice = async (invoiceId: string, updateData: {
+    contact_id: string;
+    team_id: string;
+    due_date: string | null;
+    tax_rate: number;
+    notes: string | null;
+    items: Array<{
+      description: string;
+      quantity: number;
+      unit_price: number;
+    }>;
+  }) => {
+    if (!user) return false;
+
+    try {
+      const isOwner = isTeamOwner(updateData.team_id);
+      if (!isOwner) {
+        throw new Error('Only team owners can update invoices');
+      }
+
+      // Calculate totals
+      const subtotal = updateData.items.reduce((sum, item) => 
+        sum + (item.quantity * item.unit_price), 0
+      );
+      const taxAmount = subtotal * updateData.tax_rate / 100;
+      const total = subtotal + taxAmount;
+
+      // Update invoice
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .update({
+          contact_id: updateData.contact_id,
+          team_id: updateData.team_id,
+          subtotal,
+          tax_rate: updateData.tax_rate,
+          tax_amount: taxAmount,
+          total,
+          due_date: updateData.due_date,
+          notes: updateData.notes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invoiceId);
+
+      if (invoiceError) {
+        throw invoiceError;
+      }
+
+      // Delete existing items
+      const { error: deleteError } = await supabase
+        .from('invoice_items')
+        .delete()
+        .eq('invoice_id', invoiceId);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Create new items
+      const itemsWithInvoiceId = updateData.items.map(item => ({
+        ...item,
+        invoice_id: invoiceId,
+        total_price: item.quantity * item.unit_price,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('invoice_items')
+        .insert(itemsWithInvoiceId);
+
+      if (itemsError) {
+        throw itemsError;
+      }
+
+      // Log activity
+      await supabase
+        .from('invoice_activities')
+        .insert({
+          invoice_id: invoiceId,
+          user_id: user.id,
+          activity_type: 'Invoice Updated',
+          details: 'Invoice details were updated',
+        });
+
+      setInvoices(prevInvoices =>
+        prevInvoices.map(invoice =>
+          invoice.id === invoiceId 
+            ? { 
+                ...invoice, 
+                ...updateData,
+                subtotal,
+                tax_amount: taxAmount,
+                total,
+                updated_at: new Date().toISOString()
+              }
+            : invoice
+        )
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Invoice updated successfully',
+      });
+
+      return true;
+    } catch (err: any) {
+      console.error('Error updating invoice:', err);
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to update invoice',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const updateInvoiceStatus = async (invoiceId: string, status: string) => {
     if (!user) return false;
 
@@ -250,6 +363,7 @@ export const useInvoiceData = () => {
     error,
     fetchInvoices,
     createInvoice,
+    updateInvoice,
     updateInvoiceStatus,
     fetchInvoiceItems,
     fetchInvoiceActivities,
