@@ -9,7 +9,6 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
-  Shield,
   Target,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -48,11 +47,6 @@ const AppSidebar = () => {
       title: "Companies",
       url: "/team-management", 
       icon: Building2,
-    },
-    {
-      title: "Role Management",
-      url: "/role-management",
-      icon: Shield,
     },
   ];
 
