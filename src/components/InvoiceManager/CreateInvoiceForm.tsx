@@ -230,7 +230,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                     <SelectValue placeholder="Select team" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Personal Contacts</SelectItem>
+                    <SelectItem value="personal">Personal Contacts</SelectItem>
                     {teams.map(team => (
                       <SelectItem key={team.id} value={team.id}>
                         {team.name}
@@ -253,7 +253,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                       </SelectItem>
                     ))}
                     {teamContacts.length === 0 && (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="no-contacts" disabled>
                         No contacts available for this selection
                       </SelectItem>
                     )}
