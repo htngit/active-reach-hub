@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { Separator } from "@/components/ui/separator";
@@ -27,6 +27,56 @@ import InvoicePage from './pages/InvoicePage';
 
 const queryClient = new QueryClient();
 
+const DynamicBreadcrumb = () => {
+  const location = useLocation();
+  
+  const getBreadcrumbItems = () => {
+    const path = location.pathname;
+    
+    switch (path) {
+      case '/':
+        return { title: 'Dashboard', parent: null };
+      case '/contacts':
+        return { title: 'Contacts', parent: 'CRM' };
+      case '/products':
+        return { title: 'Products', parent: 'CRM' };
+      case '/invoices':
+        return { title: 'Invoices', parent: 'CRM' };
+      case '/teams':
+        return { title: 'Teams', parent: 'Management' };
+      case '/settings':
+        return { title: 'Settings', parent: 'Account' };
+      default:
+        if (path.startsWith('/join-team/')) {
+          return { title: 'Join Team', parent: 'Teams' };
+        }
+        return { title: 'Page Not Found', parent: null };
+    }
+  };
+
+  const breadcrumbData = getBreadcrumbItems();
+
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        {breadcrumbData.parent && (
+          <>
+            <BreadcrumbItem className="hidden md:block">
+              <BreadcrumbLink href="/">
+                {breadcrumbData.parent}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator className="hidden md:block" />
+          </>
+        )}
+        <BreadcrumbItem>
+          <BreadcrumbPage>{breadcrumbData.title}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -40,19 +90,7 @@ function App() {
                   <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
                     <SidebarTrigger className="-ml-1" />
                     <Separator orientation="vertical" className="mr-2 h-4" />
-                    <Breadcrumb>
-                      <BreadcrumbList>
-                        <BreadcrumbItem className="hidden md:block">
-                          <BreadcrumbLink href="#">
-                            Building Your Application
-                          </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator className="hidden md:block" />
-                        <BreadcrumbItem>
-                          <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                        </BreadcrumbItem>
-                      </BreadcrumbList>
-                    </Breadcrumb>
+                    <DynamicBreadcrumb />
                   </header>
                   <main className="flex-1 p-4">
                     <Routes>
