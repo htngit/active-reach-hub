@@ -1,7 +1,6 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSidebar } from "@/hooks/useSidebar";
 import {
   Home,
   Users,
@@ -9,6 +8,8 @@ import {
   Settings,
   FileText,
   Building2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -20,18 +21,40 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const AppSidebar = () => {
   const { signOut } = useAuth();
   const location = useLocation();
+  const [crmOpen, setCrmOpen] = useState(true);
 
-  const navItems = [
+  const mainNavItems = [
     {
       title: "Dashboard",
       url: "/",
       icon: Home,
     },
+    {
+      title: "Teams",
+      url: "/teams", 
+      icon: Building2,
+    },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Settings,
+    },
+  ];
+
+  const crmNavItems = [
     {
       title: "Contacts",
       url: "/contacts",
@@ -47,16 +70,6 @@ const AppSidebar = () => {
       url: "/invoices",
       icon: FileText,
     },
-    {
-      title: "Teams",
-      url: "/teams", 
-      icon: Building2,
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings,
-    },
   ];
 
   return (
@@ -66,7 +79,7 @@ const AppSidebar = () => {
           <SidebarGroupLabel>CRM Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location.pathname === item.url}>
                     <Link to={item.url}>
@@ -76,6 +89,35 @@ const AppSidebar = () => {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              
+              <SidebarMenuItem>
+                <Collapsible open={crmOpen} onOpenChange={setCrmOpen}>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton>
+                      {crmOpen ? (
+                        <ChevronDown className="mr-2 h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="mr-2 h-4 w-4" />
+                      )}
+                      <span>CRM</span>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {crmNavItems.map((item) => (
+                        <SidebarMenuSubItem key={item.title}>
+                          <SidebarMenuSubButton asChild isActive={location.pathname === item.url}>
+                            <Link to={item.url}>
+                              <item.icon className="mr-2 h-4 w-4" />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </Collapsible>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
