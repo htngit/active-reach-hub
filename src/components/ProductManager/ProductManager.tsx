@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ProductList } from './ProductList';
 import { ProductDetail } from './ProductDetail';
@@ -14,7 +15,10 @@ enum ProductView {
 export const ProductManager: React.FC = () => {
   const [currentView, setCurrentView] = useState<ProductView>(ProductView.LIST);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const { teams, loading } = useTeamData();
+  const { teams, loading, isTeamOwner } = useTeamData();
+
+  // Check if user is owner of at least one team
+  const canAddProducts = teams.some(team => isTeamOwner(team.id));
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -22,6 +26,7 @@ export const ProductManager: React.FC = () => {
   };
 
   const handleAddProduct = () => {
+    if (!canAddProducts) return;
     setCurrentView(ProductView.ADD);
   };
 
@@ -74,6 +79,7 @@ export const ProductManager: React.FC = () => {
         <ProductList
           onSelectProduct={handleSelectProduct}
           onAddProduct={handleAddProduct}
+          canAddProducts={canAddProducts}
         />
       )}
 

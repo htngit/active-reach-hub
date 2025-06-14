@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useProductData } from '@/hooks/useProductData';
 import { useTeamData } from '@/hooks/useTeamData';
@@ -15,11 +14,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface ProductListProps {
   onSelectProduct: (product: Product) => void;
   onAddProduct: () => void;
+  canAddProducts: boolean;
 }
 
 export const ProductList: React.FC<ProductListProps> = ({
   onSelectProduct,
   onAddProduct,
+  canAddProducts,
 }) => {
   const { products, loading } = useProductData();
   const { teams } = useTeamData();
@@ -105,11 +106,27 @@ export const ProductList: React.FC<ProductListProps> = ({
           <h1 className="text-2xl font-bold">Product Manager</h1>
           <p className="text-gray-600">Manage your products and inventory</p>
         </div>
-        <Button onClick={onAddProduct}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Product
-        </Button>
+        {canAddProducts && (
+          <Button onClick={onAddProduct}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Product
+          </Button>
+        )}
       </div>
+
+      {/* Show message if user cannot add products */}
+      {!canAddProducts && (
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2 text-amber-800">
+              <Package className="h-5 w-5" />
+              <p className="text-sm">
+                Only team owners can add new products. You can view and manage existing products.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
@@ -210,11 +227,13 @@ export const ProductList: React.FC<ProductListProps> = ({
             </h3>
             <p className="text-gray-500 mb-4 text-center">
               {products.length === 0 
-                ? 'Get started by adding your first product'
+                ? canAddProducts 
+                  ? 'Get started by adding your first product'
+                  : 'No products are available in your teams yet'
                 : 'Try adjusting your search or filter criteria'
               }
             </p>
-            {products.length === 0 && (
+            {products.length === 0 && canAddProducts && (
               <Button onClick={onAddProduct}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Product
