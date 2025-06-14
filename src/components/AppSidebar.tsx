@@ -44,7 +44,7 @@ const AppSidebar = () => {
     },
     {
       title: "Companies",
-      url: "/teams", 
+      url: "/team-management", 
       icon: Building2,
     },
   ];
