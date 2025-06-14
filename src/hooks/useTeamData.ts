@@ -113,6 +113,30 @@ export const useTeamData = () => {
     return team ? team.owner_id === user.id : false;
   }, [user, teams]);
 
+  // Check if user is a team manager
+  const isTeamManager = useCallback((teamId: string) => {
+    if (!user || !teamMembers.length) return false;
+    const member = teamMembers.find(m => m.team_id === teamId && m.user_id === user.id);
+    return member ? member.role === 'manager' : false;
+  }, [user, teamMembers]);
+
+  // Check if user has manager or owner permissions for a team
+  const canManageTeam = useCallback((teamId: string) => {
+    return isTeamOwner(teamId) || isTeamManager(teamId);
+  }, [isTeamOwner, isTeamManager]);
+
+  // Get user's role in a specific team
+  const getUserRole = useCallback((teamId: string) => {
+    if (!user) return null;
+    
+    // Check if owner
+    if (isTeamOwner(teamId)) return 'owner';
+    
+    // Check member role
+    const member = teamMembers.find(m => m.team_id === teamId && m.user_id === user.id);
+    return member?.role || null;
+  }, [user, isTeamOwner, teamMembers]);
+
   return {
     teams,
     teamMembers,
@@ -120,6 +144,9 @@ export const useTeamData = () => {
     getTeamMembers,
     getTeamMemberNames,
     refetch: fetchTeamsAndMembers,
-    isTeamOwner
+    isTeamOwner,
+    isTeamManager,
+    canManageTeam,
+    getUserRole
   };
 };

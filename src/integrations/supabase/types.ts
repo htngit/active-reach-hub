@@ -403,6 +403,30 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       team_invitations: {
         Row: {
           created_at: string
@@ -580,6 +604,16 @@ export type Database = {
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_subordinate_user_ids: {
+        Args: { team_uuid: string; manager_uuid: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
+      is_team_manager: {
+        Args: { team_uuid: string; user_uuid: string }
+        Returns: boolean
       }
       is_team_member: {
         Args: { team_uuid: string; user_uuid: string }

@@ -8,6 +8,7 @@ import {
   CreditCard,
   Bell,
   ChevronDown,
+  Cog,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -39,6 +40,11 @@ const UserMenu = () => {
       title: "Notifications",
       url: "/settings/notifications",
       icon: Bell,
+    },
+    {
+      title: "Systems",
+      url: "/settings/systems",
+      icon: Cog,
     },
   ];
 
