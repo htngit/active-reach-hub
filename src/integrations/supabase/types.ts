@@ -181,40 +181,40 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string | null
-          created_by: string | null
+          created_by: string
           description: string | null
           id: string
           name: string
           price: number | null
           status: string
           stock: number
-          team_id: string | null
+          team_id: string
           updated_at: string | null
         }
         Insert: {
           category?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by: string
           description?: string | null
           id?: string
           name: string
           price?: number | null
           status?: string
           stock?: number
-          team_id?: string | null
+          team_id: string
           updated_at?: string | null
         }
         Update: {
           category?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by?: string
           description?: string | null
           id?: string
           name?: string
           price?: number | null
           status?: string
           stock?: number
-          team_id?: string | null
+          team_id?: string
           updated_at?: string | null
         }
         Relationships: [

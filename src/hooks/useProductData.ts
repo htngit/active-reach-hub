@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -70,10 +71,13 @@ export const useProductData = () => {
         ...product,
         price: product.price || null,
         stock,
-        created_by: user.id,
+        created_by: user.id, // This is now required
       };
 
       console.log('Inserting product:', newProduct);
+      console.log('User ID:', user.id);
+      console.log('Team ID:', product.team_id);
+      console.log('Is team owner:', isOwner);
 
       const { data, error: insertError } = await supabase
         .from('products')
@@ -82,6 +86,7 @@ export const useProductData = () => {
         .single();
 
       if (insertError) {
+        console.error('Insert error:', insertError);
         throw insertError;
       }
 
