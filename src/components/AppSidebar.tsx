@@ -71,7 +71,7 @@ const AppSidebar = () => {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>CRM Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>Xalesin CRM</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
