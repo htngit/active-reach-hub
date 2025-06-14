@@ -68,19 +68,28 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
     }
   }, [contacts]);
 
-  // Show all team contacts that user has access to (already filtered by RLS)
-  const teamContacts = selectedTeamId === 'personal' 
-    ? contacts.filter(contact => !contact.team_id) // Only personal contacts (no team_id)
-    : selectedTeamId
-    ? contacts.filter(contact => contact.team_id === selectedTeamId) // All team contacts user has access to
-    : contacts; // All contacts if no team selected
+  // Filter contacts based on selected team - show all contacts that RLS allows
+  const getTeamContacts = () => {
+    if (selectedTeamId === 'personal') {
+      // Show personal contacts (no team_id)
+      return contacts.filter(contact => !contact.team_id);
+    } else if (selectedTeamId) {
+      // Show all contacts for the selected team that user has access to
+      return contacts.filter(contact => contact.team_id === selectedTeamId);
+    } else {
+      // Show all contacts if no team selected
+      return contacts;
+    }
+  };
+
+  const teamContacts = getTeamContacts();
 
   console.log('Team contacts debug:', {
     selectedTeamId,
     totalContacts: contacts.length,
     teamContacts: teamContacts.length,
     userId: user?.id,
-    contactsPreview: teamContacts.slice(0, 3).map(c => ({
+    contactsPreview: teamContacts.slice(0, 5).map(c => ({
       id: c.id,
       name: c.name,
       owner_id: c.owner_id,
@@ -231,6 +240,11 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                     )}
                   </SelectContent>
                 </Select>
+                {teamContacts.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {teamContacts.length} contact{teamContacts.length !== 1 ? 's' : ''} available
+                  </div>
+                )}
               </div>
             </div>
             
