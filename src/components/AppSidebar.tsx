@@ -9,6 +9,8 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
+  Shield,
+  Target,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -47,6 +49,11 @@ const AppSidebar = () => {
       url: "/team-management", 
       icon: Building2,
     },
+    {
+      title: "Role Management",
+      url: "/role-management",
+      icon: Shield,
+    },
   ];
 
   const crmNavItems = [
@@ -54,6 +61,11 @@ const AppSidebar = () => {
       title: "Contacts",
       url: "/contacts",
       icon: Users,
+    },
+    {
+      title: "Leads Distribution",
+      url: "/leads-distribution",
+      icon: Target,
     },
     {
       title: "Products", 

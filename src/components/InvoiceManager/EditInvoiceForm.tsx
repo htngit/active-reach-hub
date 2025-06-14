@@ -56,9 +56,9 @@ export const EditInvoiceForm: React.FC<EditInvoiceFormProps> = ({
       tax_rate: invoice.tax_rate || 0,
       notes: invoice.notes || '',
       items: items.map(item => ({
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
+        description: item.description || '',
+        quantity: item.quantity || 1,
+        unit_price: item.unit_price || 0,
       })),
     },
   });
