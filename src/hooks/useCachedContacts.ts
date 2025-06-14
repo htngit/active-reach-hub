@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,7 +41,7 @@ export const useCachedContacts = () => {
     }
   }, [user]);
 
-  // Fetch contacts directly from database without complex RLS
+  // Fetch contacts with proper RLS handling
   const fetchContacts = useCallback(async (skipCache = false) => {
     if (!user) return;
 
@@ -60,7 +61,8 @@ export const useCachedContacts = () => {
 
       console.log('Fetching fresh contacts data...');
 
-      // Fetch all contacts - with RLS disabled, this will get all accessible contacts
+      // Fetch contacts with RLS policies in place
+      // This will automatically filter based on the user's permissions
       const { data, error: fetchError } = await supabase
         .from('contacts')
         .select('*')
