@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Team } from '@/types/team';
 
 interface TeamListProps {
@@ -22,13 +22,13 @@ export const TeamList: React.FC<TeamListProps> = ({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Teams
+          <Building2 className="h-5 w-5" />
+          Companies
         </CardTitle>
       </CardHeader>
       <CardContent>
         {teams.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No teams yet</p>
+          <p className="text-gray-500 text-center py-4">No companies yet</p>
         ) : (
           <div className="space-y-2">
             {teams.map((team) => (
@@ -41,11 +41,23 @@ export const TeamList: React.FC<TeamListProps> = ({
                 }`}
                 onClick={() => onSelectTeam(team)}
               >
-                <h4 className="font-medium">{team.name}</h4>
+                <div className="flex items-center gap-2 mb-2">
+                  {team.logo_url && (
+                    <img 
+                      src={team.logo_url} 
+                      alt={`${team.name} logo`}
+                      className="h-8 w-8 object-contain rounded"
+                    />
+                  )}
+                  <h4 className="font-medium">{team.name}</h4>
+                </div>
                 {team.description && (
-                  <p className="text-sm text-gray-600">{team.description}</p>
+                  <p className="text-sm text-gray-600 mb-2">{team.description}</p>
                 )}
-                <Badge variant="outline" className="text-xs mt-1">
+                {team.company_legal_name && (
+                  <p className="text-xs text-gray-500 mb-2">{team.company_legal_name}</p>
+                )}
+                <Badge variant="outline" className="text-xs">
                   {team.owner_id === user?.id ? 'Owner' : 'Member'}
                 </Badge>
               </div>

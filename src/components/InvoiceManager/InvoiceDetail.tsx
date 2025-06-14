@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useInvoiceData } from '@/hooks/useInvoiceData';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { useUserData } from '@/hooks/useUserData';
+import { useTeamData } from '@/hooks/useTeamData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,8 +32,10 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const { updateInvoiceStatus, fetchInvoiceItems, fetchInvoiceActivities } = useInvoiceData();
   const { contacts } = useCachedContacts();
   const { getUserNameById } = useUserData();
+  const { teams } = useTeamData();
 
   const contact = contacts.find(c => c.id === invoice.contact_id);
+  const company = teams.find(t => t.id === invoice.team_id);
   const statusOptions = ['Draft', 'Sent', 'Viewed', 'Paid', 'Overdue'];
 
   useEffect(() => {
@@ -67,8 +70,23 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
       const element = document.createElement('div');
       element.innerHTML = `
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
+          <!-- Company Header -->
           <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
-            <h1 style="color: #333; margin-bottom: 10px;">Invoice ${invoice.invoice_number}</h1>
+            ${company?.logo_url ? `<img src="${company.logo_url}" alt="Company Logo" style="max-height: 80px; margin-bottom: 10px;">` : ''}
+            <h1 style="color: #333; margin-bottom: 5px; font-size: 28px;">${company?.company_legal_name || company?.name || 'Company Name'}</h1>
+            ${company?.company_address ? `<p style="margin: 2px 0; font-size: 12px;">${company.company_address}</p>` : ''}
+            ${company?.city ? `<p style="margin: 2px 0; font-size: 12px;">${company.city}${company.state ? `, ${company.state}` : ''} ${company.postal_code || ''}</p>` : ''}
+            ${company?.country ? `<p style="margin: 2px 0; font-size: 12px;">${company.country}</p>` : ''}
+            ${company?.company_phone ? `<p style="margin: 2px 0; font-size: 12px;">Phone: ${company.company_phone}</p>` : ''}
+            ${company?.company_email ? `<p style="margin: 2px 0; font-size: 12px;">Email: ${company.company_email}</p>` : ''}
+            ${company?.website ? `<p style="margin: 2px 0; font-size: 12px;">Website: ${company.website}</p>` : ''}
+            ${company?.tax_id ? `<p style="margin: 2px 0; font-size: 12px;">Tax ID: ${company.tax_id}</p>` : ''}
+          </div>
+
+          <!-- Invoice Header -->
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #333; margin-bottom: 10px; font-size: 24px;">INVOICE</h2>
+            <h3 style="color: #333; margin-bottom: 10px;">${invoice.invoice_number}</h3>
             <p style="margin: 5px 0;">Created: ${format(new Date(invoice.created_at), 'MMM dd, yyyy')}</p>
             ${invoice.due_date ? `<p style="margin: 5px 0;">Due: ${format(new Date(invoice.due_date), 'MMM dd, yyyy')}</p>` : ''}
           </div>
@@ -128,6 +146,16 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             <div style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px;">
               <h3 style="color: #333; margin-bottom: 10px;">Notes:</h3>
               <p style="line-height: 1.5;">${invoice.notes}</p>
+            </div>
+          ` : ''}
+
+          ${company?.bank_name ? `
+            <div style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px;">
+              <h3 style="color: #333; margin-bottom: 10px;">Payment Information:</h3>
+              <p style="margin: 3px 0;"><strong>Bank:</strong> ${company.bank_name}</p>
+              ${company.bank_account ? `<p style="margin: 3px 0;"><strong>Account:</strong> ${company.bank_account}</p>` : ''}
+              ${company.bank_account_holder ? `<p style="margin: 3px 0;"><strong>Account Holder:</strong> ${company.bank_account_holder}</p>` : ''}
+              ${company.swift_code ? `<p style="margin: 3px 0;"><strong>SWIFT:</strong> ${company.swift_code}</p>` : ''}
             </div>
           ` : ''}
         </div>
@@ -230,6 +258,13 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
               <span className="text-sm font-medium">Created by:</span>
               <span>{getUserNameById(invoice.created_by)}</span>
             </div>
+            {company && (
+              <div className="flex items-center gap-2">
+                <Building className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium">Company:</span>
+                <span>{company.name}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

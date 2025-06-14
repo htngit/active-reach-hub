@@ -43,7 +43,7 @@ const AppSidebar = () => {
       icon: Home,
     },
     {
-      title: "Teams",
+      title: "Companies",
       url: "/teams", 
       icon: Building2,
     },

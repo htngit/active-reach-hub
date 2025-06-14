@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useTeamData } from '@/hooks/useTeamData';
-import { CreateTeamDialog } from './CreateTeamDialog';
+import { CompanySetupForm } from './CompanySetupForm';
 import { TeamList } from './TeamList';
 import { TeamDetails } from './TeamDetails';
 import { Team } from '@/types/team';
@@ -27,7 +27,7 @@ export const TeamManagement = () => {
     refetch();
     toast({
       title: "Success",
-      description: "Team created successfully",
+      description: "Company created successfully",
     });
   };
 
@@ -35,7 +35,7 @@ export const TeamManagement = () => {
     refetch();
     toast({
       title: "Success",
-      description: "Team updated successfully",
+      description: "Company updated successfully",
     });
   };
 
@@ -44,29 +44,39 @@ export const TeamManagement = () => {
     setSelectedTeam(null);
     toast({
       title: "Success",
-      description: "Team deleted successfully",
+      description: "Company deleted successfully",
     });
   };
 
   if (loading) {
-    return <div className="p-6">Loading teams...</div>;
+    return <div className="p-6">Loading companies...</div>;
+  }
+
+  if (showCreateForm) {
+    return (
+      <CompanySetupForm
+        onCompanyCreated={handleTeamCreated}
+        onCancel={() => setShowCreateForm(false)}
+        user={user}
+      />
+    );
   }
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">My Team</h1>
-          <p className="text-gray-600">Manage your teams and collaborate with others</p>
+          <h1 className="text-3xl font-bold">My Companies</h1>
+          <p className="text-gray-600">Manage your companies and collaborate with team members</p>
         </div>
         <Button onClick={() => setShowCreateForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Team
+          Create Company
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Teams List */}
+        {/* Companies List */}
         <TeamList 
           teams={teams}
           selectedTeam={selectedTeam}
@@ -74,7 +84,7 @@ export const TeamManagement = () => {
           user={user}
         />
 
-        {/* Team Details */}
+        {/* Company Details */}
         {selectedTeam && (
           <div className="lg:col-span-2">
             <TeamDetails
@@ -86,13 +96,6 @@ export const TeamManagement = () => {
           </div>
         )}
       </div>
-
-      <CreateTeamDialog
-        open={showCreateForm}
-        onOpenChange={setShowCreateForm}
-        onTeamCreated={handleTeamCreated}
-        user={user}
-      />
     </div>
   );
 };

@@ -478,28 +478,73 @@ export type Database = {
       }
       teams: {
         Row: {
+          bank_account: string | null
+          bank_account_holder: string | null
+          bank_name: string | null
+          city: string | null
+          company_address: string | null
+          company_email: string | null
+          company_legal_name: string | null
+          company_phone: string | null
+          country: string | null
           created_at: string
           description: string | null
           id: string
+          logo_url: string | null
           name: string
           owner_id: string
+          postal_code: string | null
+          state: string | null
+          swift_code: string | null
+          tax_id: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
+          bank_account?: string | null
+          bank_account_holder?: string | null
+          bank_name?: string | null
+          city?: string | null
+          company_address?: string | null
+          company_email?: string | null
+          company_legal_name?: string | null
+          company_phone?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          logo_url?: string | null
           name: string
           owner_id: string
+          postal_code?: string | null
+          state?: string | null
+          swift_code?: string | null
+          tax_id?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
+          bank_account?: string | null
+          bank_account_holder?: string | null
+          bank_name?: string | null
+          city?: string | null
+          company_address?: string | null
+          company_email?: string | null
+          company_legal_name?: string | null
+          company_phone?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
           owner_id?: string
+          postal_code?: string | null
+          state?: string | null
+          swift_code?: string | null
+          tax_id?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
