@@ -5,15 +5,10 @@ import {
   Home,
   Users,
   Package,
-  Settings,
   FileText,
   Building2,
   ChevronDown,
   ChevronRight,
-  LogOut,
-  User,
-  CreditCard,
-  Bell,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -35,12 +30,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import UserMenu from "./UserMenu";
 
 const AppSidebar = () => {
-  const { signOut } = useAuth();
   const location = useLocation();
   const [crmOpen, setCrmOpen] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const mainNavItems = [
     {
@@ -70,24 +64,6 @@ const AppSidebar = () => {
       title: "Invoices",
       url: "/invoices",
       icon: FileText,
-    },
-  ];
-
-  const settingsNavItems = [
-    {
-      title: "Account",
-      url: "/settings",
-      icon: User,
-    },
-    {
-      title: "Billing",
-      url: "/settings/billing",
-      icon: CreditCard,
-    },
-    {
-      title: "Notifications",
-      url: "/settings/notifications",
-      icon: Bell,
     },
   ];
 
@@ -145,39 +121,7 @@ const AppSidebar = () => {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton>
-                  {settingsOpen ? (
-                    <ChevronDown className="mr-2 h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="mr-2 h-4 w-4" />
-                  )}
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarMenuSub>
-                  {settingsNavItems.map((item) => (
-                    <SidebarMenuSubItem key={item.title}>
-                      <SidebarMenuSubButton asChild isActive={location.pathname === item.url}>
-                        <Link to={item.url}>
-                          <item.icon className="mr-2 h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  ))}
-                  <SidebarMenuSubItem>
-                    <SidebarMenuSubButton onClick={signOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log Out</span>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                </SidebarMenuSub>
-              </CollapsibleContent>
-            </Collapsible>
+            <UserMenu />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
