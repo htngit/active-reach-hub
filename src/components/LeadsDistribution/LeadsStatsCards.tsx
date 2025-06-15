@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, TrendingUp, Target, UserPlus, DollarSign } from 'lucide-react';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface LeadsStatsCardsProps {
   stats: {
@@ -16,6 +17,8 @@ interface LeadsStatsCardsProps {
 }
 
 export const LeadsStatsCards: React.FC<LeadsStatsCardsProps> = ({ stats }) => {
+  const { formatCurrency } = useCurrency();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
       <Card>
@@ -69,7 +72,7 @@ export const LeadsStatsCards: React.FC<LeadsStatsCardsProps> = ({ stats }) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-600">
-            ${stats.totalRevenue.toLocaleString()}
+            {formatCurrency(stats.totalRevenue)}
           </div>
           <p className="text-xs text-muted-foreground">{stats.conversionRate}% conversion rate</p>
         </CardContent>
