@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   Target,
+  Settings,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -36,17 +37,13 @@ import UserMenu from "./UserMenu";
 const AppSidebar = () => {
   const location = useLocation();
   const [crmOpen, setCrmOpen] = useState(true);
+  const [systemPagesOpen, setSystemPagesOpen] = useState(true);
 
   const mainNavItems = [
     {
       title: "Dashboard",
       url: "/",
       icon: Home,
-    },
-    {
-      title: "Companies",
-      url: "/team-management", 
-      icon: Building2,
     },
   ];
 
@@ -70,6 +67,14 @@ const AppSidebar = () => {
       title: "Invoices",
       url: "/invoices",
       icon: FileText,
+    },
+  ];
+
+  const systemPagesItems = [
+    {
+      title: "Team Management",
+      url: "/team-management",
+      icon: Building2,
     },
   ];
 
@@ -106,6 +111,35 @@ const AppSidebar = () => {
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {crmNavItems.map((item) => (
+                        <SidebarMenuSubItem key={item.title}>
+                          <SidebarMenuSubButton asChild isActive={location.pathname === item.url}>
+                            <Link to={item.url}>
+                              <item.icon className="mr-2 h-4 w-4" />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </Collapsible>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <Collapsible open={systemPagesOpen} onOpenChange={setSystemPagesOpen}>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton>
+                      {systemPagesOpen ? (
+                        <ChevronDown className="mr-2 h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="mr-2 h-4 w-4" />
+                      )}
+                      <span>System Pages</span>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {systemPagesItems.map((item) => (
                         <SidebarMenuSubItem key={item.title}>
                           <SidebarMenuSubButton asChild isActive={location.pathname === item.url}>
                             <Link to={item.url}>
