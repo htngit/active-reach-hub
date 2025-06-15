@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -151,34 +150,36 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
       
       console.log('Uploading to storage path:', fileName);
       
-      // Check if bucket exists first
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-      console.log('Available buckets:', buckets);
-      
-      if (bucketError) {
-        console.error('Error listing buckets:', bucketError);
-        throw new Error('Failed to access storage buckets');
+      // Upload file to storage with retry logic
+      let uploadData, uploadError;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        console.log(`Upload attempt ${attempt}`);
+        
+        const result = await supabase.storage
+          .from('company-assets')
+          .upload(fileName, logoFile, { 
+            upsert: true,
+            contentType: logoFile.type
+          });
+
+        uploadData = result.data;
+        uploadError = result.error;
+
+        if (!uploadError) {
+          console.log('Upload successful on attempt', attempt);
+          break;
+        } else {
+          console.error(`Upload attempt ${attempt} failed:`, uploadError);
+          if (attempt === 3) {
+            throw new Error(`Upload failed after 3 attempts: ${uploadError.message}`);
+          }
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
       }
-
-      const companyAssetsBucket = buckets?.find(bucket => bucket.id === 'company-assets');
-      if (!companyAssetsBucket) {
-        console.error('company-assets bucket not found');
-        throw new Error('Storage bucket not available. Please contact support.');
-      }
-
-      console.log('Found company-assets bucket:', companyAssetsBucket);
-
-      // Upload file to storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('company-assets')
-        .upload(fileName, logoFile, { 
-          upsert: true,
-          contentType: logoFile.type
-        });
 
       if (uploadError) {
-        console.error('Upload error details:', uploadError);
-        throw new Error(`Upload failed: ${uploadError.message}`);
+        throw uploadError;
       }
 
       console.log('Upload successful:', uploadData);
@@ -190,15 +191,15 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
 
       console.log('Generated public URL:', publicUrl);
 
-      // Verify the file was uploaded by trying to list it
-      const { data: files, error: listError } = await supabase.storage
+      // Verify the upload by checking if we can get the file info
+      const { data: fileInfo, error: fileError } = await supabase.storage
         .from('company-assets')
         .list(teamId);
 
-      if (listError) {
-        console.error('Error listing files after upload:', listError);
+      if (fileError) {
+        console.error('Error verifying upload:', fileError);
       } else {
-        console.log('Files in team folder after upload:', files);
+        console.log('Upload verified, files in folder:', fileInfo?.length);
       }
 
       return publicUrl;
