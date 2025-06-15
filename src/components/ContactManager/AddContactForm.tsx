@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,7 +15,13 @@ interface AddContactFormProps {
   onContactAdded: () => void;
 }
 
-const statusOptions = ['New', 'Approached', 'Follow-up Required', 'Paid', 'Lost'];
+const statusOptions = [
+  { value: 'New', label: 'New' },
+  { value: 'Contacted', label: 'Contacted' },
+  { value: 'Qualified', label: 'Qualified' },
+  { value: 'Converted', label: 'Converted' },
+  { value: 'Lost', label: 'Lost' }
+];
 
 export const AddContactForm: React.FC<AddContactFormProps> = ({
   onBack,
@@ -260,7 +265,7 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {statusOptions.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                    <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

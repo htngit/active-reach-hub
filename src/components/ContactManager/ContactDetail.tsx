@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Phone, Mail, Building, MapPin, MessageCircle, Plus, Edit, Trash2, Save, X, RefreshCw, FileText } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { TemplateSelectionModal } from './TemplateSelectionModal';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, Edit, Save, X, Phone, Mail, Building, MapPin, Calendar, MessageSquare, User } from 'lucide-react';
+import { toast } from 'sonner';
+import { LeadQualificationForm } from './LeadQualificationForm';
 
 interface Contact {
   id: string;

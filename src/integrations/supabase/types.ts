@@ -403,6 +403,62 @@ export type Database = {
         }
         Relationships: []
       }
+      qualification_criteria: {
+        Row: {
+          authority_confirmed: boolean | null
+          budget_confirmed: boolean | null
+          contact_id: string
+          created_at: string
+          id: string
+          need_identified: boolean | null
+          qualification_method: string | null
+          qualification_notes: string | null
+          qualification_score: number | null
+          qualified_at: string | null
+          qualified_by: string | null
+          timeline_defined: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          authority_confirmed?: boolean | null
+          budget_confirmed?: boolean | null
+          contact_id: string
+          created_at?: string
+          id?: string
+          need_identified?: boolean | null
+          qualification_method?: string | null
+          qualification_notes?: string | null
+          qualification_score?: number | null
+          qualified_at?: string | null
+          qualified_by?: string | null
+          timeline_defined?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          authority_confirmed?: boolean | null
+          budget_confirmed?: boolean | null
+          contact_id?: string
+          created_at?: string
+          id?: string
+          need_identified?: boolean | null
+          qualification_method?: string | null
+          qualification_notes?: string | null
+          qualification_score?: number | null
+          qualified_at?: string | null
+          qualified_by?: string | null
+          timeline_defined?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_qualification_contact"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string
@@ -580,6 +636,15 @@ export type Database = {
       accept_team_invitation: {
         Args: { p_token: string; p_user_id: string }
         Returns: Json
+      }
+      calculate_qualification_score: {
+        Args: {
+          budget_confirmed: boolean
+          authority_confirmed: boolean
+          need_identified: boolean
+          timeline_defined: boolean
+        }
+        Returns: number
       }
       can_user_access_contact: {
         Args: { contact_id: string; user_id: string }

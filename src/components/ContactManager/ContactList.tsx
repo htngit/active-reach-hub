@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -126,6 +125,19 @@ export const ContactList: React.FC<ContactListProps> = ({
     }
     
     return `${ownerName} (Team Member)`;
+  };
+
+  const statusOptions = ['All', 'New', 'Contacted', 'Qualified', 'Converted', 'Lost'];
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'new': return 'bg-blue-100 text-blue-800';
+      case 'contacted': return 'bg-yellow-100 text-yellow-800';
+      case 'qualified': return 'bg-purple-100 text-purple-800';
+      case 'converted': return 'bg-green-100 text-green-800';
+      case 'lost': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   if (loading || teamsLoading) {
