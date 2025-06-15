@@ -1,12 +1,18 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Edit3 } from 'lucide-react';
+import { UserPlus, Edit3, MoreVertical } from 'lucide-react';
 import { useTeamData } from '@/hooks/useTeamData';
 import { useAuth } from '@/contexts/AuthContext';
 import { InviteMemberDialog } from '@/components/TeamManagement/InviteMemberDialog';
 import { EditTeamDialog } from '@/components/TeamManagement/EditTeamDialog';
 import { Team } from '@/types/team';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface TeamManagementHeaderProps {
   selectedTeam: Team | null;
@@ -33,6 +39,9 @@ export const TeamManagementHeader: React.FC<TeamManagementHeaderProps> = ({
     onTeamUpdated();
   };
 
+  // Only show dropdown if user has any permissions
+  const hasAnyPermissions = canManageThisTeam || isOwner;
+
   return (
     <div className="flex items-center justify-between mb-6">
       <div>
@@ -40,28 +49,32 @@ export const TeamManagementHeader: React.FC<TeamManagementHeaderProps> = ({
         <p className="text-sm text-gray-600">{selectedTeam.description}</p>
       </div>
       
-      <div className="flex gap-2">
-        {canManageThisTeam && (
-          <Button
-            onClick={() => setIsInviteDialogOpen(true)}
-            size="sm"
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invite Member
-          </Button>
-        )}
-        
-        {isOwner && (
-          <Button
-            variant="outline"
-            onClick={() => setIsEditDialogOpen(true)}
-            size="sm"
-          >
-            <Edit3 className="h-4 w-4 mr-2" />
-            Edit Team
-          </Button>
-        )}
-      </div>
+      {hasAnyPermissions && (
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm">
+                <MoreVertical className="h-4 w-4 mr-2" />
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canManageThisTeam && (
+                <DropdownMenuItem onClick={() => setIsInviteDialogOpen(true)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Invite Member
+                </DropdownMenuItem>
+              )}
+              {isOwner && (
+                <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Edit Team
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
       {/* Dialogs */}
       {isOwner && (
