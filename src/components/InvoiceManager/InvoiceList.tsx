@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { useInvoiceData } from '@/hooks/useInvoiceData';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { useUserData } from '@/hooks/useUserData';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +27,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   const { invoices, loading } = useInvoiceData();
   const { contacts } = useCachedContacts();
   const { getUserNameById } = useUserData();
+  const { formatCurrency } = useCurrency();
 
   const getContactName = (contactId: string) => {
     const contact = contacts.find(c => c.id === contactId);
@@ -133,7 +134,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                 <div className="text-right space-y-1">
                   <div className="flex items-center gap-1 text-lg font-semibold">
                     <DollarSign className="h-4 w-4" />
-                    {invoice.total.toFixed(2)}
+                    {formatCurrency(invoice.total)}
                   </div>
                   <p className="text-sm text-gray-500">
                     Created by {getUserNameById(invoice.created_by)}
