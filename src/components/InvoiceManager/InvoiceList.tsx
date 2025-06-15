@@ -133,7 +133,6 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                 </div>
                 <div className="text-right space-y-1">
                   <div className="flex items-center gap-1 text-lg font-semibold">
-                    <DollarSign className="h-4 w-4" />
                     {formatCurrency(invoice.total)}
                   </div>
                   <p className="text-sm text-gray-500">
