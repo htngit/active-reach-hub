@@ -40,6 +40,21 @@ export const useQualificationCriteria = (contactId: string) => {
   const fetchQualificationCriteria = async () => {
     setLoading(true);
     try {
+      console.log('Fetching qualification criteria for contact:', contactId);
+      console.log('Current user:', user?.id);
+
+      // First, let's check the contact details
+      const { data: contactData, error: contactError } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', contactId)
+        .single();
+
+      console.log('Contact data:', contactData);
+      if (contactError) {
+        console.error('Error fetching contact:', contactError);
+      }
+
       const { data, error } = await supabase
         .from('qualification_criteria')
         .select('*')
@@ -47,11 +62,15 @@ export const useQualificationCriteria = (contactId: string) => {
         .single();
 
       if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching qualification criteria:', error);
         throw error;
       }
 
       if (data) {
+        console.log('Found existing qualification criteria:', data);
         setCriteria(data);
+      } else {
+        console.log('No existing qualification criteria found');
       }
     } catch (error: any) {
       console.error('Error fetching qualification criteria:', error);
@@ -77,7 +96,10 @@ export const useQualificationCriteria = (contactId: string) => {
   };
 
   const saveQualificationCriteria = async (currentStatus: string, onQualificationUpdate: () => void) => {
-    if (!user) return;
+    if (!user) {
+      toast.error('You must be logged in to save qualification criteria');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -88,23 +110,52 @@ export const useQualificationCriteria = (contactId: string) => {
         qualification_method: 'manual',
       };
 
+      console.log('Attempting to save qualification data:', qualificationData);
+      console.log('Current user ID:', user.id);
+
+      // First, let's verify the contact exists and get its details
+      const { data: contactCheck, error: contactCheckError } = await supabase
+        .from('contacts')
+        .select('id, owner_id, user_id, team_id')
+        .eq('id', contactId)
+        .single();
+
+      if (contactCheckError) {
+        console.error('Error checking contact:', contactCheckError);
+        throw new Error('Contact not found or inaccessible');
+      }
+
+      console.log('Contact check result:', contactCheck);
+      console.log('User can access contact based on:');
+      console.log('- owner_id match:', contactCheck.owner_id === user.id);
+      console.log('- user_id match:', contactCheck.user_id === user.id);
+
       if (criteria.id) {
         // Update existing
+        console.log('Updating existing qualification criteria with ID:', criteria.id);
         const { error } = await supabase
           .from('qualification_criteria')
           .update(qualificationData)
           .eq('id', criteria.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
       } else {
         // Create new
+        console.log('Creating new qualification criteria');
         const { data, error } = await supabase
           .from('qualification_criteria')
           .insert([qualificationData])
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
+        console.log('Successfully created qualification criteria:', data);
         setCriteria(data);
       }
 
@@ -115,14 +166,17 @@ export const useQualificationCriteria = (contactId: string) => {
           .update({ status: 'Qualified' })
           .eq('id', contactId);
 
-        if (contactError) throw contactError;
+        if (contactError) {
+          console.error('Error updating contact status:', contactError);
+          throw contactError;
+        }
       }
 
       toast.success('Qualification criteria saved successfully');
       onQualificationUpdate();
     } catch (error: any) {
       console.error('Error saving qualification criteria:', error);
-      toast.error('Failed to save qualification criteria');
+      toast.error(`Failed to save qualification criteria: ${error.message}`);
     } finally {
       setSaving(false);
     }
