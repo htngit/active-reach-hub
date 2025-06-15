@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -32,64 +33,6 @@ export const EngagementDialog: React.FC<EngagementDialogProps> = ({
   const [potentialProducts, setPotentialProducts] = useState<string[]>([]);
   const [newProduct, setNewProduct] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // Debug contact access when dialog opens
-  useEffect(() => {
-    if (open && contactId && user) {
-      debugContactAccess();
-    }
-  }, [open, contactId, user]);
-
-  const debugContactAccess = async () => {
-    try {
-      console.log('Debugging contact access for:', { contactId, userId: user?.id });
-      
-      // Check contact details
-      const { data: contactData, error: contactError } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('id', contactId)
-        .single();
-
-      if (contactError) {
-        console.error('Error fetching contact:', contactError);
-        return;
-      }
-
-      console.log('Contact data:', contactData);
-      console.log('User can access because:', {
-        isOwner: contactData.owner_id === user?.id,
-        isCreator: contactData.user_id === user?.id,
-        hasTeam: !!contactData.team_id
-      });
-
-      // If contact has a team, check team membership
-      if (contactData.team_id) {
-        const { data: teamData, error: teamError } = await supabase
-          .from('teams')
-          .select('*')
-          .eq('id', contactData.team_id)
-          .single();
-
-        if (!teamError && teamData) {
-          console.log('Team data:', teamData);
-          console.log('User is team owner:', teamData.owner_id === user?.id);
-        }
-
-        const { data: memberData, error: memberError } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('team_id', contactData.team_id)
-          .eq('user_id', user?.id);
-
-        if (!memberError) {
-          console.log('Team membership:', memberData);
-        }
-      }
-    } catch (error) {
-      console.error('Debug error:', error);
-    }
-  };
 
   const handleAddProduct = () => {
     if (newProduct.trim() && !potentialProducts.includes(newProduct.trim())) {
