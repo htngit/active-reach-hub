@@ -3,6 +3,7 @@ import { useInvoiceData } from '@/hooks/useInvoiceData';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { useProductData } from '@/hooks/useProductData';
 import { useTeamData } from '@/hooks/useTeamData';
+import { useCurrency } from '@/hooks/useCurrency';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
   const { products } = useProductData();
   const { teams } = useTeamData();
   const { user } = useAuth();
+  const { formatCurrency } = useCurrency();
 
   // Auto-select team if only one team exists
   useEffect(() => {
@@ -211,12 +213,12 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                     <SelectValue placeholder="Select contact" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableContacts.map(contact => (
+                    {contacts.map(contact => (
                       <SelectItem key={contact.id} value={contact.id}>
                         {contact.name} - {contact.phone_number}
                       </SelectItem>
                     ))}
-                    {availableContacts.length === 0 && (
+                    {contacts.length === 0 && (
                       <SelectItem value="no-contacts" disabled>
                         No contacts available
                       </SelectItem>
@@ -224,7 +226,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                   </SelectContent>
                 </Select>
                 <div className="text-xs text-gray-500 mt-1">
-                  {availableContacts.length} contact{availableContacts.length !== 1 ? 's' : ''} available
+                  {contacts.length} contact{contacts.length !== 1 ? 's' : ''} available
                 </div>
               </div>
             </div>
@@ -293,7 +295,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                         <SelectItem value="custom">Custom Item</SelectItem>
                         {teamProducts.map(product => (
                           <SelectItem key={product.id} value={product.id}>
-                            {product.name} - ${product.price?.toFixed(2) || '0.00'}
+                            {product.name} - {formatCurrency(product.price || 0)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -333,7 +335,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
                 </div>
                 <div className="text-right">
                   <Badge variant="outline">
-                    Total: ${(item.quantity * item.unit_price).toFixed(2)}
+                    Total: {formatCurrency(item.quantity * item.unit_price)}
                   </Badge>
                 </div>
               </div>
@@ -351,15 +353,15 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
           <CardContent className="space-y-3">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className="flex justify-between">
               <span>Tax ({taxRate}%):</span>
-              <span>${taxAmount.toFixed(2)}</span>
+              <span>{formatCurrency(taxAmount)}</span>
             </div>
             <div className="flex justify-between text-lg font-semibold border-t pt-2">
               <span>Total:</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{formatCurrency(total)}</span>
             </div>
           </CardContent>
         </Card>
