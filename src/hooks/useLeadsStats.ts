@@ -81,6 +81,13 @@ export const useLeadsStats = () => {
     return engagement.qualification_criteria[0].qualification_score >= 75;
   };
 
+  // Helper function to check if a contact is qualified by BANT (legacy support)
+  const isContactQualifiedByBANT = (contactId: string) => {
+    // Check if any engagement for this contact is qualified
+    const contactEngagements = engagementData.filter(e => e.contact_id === contactId);
+    return contactEngagements.some(engagement => isEngagementQualified(engagement.id));
+  };
+
   // Helper function to check if a conversion is validated by a paid invoice
   const isConversionValidated = (conversionId: string) => {
     const conversion = conversionData.find(c => c.id === conversionId);
@@ -135,6 +142,7 @@ export const useLeadsStats = () => {
     refreshing,
     handleRefresh,
     isEngagementQualified,
+    isContactQualifiedByBANT,
     isConversionValidated,
     getLeadsStats
   };

@@ -24,6 +24,7 @@ interface EngagementQualificationDialogProps {
 interface QualificationCriteria {
   id?: string;
   engagement_id: string;
+  contact_id: string;
   budget_confirmed: boolean;
   authority_confirmed: boolean;
   need_identified: boolean;
@@ -45,6 +46,7 @@ export const EngagementQualificationDialog: React.FC<EngagementQualificationDial
   const { user } = useAuth();
   const [criteria, setCriteria] = useState<QualificationCriteria>({
     engagement_id: engagementId,
+    contact_id: contactId,
     budget_confirmed: false,
     authority_confirmed: false,
     need_identified: false,
