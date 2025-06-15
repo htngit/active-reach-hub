@@ -78,27 +78,29 @@ export const useInvoicePDFGenerator = () => {
       <div style="font-family: 'Arial', sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; background: white; color: #333;">
         <!-- Header Section -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 3px solid #2563eb; padding-bottom: 30px;">
-          <!-- Company Info -->
-          <div style="flex: 1;">
+          <!-- Company Info with Logo and Name Side by Side -->
+          <div style="flex: 1; display: flex; align-items: flex-start; gap: 20px;">
             ${logoBase64 ? `
-              <div style="margin-bottom: 15px;">
-                <img src="${logoBase64}" alt="Company Logo" style="max-height: 80px; max-width: 200px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px;">
+              <div style="flex-shrink: 0;">
+                <img src="${logoBase64}" alt="Company Logo" style="max-height: 80px; max-width: 120px; object-fit: contain;">
               </div>
             ` : ''}
-            <h1 style="color: #1f2937; margin: 0 0 10px 0; font-size: 24px; font-weight: bold;">${company?.company_legal_name || company?.name || 'Company Name'}</h1>
-            <div style="color: #6b7280; font-size: 12px; line-height: 1.5;">
-              ${company?.company_address ? `<div>${company.company_address}</div>` : ''}
-              ${company?.city ? `<div>${company.city}${company.state ? `, ${company.state}` : ''} ${company.postal_code || ''}</div>` : ''}
-              ${company?.country ? `<div>${company.country}</div>` : ''}
-              ${company?.company_phone ? `<div>Phone: ${company.company_phone}</div>` : ''}
-              ${company?.company_email ? `<div>Email: ${company.company_email}</div>` : ''}
-              ${company?.website ? `<div>Website: ${company.website}</div>` : ''}
-              ${company?.tax_id ? `<div>Tax ID: ${company.tax_id}</div>` : ''}
+            <div style="flex: 1;">
+              <h1 style="color: #1f2937; margin: 0 0 15px 0; font-size: 24px; font-weight: bold;">${company?.company_legal_name || company?.name || 'Company Name'}</h1>
+              <div style="color: #6b7280; font-size: 12px; line-height: 1.5;">
+                ${company?.company_address ? `<div>${company.company_address}</div>` : ''}
+                ${company?.city ? `<div>${company.city}${company.state ? `, ${company.state}` : ''} ${company.postal_code || ''}</div>` : ''}
+                ${company?.country ? `<div>${company.country}</div>` : ''}
+                ${company?.company_phone ? `<div>Phone: ${company.company_phone}</div>` : ''}
+                ${company?.company_email ? `<div>Email: ${company.company_email}</div>` : ''}
+                ${company?.website ? `<div>Website: ${company.website}</div>` : ''}
+                ${company?.tax_id ? `<div>Tax ID: ${company.tax_id}</div>` : ''}
+              </div>
             </div>
           </div>
           
           <!-- Invoice Title & Number -->
-          <div style="text-align: right;">
+          <div style="text-align: right; flex-shrink: 0;">
             <h2 style="color: #2563eb; margin: 0 0 10px 0; font-size: 36px; font-weight: bold;">INVOICE</h2>
             <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; min-width: 200px;">
               <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Invoice Number</div>
