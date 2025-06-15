@@ -49,7 +49,7 @@ export const TeamManagement = () => {
   };
 
   if (loading) {
-    return <div className="p-6">Loading companies...</div>;
+    return <div className="p-2 md:p-6">Loading companies...</div>;
   }
 
   if (showCreateForm) {
@@ -63,7 +63,7 @@ export const TeamManagement = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-2 md:p-6 space-y-4 md:space-y-6">
       {/* Header Section - Desktop Layout */}
       <div className="hidden md:flex items-center justify-between">
         <div>
@@ -77,7 +77,7 @@ export const TeamManagement = () => {
       </div>
 
       {/* Header Section - Mobile Layout */}
-      <div className="md:hidden space-y-4">
+      <div className="md:hidden space-y-3">
         {/* Title and Description Row */}
         <div>
           <h1 className="text-2xl font-bold">My Companies</h1>
@@ -93,7 +93,7 @@ export const TeamManagement = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Companies List */}
         <TeamList 
           teams={teams}

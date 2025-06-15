@@ -9,8 +9,8 @@ const TeamManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="space-y-6">
+      <div className="container mx-auto p-2 md:p-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Header Skeleton */}
           <div className="flex justify-between items-center">
             <Skeleton className="h-8 w-[200px]" />
@@ -40,7 +40,7 @@ const TeamManagement: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-0 md:p-6">
       <TeamManagementComponent />
     </div>
   );
