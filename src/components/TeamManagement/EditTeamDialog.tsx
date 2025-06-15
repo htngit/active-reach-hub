@@ -99,6 +99,10 @@ export const EditTeamDialog: React.FC<EditTeamDialogProps> = ({
     onOpenChange(false);
   };
 
+  const handleLogoUpdated = () => {
+    onTeamUpdated();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -111,6 +115,8 @@ export const EditTeamDialog: React.FC<EditTeamDialogProps> = ({
           onSubmit={onSubmit}
           updating={updating}
           onCancel={handleCancel}
+          team={team}
+          onLogoUpdated={handleLogoUpdated}
         />
       </DialogContent>
     </Dialog>
