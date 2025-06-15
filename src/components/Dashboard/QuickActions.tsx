@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Users, Target } from 'lucide-react';
+import { Plus, FileText, Users, Target, BarChart3 } from 'lucide-react';
 
 export const QuickActions = () => {
   const navigate = useNavigate();
@@ -24,16 +24,16 @@ export const QuickActions = () => {
       onClick: () => navigate('/invoices'),
     },
     {
-      title: 'View Team',
-      description: 'Manage team members',
-      icon: Users,
+      title: 'View Pipeline',
+      description: 'Manage sales deals',
+      icon: Target,
       color: 'bg-purple-500 hover:bg-purple-600',
-      onClick: () => navigate('/team-management'),
+      onClick: () => navigate('/pipeline'),
     },
     {
       title: 'Leads Distribution',
       description: 'View lead analytics',
-      icon: Target,
+      icon: BarChart3,
       color: 'bg-orange-500 hover:bg-orange-600',
       onClick: () => navigate('/leads-distribution'),
     },

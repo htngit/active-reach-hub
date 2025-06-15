@@ -109,6 +109,128 @@ export type Database = {
           },
         ]
       }
+      deal_activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          created_by: string
+          deal_id: string
+          id: string
+          new_stage: Database["public"]["Enums"]["pipeline_stage"] | null
+          new_value: number | null
+          notes: string | null
+          old_stage: Database["public"]["Enums"]["pipeline_stage"] | null
+          old_value: number | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          created_by: string
+          deal_id: string
+          id?: string
+          new_stage?: Database["public"]["Enums"]["pipeline_stage"] | null
+          new_value?: number | null
+          notes?: string | null
+          old_stage?: Database["public"]["Enums"]["pipeline_stage"] | null
+          old_value?: number | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          created_by?: string
+          deal_id?: string
+          id?: string
+          new_stage?: Database["public"]["Enums"]["pipeline_stage"] | null
+          new_value?: number | null
+          notes?: string | null
+          old_stage?: Database["public"]["Enums"]["pipeline_stage"] | null
+          old_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          actual_close_date: string | null
+          assigned_to: string | null
+          closed_at: string | null
+          contact_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          expected_close_date: string | null
+          id: string
+          notes: string | null
+          probability: number | null
+          source: string | null
+          stage: Database["public"]["Enums"]["pipeline_stage"]
+          team_id: string | null
+          title: string
+          updated_at: string
+          value: number | null
+        }
+        Insert: {
+          actual_close_date?: string | null
+          assigned_to?: string | null
+          closed_at?: string | null
+          contact_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          expected_close_date?: string | null
+          id?: string
+          notes?: string | null
+          probability?: number | null
+          source?: string | null
+          stage?: Database["public"]["Enums"]["pipeline_stage"]
+          team_id?: string | null
+          title: string
+          updated_at?: string
+          value?: number | null
+        }
+        Update: {
+          actual_close_date?: string | null
+          assigned_to?: string | null
+          closed_at?: string | null
+          contact_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          expected_close_date?: string | null
+          id?: string
+          notes?: string | null
+          probability?: number | null
+          source?: string | null
+          stage?: Database["public"]["Enums"]["pipeline_stage"]
+          team_id?: string | null
+          title?: string
+          updated_at?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       engagement_conversions: {
         Row: {
           converted_at: string
@@ -766,6 +888,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_pipeline_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_subordinate_user_ids: {
         Args: { team_uuid: string; manager_uuid: string }
         Returns: {
@@ -786,7 +912,13 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      pipeline_stage:
+        | "Lead"
+        | "Qualified"
+        | "Proposal"
+        | "Negotiation"
+        | "Closed Won"
+        | "Closed Lost"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -901,6 +1033,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      pipeline_stage: [
+        "Lead",
+        "Qualified",
+        "Proposal",
+        "Negotiation",
+        "Closed Won",
+        "Closed Lost",
+      ],
+    },
   },
 } as const

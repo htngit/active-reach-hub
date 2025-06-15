@@ -1,71 +1,71 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import AppSidebar from "@/components/AppSidebar";
-import { SidebarTrigger } from "@/components/SidebarTrigger";
-import Index from "./pages/Index";
-import { LoginForm } from "./components/Auth/LoginForm";
-import { ResetPassword } from "./components/Auth/ResetPassword";
-import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
-import { SidebarProvider as SidebarContextProvider } from "./contexts/SidebarContext";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarTrigger } from "@/components/SidebarTrigger";
+import { UserMenu } from "@/components/UserMenu";
+import { EmailVerificationBanner } from "@/components/Auth/EmailVerificationBanner";
+import { ProtectedRoute } from "@/components/Auth/ProtectedRoute";
+
+import Index from "./pages/Index";
+import ContactsPage from "./pages/ContactsPage";
+import InvoicePage from "./pages/InvoicePage";
+import ProductPage from "./pages/ProductPage";
+import LeadsDistributionPage from "./pages/LeadsDistributionPage";
 import TeamManagement from "./pages/TeamManagement";
-import JoinTeamPage from "./pages/JoinTeamPage";
+import RoleManagementPage from "./pages/RoleManagementPage";
 import PersonalSettings from "./pages/PersonalSettings";
 import SystemsPage from "./pages/SystemsPage";
-import ProductPage from "./pages/ProductPage";
-import InvoicePage from "./pages/InvoicePage";
 import NotFound from "./pages/NotFound";
-import ContactsPage from "./pages/ContactsPage";
-import LeadsDistributionPage from "./pages/LeadsDistributionPage";
+import JoinTeamPage from "./pages/JoinTeamPage";
+import PipelinePage from "./pages/PipelinePage";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <SidebarContextProvider>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
           <Toaster />
-          <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<LoginForm />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/join-team" element={<JoinTeamPage />} />
-              <Route path="/*" element={
-                <ProtectedRoute>
-                  <SidebarProvider>
-                    <AppSidebar />
-                    <main className="w-full">
-                      <SidebarTrigger />
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/team-management" element={<TeamManagement />} />
-                        <Route path="/contacts" element={<ContactsPage />} />
-                        <Route path="/leads-distribution" element={<LeadsDistributionPage />} />
-                        <Route path="/settings" element={<PersonalSettings />} />
-                        <Route path="/settings/billing" element={<PersonalSettings />} />
-                        <Route path="/settings/notifications" element={<PersonalSettings />} />
-                        <Route path="/settings/systems" element={<SystemsPage />} />
-                        <Route path="/products" element={<ProductPage />} />
-                        <Route path="/invoices" element={<InvoicePage />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </main>
-                  </SidebarProvider>
-                </ProtectedRoute>
-              } />
-            </Routes>
+            <SidebarProvider>
+              <div className="min-h-screen flex w-full bg-gray-50">
+                <AppSidebar />
+                <main className="flex-1 flex flex-col">
+                  <header className="border-b bg-white px-6 py-3 flex items-center justify-between">
+                    <SidebarTrigger />
+                    <UserMenu />
+                  </header>
+                  <EmailVerificationBanner />
+                  <div className="flex-1 overflow-auto">
+                    <Routes>
+                      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                      <Route path="/pipeline" element={<ProtectedRoute><PipelinePage /></ProtectedRoute>} />
+                      <Route path="/contacts" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
+                      <Route path="/invoices" element={<ProtectedRoute><InvoicePage /></ProtectedRoute>} />
+                      <Route path="/products" element={<ProtectedRoute><ProductPage /></ProtectedRoute>} />
+                      <Route path="/leads-distribution" element={<ProtectedRoute><LeadsDistributionPage /></ProtectedRoute>} />
+                      <Route path="/team-management" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
+                      <Route path="/role-management" element={<ProtectedRoute><RoleManagementPage /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute><PersonalSettings /></ProtectedRoute>} />
+                      <Route path="/systems" element={<ProtectedRoute><SystemsPage /></ProtectedRoute>} />
+                      <Route path="/join/:token" element={<JoinTeamPage />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </div>
+                </main>
+              </div>
+            </SidebarProvider>
           </BrowserRouter>
-        </SidebarContextProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

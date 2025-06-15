@@ -1,132 +1,93 @@
 
-import React, { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import {
-  Home,
-  Users,
-  Package,
-  FileText,
-  ChevronDown,
-  ChevronRight,
-  Target,
-} from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import React from 'react';
+import { Home, Users, FileText, Package, Settings, Target, BarChart3, UserCheck, Map } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
-} from "@/components/ui/sidebar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import UserMenu from "./UserMenu";
+} from '@/components/ui/sidebar';
+import { NavLink } from 'react-router-dom';
 
-const AppSidebar = () => {
-  const location = useLocation();
-  const [crmOpen, setCrmOpen] = useState(true);
+const menuItems = [
+  {
+    title: 'Dashboard',
+    url: '/',
+    icon: Home,
+  },
+  {
+    title: 'Sales Pipeline',
+    url: '/pipeline',
+    icon: Target,
+  },
+  {
+    title: 'Contacts',
+    url: '/contacts',
+    icon: Users,
+  },
+  {
+    title: 'Invoices',
+    url: '/invoices',
+    icon: FileText,
+  },
+  {
+    title: 'Products',
+    url: '/products',
+    icon: Package,
+  },
+  {
+    title: 'Leads Distribution',
+    url: '/leads-distribution',
+    icon: BarChart3,
+  },
+  {
+    title: 'Maps Distribution',
+    url: '/maps-distribution',
+    icon: Map,
+  },
+  {
+    title: 'Team Management',
+    url: '/team-management',
+    icon: UserCheck,
+  },
+  {
+    title: 'Role Management',
+    url: '/role-management',
+    icon: Settings,
+  },
+  {
+    title: 'Settings',
+    url: '/settings',
+    icon: Settings,
+  },
+];
 
-  const mainNavItems = [
-    {
-      title: "Dashboard",
-      url: "/",
-      icon: Home,
-    },
-  ];
-
-  const crmNavItems = [
-    {
-      title: "Contacts",
-      url: "/contacts",
-      icon: Users,
-    },
-    {
-      title: "Leads Distribution",
-      url: "/leads-distribution",
-      icon: Target,
-    },
-    {
-      title: "Products", 
-      url: "/products",
-      icon: Package,
-    },
-    {
-      title: "Invoices",
-      url: "/invoices",
-      icon: FileText,
-    },
-  ];
-
+export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Xalesin CRM</SidebarGroupLabel>
+          <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.url}>
-                    <Link to={item.url}>
-                      <item.icon className="mr-2 h-4 w-4" />
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.url} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                    </Link>
+                    </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              
-              <SidebarMenuItem>
-                <Collapsible open={crmOpen} onOpenChange={setCrmOpen}>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
-                      {crmOpen ? (
-                        <ChevronDown className="mr-2 h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="mr-2 h-4 w-4" />
-                      )}
-                      <span>CRM</span>
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {crmNavItems.map((item) => (
-                        <SidebarMenuSubItem key={item.title}>
-                          <SidebarMenuSubButton asChild isActive={location.pathname === item.url}>
-                            <Link to={item.url}>
-                              <item.icon className="mr-2 h-4 w-4" />
-                              <span>{item.title}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </Collapsible>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <UserMenu />
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
-};
-
-export default AppSidebar;
+}
