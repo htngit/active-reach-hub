@@ -67,10 +67,27 @@ export const LeadsDistribution: React.FC = () => {
         isEngagementQualified(engagement.id)
       ).length;
       
-      // Count converted contacts for this member (including status-based conversions)
+      // Count converted contacts for this member using the same logic as the main stats
       const converted = memberContacts.filter(contact => 
         isContactConverted(contact.id)
       ).length;
+      
+      console.log(`Member ${member.name} (${member.id}) stats:`, {
+        totalContacts: memberContacts.length,
+        memberContactIds: memberContacts.map(c => c.id),
+        newLeads,
+        qualified,
+        converted,
+        contactsWithConvertedStatus: memberContacts.filter(c => c.status === 'Converted').length,
+        contactsWithValidatedConversions: memberContacts.filter(contact => {
+          const contactEngagements = engagementData.filter(e => e.contact_id === contact.id);
+          return contactEngagements.some(engagement => {
+            return conversionData.some(conversion => 
+              conversion.engagement_id === engagement.id && isConversionValidated(conversion.id)
+            );
+          });
+        }).length
+      });
       
       return {
         ...member,
