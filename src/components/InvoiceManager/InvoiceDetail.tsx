@@ -3,6 +3,7 @@ import { useInvoiceData } from '@/hooks/useInvoiceData';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { useUserData } from '@/hooks/useUserData';
 import { useTeamData } from '@/hooks/useTeamData';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +58,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const { contacts } = useCachedContacts();
   const { getUserNameById } = useUserData();
   const { teams } = useTeamData();
+  const { formatCurrency } = useCurrency();
 
   const contact = contacts.find(c => c.id === invoice.contact_id);
   const company = teams.find(t => t.id === invoice.team_id);
@@ -158,8 +160,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                 <tr>
                   <td style="border: 1px solid #ddd; padding: 12px;">${item.description}</td>
                   <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${item.quantity}</td>
-                  <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">$${item.unit_price.toFixed(2)}</td>
-                  <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">$${item.total_price.toFixed(2)}</td>
+                  <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">${formatCurrency(item.unit_price)}</td>
+                  <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">${formatCurrency(item.total_price)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -169,17 +171,17 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             <div style="display: inline-block; min-width: 200px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                 <span>Subtotal:</span>
-                <span>$${invoice.subtotal.toFixed(2)}</span>
+                <span>${formatCurrency(invoice.subtotal)}</span>
               </div>
               ${invoice.tax_rate && invoice.tax_rate > 0 ? `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                   <span>Tax (${invoice.tax_rate}%):</span>
-                  <span>$${(invoice.tax_amount || 0).toFixed(2)}</span>
+                  <span>${formatCurrency(invoice.tax_amount || 0)}</span>
                 </div>
               ` : ''}
               <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 2px solid #333; padding-top: 10px; font-size: 18px;">
                 <span>Total:</span>
-                <span>$${invoice.total.toFixed(2)}</span>
+                <span>${formatCurrency(invoice.total)}</span>
               </div>
             </div>
           </div>
@@ -367,7 +369,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             {company && (
               <div className="flex items-center gap-2">
                 <Building className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium">Company:</span>
                 <span>{company.name}</span>
               </div>
             )}
@@ -414,11 +415,11 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                 <div>
                   <h4 className="font-medium">{item.description}</h4>
                   <p className="text-sm text-gray-600">
-                    Quantity: {item.quantity} × ${item.unit_price.toFixed(2)}
+                    Quantity: {item.quantity} × {formatCurrency(item.unit_price)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="font-semibold">${item.total_price.toFixed(2)}</span>
+                  <span className="font-semibold">{formatCurrency(item.total_price)}</span>
                 </div>
               </div>
             ))}
@@ -429,19 +430,19 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
           <div className="space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>${invoice.subtotal.toFixed(2)}</span>
+              <span>{formatCurrency(invoice.subtotal)}</span>
             </div>
             {invoice.tax_rate && invoice.tax_rate > 0 && (
               <div className="flex justify-between">
                 <span>Tax ({invoice.tax_rate}%):</span>
-                <span>${(invoice.tax_amount || 0).toFixed(2)}</span>
+                <span>{formatCurrency(invoice.tax_amount || 0)}</span>
               </div>
             )}
             <div className="flex justify-between text-lg font-semibold border-t pt-2">
               <span>Total:</span>
               <span className="flex items-center gap-1">
                 <DollarSign className="h-4 w-4" />
-                {invoice.total.toFixed(2)}
+                {formatCurrency(invoice.total).replace(/^\S+/, '')}
               </span>
             </div>
           </div>
