@@ -80,7 +80,7 @@ export const TeamManagement = () => {
       <div className="md:hidden space-y-4">
         {/* Title and Description Row */}
         <div>
-          <h1 className="text-xl font-bold">My Companies</h1>
+          <h1 className="text-2xl font-bold">My Companies</h1>
           <p className="text-gray-600">Manage your companies and collaborate with team members</p>
         </div>
         
