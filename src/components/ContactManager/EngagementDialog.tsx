@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,64 @@ export const EngagementDialog: React.FC<EngagementDialogProps> = ({
   const [newProduct, setNewProduct] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Debug contact access when dialog opens
+  useEffect(() => {
+    if (open && contactId && user) {
+      debugContactAccess();
+    }
+  }, [open, contactId, user]);
+
+  const debugContactAccess = async () => {
+    try {
+      console.log('Debugging contact access for:', { contactId, userId: user?.id });
+      
+      // Check contact details
+      const { data: contactData, error: contactError } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', contactId)
+        .single();
+
+      if (contactError) {
+        console.error('Error fetching contact:', contactError);
+        return;
+      }
+
+      console.log('Contact data:', contactData);
+      console.log('User can access because:', {
+        isOwner: contactData.owner_id === user?.id,
+        isCreator: contactData.user_id === user?.id,
+        hasTeam: !!contactData.team_id
+      });
+
+      // If contact has a team, check team membership
+      if (contactData.team_id) {
+        const { data: teamData, error: teamError } = await supabase
+          .from('teams')
+          .select('*')
+          .eq('id', contactData.team_id)
+          .single();
+
+        if (!teamError && teamData) {
+          console.log('Team data:', teamData);
+          console.log('User is team owner:', teamData.owner_id === user?.id);
+        }
+
+        const { data: memberData, error: memberError } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('team_id', contactData.team_id)
+          .eq('user_id', user?.id);
+
+        if (!memberError) {
+          console.log('Team membership:', memberData);
+        }
+      }
+    } catch (error) {
+      console.error('Debug error:', error);
+    }
+  };
+
   const handleAddProduct = () => {
     if (newProduct.trim() && !potentialProducts.includes(newProduct.trim())) {
       setPotentialProducts([...potentialProducts, newProduct.trim()]);
@@ -51,6 +109,15 @@ export const EngagementDialog: React.FC<EngagementDialogProps> = ({
 
     setSaving(true);
     try {
+      console.log('Attempting to create engagement with data:', {
+        contact_id: contactId,
+        name: name.trim(),
+        description: description.trim() || null,
+        potential_product: potentialProducts.length > 0 ? potentialProducts : null,
+        created_by: user.id,
+        status: 'New'
+      });
+
       const { data, error } = await supabase
         .from('engagements')
         .insert([{
@@ -64,8 +131,12 @@ export const EngagementDialog: React.FC<EngagementDialogProps> = ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Engagement creation error:', error);
+        throw error;
+      }
 
+      console.log('Successfully created engagement:', data);
       toast.success('New engagement created successfully');
       setName('');
       setDescription('');
