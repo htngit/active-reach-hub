@@ -1,148 +1,31 @@
+
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { Users, Target, BarChart3, Filter, RefreshCw, Info } from 'lucide-react';
+import { Users, BarChart3 } from 'lucide-react';
 import { useTeamData } from '@/hooks/useTeamData';
-import { useAuth } from '@/contexts/AuthContext';
 import { useLeadsStats } from '@/hooks/useLeadsStats';
+import { useTeamMembersData } from '@/hooks/useTeamMembersData';
 import { LeadsStatsCards } from './LeadsStatsCards';
-import { TeamMembersList } from './TeamMembersList';
+import { LeadsDistributionHeader } from './LeadsDistributionHeader';
+import { TeamDistributionTab } from './TeamDistributionTab';
+import { PerformanceAnalyticsTab } from './PerformanceAnalyticsTab';
 import { LeadsDistributionTips } from './LeadsDistributionTips';
 
 export const LeadsDistribution: React.FC = () => {
-  const { teams, getTeamMemberNames } = useTeamData();
-  const { user } = useAuth();
-  const {
-    contacts,
-    engagementData,
-    conversionData,
-    refreshing,
-    handleRefresh,
-    isEngagementQualified,
-    isConversionValidated,
-    getLeadsStats
-  } = useLeadsStats();
+  const { teams } = useTeamData();
+  const { refreshing, handleRefresh, getLeadsStats } = useLeadsStats();
+  const { getTeamMembersData } = useTeamMembersData();
   const [selectedTeam, setSelectedTeam] = useState<string>('');
 
   const stats = getLeadsStats();
-
-  // Helper function to check if a contact is converted (either by status or invoice validation)
-  const isContactConverted = (contactId: string) => {
-    const contact = contacts.find(c => c.id === contactId);
-    
-    // Check if contact status is "Converted"
-    if (contact && contact.status === 'Converted') {
-      console.log(`Contact ${contactId} is converted by status`);
-      return true;
-    }
-    
-    // Check if contact has validated conversions through invoices
-    const contactEngagements = engagementData.filter(e => e.contact_id === contactId);
-    const hasValidatedConversion = contactEngagements.some(engagement => {
-      return conversionData.some(conversion => 
-        conversion.engagement_id === engagement.id && isConversionValidated(conversion.id)
-      );
-    });
-    
-    if (hasValidatedConversion) {
-      console.log(`Contact ${contactId} is converted by validated invoice`);
-    }
-    
-    return hasValidatedConversion;
-  };
-
-  const getTeamMembersData = (teamId: string) => {
-    if (!teamId) return [];
-    
-    const members = getTeamMemberNames(teamId);
-    return members.map(member => {
-      // Get contacts owned by this member (either as owner_id or user_id)
-      const memberContacts = contacts.filter(c => c.owner_id === member.id || c.user_id === member.id);
-      const newLeads = memberContacts.filter(c => c.status === 'New').length;
-      
-      // Count qualified engagements for this member's contacts
-      const memberEngagements = engagementData.filter(engagement => 
-        memberContacts.some(contact => contact.id === engagement.contact_id)
-      );
-      const qualified = memberEngagements.filter(engagement => 
-        isEngagementQualified(engagement.id)
-      ).length;
-      
-      // Count converted contacts for this member using our local isContactConverted function
-      const converted = memberContacts.filter(contact => 
-        isContactConverted(contact.id)
-      ).length;
-      
-      console.log(`Member ${member.name} (${member.id}) stats:`, {
-        totalContacts: memberContacts.length,
-        memberContactIds: memberContacts.map(c => c.id),
-        memberContactStatuses: memberContacts.map(c => ({ id: c.id, status: c.status })),
-        newLeads,
-        qualified,
-        converted,
-        contactsWithConvertedStatus: memberContacts.filter(c => c.status === 'Converted').length,
-        contactsWithValidatedConversions: memberContacts.filter(contact => {
-          const contactEngagements = engagementData.filter(e => e.contact_id === contact.id);
-          return contactEngagements.some(engagement => {
-            return conversionData.some(conversion => 
-              conversion.engagement_id === engagement.id && isConversionValidated(conversion.id)
-            );
-          });
-        }).length
-      });
-      
-      return {
-        ...member,
-        totalLeads: memberContacts.length,
-        newLeads,
-        qualified,
-        converted,
-        conversionRate: memberContacts.length > 0 ? ((converted / memberContacts.length) * 100).toFixed(1) : '0'
-      };
-    });
-  };
+  const teamMembers = getTeamMembersData(selectedTeam);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Target className="h-8 w-8" />
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold">Leads Distribution</h1>
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
-                  <Info className="h-4 w-4 text-gray-500 hover:text-gray-700" />
-                </Button>
-              </HoverCardTrigger>
-              <HoverCardContent className="w-80">
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Lead Distribution Metrics</h4>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p><strong>Qualified:</strong> Engagements with BANT score ≥ 75%</p>
-                    <p><strong>Converted:</strong> Contacts with "Converted" status or validated by paid invoice</p>
-                    <p><strong>Attribution:</strong> All metrics are attributed to the contact owner, regardless of who performs the actions</p>
-                  </div>
-                </div>
-              </HoverCardContent>
-            </HoverCard>
-          </div>
-          <p className="text-gray-600">Track and manage lead distribution across your team</p>
-        </div>
-        <Button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh Data'}
-        </Button>
-      </div>
+      <LeadsDistributionHeader
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+      />
 
       {/* Overall Stats */}
       <LeadsStatsCards stats={stats} />
@@ -160,69 +43,16 @@ export const LeadsDistribution: React.FC = () => {
         </TabsList>
 
         <TabsContent value="team-distribution">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Lead Distribution by Team
-                  </CardTitle>
-                  <CardDescription>
-                    View how leads are distributed among your team members
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-500" />
-                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Select team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teams.map(team => (
-                        <SelectItem key={team.id} value={team.id}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {selectedTeam ? (
-                <TeamMembersList teamMembers={getTeamMembersData(selectedTeam)} />
-              ) : (
-                <div className="text-center py-8">
-                  <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Select a team to view lead distribution</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <TeamDistributionTab
+            teams={teams}
+            selectedTeam={selectedTeam}
+            onTeamSelect={setSelectedTeam}
+            teamMembers={teamMembers}
+          />
         </TabsContent>
 
         <TabsContent value="performance">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Performance Analytics
-              </CardTitle>
-              <CardDescription>
-                Detailed performance metrics and conversion analytics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">Analytics Coming Soon</h3>
-                <p className="text-gray-500">
-                  Advanced performance analytics and detailed reporting will be available here
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <PerformanceAnalyticsTab />
         </TabsContent>
       </Tabs>
 
