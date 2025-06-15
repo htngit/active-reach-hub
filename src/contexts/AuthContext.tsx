@@ -122,8 +122,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     setLoading(true);
     try {
+      // Check if we have a session before trying to sign out
+      if (!session) {
+        console.log('No session to sign out, clearing state manually');
+        // Manually clear state if no session exists
+        setSession(null);
+        setUser(null);
+        return;
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) {
+        // Handle specific auth session missing error
+        if (error.message === 'Auth session missing!') {
+          console.log('Session already missing, clearing state manually');
+          // Manually clear state since session is already gone
+          setSession(null);
+          setUser(null);
+          return;
+        }
         console.error('Sign out error:', error);
         throw error;
       }
@@ -133,6 +150,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Manually clear state to ensure immediate UI update
       setSession(null);
       setUser(null);
+    } catch (error: any) {
+      // Handle auth session missing error gracefully
+      if (error.message === 'Auth session missing!') {
+        console.log('Session already missing during sign out, clearing state');
+        setSession(null);
+        setUser(null);
+        return;
+      }
+      console.error('Unexpected sign out error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }

@@ -97,7 +97,7 @@ export function AppSidebar() {
             <Target className="h-4 w-4" />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold">CRM System</span>
+            <span className="truncate font-semibold">XalesIn CRM</span>
             <span className="truncate text-xs text-muted-foreground">Sales Management</span>
           </div>
         </div>
@@ -204,7 +204,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4">
         <div className="text-xs text-muted-foreground">
-          © 2024 CRM System
+          © 2024 XalesIn CRM
         </div>
       </SidebarFooter>
     </Sidebar>

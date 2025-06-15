@@ -66,7 +66,7 @@ export const LoginForm = () => {
                 <path d="M2 12l10 5 10-5"/>
               </svg>
             </div>
-            <span className="text-xl font-bold">CRM System</span>
+            <span className="text-xl font-bold">XalesIn CRM</span>
           </div>
           <CardTitle>{isLogin ? 'Welcome Back' : 'Create Account'}</CardTitle>
           <CardDescription>
