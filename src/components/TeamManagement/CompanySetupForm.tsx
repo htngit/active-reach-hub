@@ -89,6 +89,8 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log('Selected file:', file.name, file.type, file.size);
+
     // Validate file type
     if (!validateFileType(file)) {
       toast({
@@ -115,6 +117,7 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
     const reader = new FileReader();
     reader.onload = (e) => {
       setLogoPreview(e.target?.result as string);
+      console.log('Logo preview created successfully');
     };
     reader.readAsDataURL(file);
   };
@@ -125,19 +128,48 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
     // Reset file input
     const fileInput = document.getElementById('logo') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
+    console.log('Logo removed');
   };
 
   const uploadLogo = async (teamId: string): Promise<string | null> => {
-    if (!logoFile) return null;
+    if (!logoFile) {
+      console.log('No logo file to upload');
+      return null;
+    }
 
     setUploadingLogo(true);
     try {
+      console.log('Starting logo upload for team:', teamId);
+      console.log('File details:', {
+        name: logoFile.name,
+        type: logoFile.type,
+        size: logoFile.size
+      });
+
       const fileExt = logoFile.name.split('.').pop()?.toLowerCase();
       const fileName = `${teamId}/logo-${Date.now()}.${fileExt}`;
       
-      console.log('Uploading logo to path:', fileName);
+      console.log('Uploading to storage path:', fileName);
       
-      const { error: uploadError } = await supabase.storage
+      // Check if bucket exists first
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+      console.log('Available buckets:', buckets);
+      
+      if (bucketError) {
+        console.error('Error listing buckets:', bucketError);
+        throw new Error('Failed to access storage buckets');
+      }
+
+      const companyAssetsBucket = buckets?.find(bucket => bucket.id === 'company-assets');
+      if (!companyAssetsBucket) {
+        console.error('company-assets bucket not found');
+        throw new Error('Storage bucket not available. Please contact support.');
+      }
+
+      console.log('Found company-assets bucket:', companyAssetsBucket);
+
+      // Upload file to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('company-assets')
         .upload(fileName, logoFile, { 
           upsert: true,
@@ -145,21 +177,36 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
+        console.error('Upload error details:', uploadError);
+        throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
+      console.log('Upload successful:', uploadData);
+
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('company-assets')
         .getPublicUrl(fileName);
 
-      console.log('Logo uploaded successfully, public URL:', publicUrl);
+      console.log('Generated public URL:', publicUrl);
+
+      // Verify the file was uploaded by trying to list it
+      const { data: files, error: listError } = await supabase.storage
+        .from('company-assets')
+        .list(teamId);
+
+      if (listError) {
+        console.error('Error listing files after upload:', listError);
+      } else {
+        console.log('Files in team folder after upload:', files);
+      }
+
       return publicUrl;
-    } catch (error) {
-      console.error('Error uploading logo:', error);
+    } catch (error: any) {
+      console.error('Error in uploadLogo function:', error);
       toast({
         title: "Error",
-        description: "Failed to upload logo. Please try again.",
+        description: error.message || "Failed to upload logo. Please try again.",
         variant: "destructive",
       });
       return null;
@@ -169,11 +216,20 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!user || !formData.name.trim()) return;
+    if (!user || !formData.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill in required fields",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      // Create company/team
+      console.log('Creating company with user:', user.id);
+      
+      // Create company/team first
       const { data: team, error: teamError } = await supabase
         .from('teams')
         .insert({
@@ -198,29 +254,12 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
         .select()
         .single();
 
-      if (teamError) throw teamError;
-
-      // Upload logo if provided
-      let logoUrl = null;
-      if (logoFile) {
-        logoUrl = await uploadLogo(team.id);
-        if (logoUrl) {
-          const { error: updateError } = await supabase
-            .from('teams')
-            .update({ logo_url: logoUrl })
-            .eq('id', team.id);
-
-          if (updateError) {
-            console.error('Error updating logo URL:', updateError);
-            // Don't fail the entire process if logo update fails
-            toast({
-              title: "Warning",
-              description: "Company created but logo upload failed. You can update it later.",
-              variant: "destructive",
-            });
-          }
-        }
+      if (teamError) {
+        console.error('Error creating team:', teamError);
+        throw teamError;
       }
+
+      console.log('Team created successfully:', team);
 
       // Add owner as team member
       const { error: memberError } = await supabase
@@ -231,7 +270,38 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
           role: 'owner',
         });
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        console.error('Error adding team member:', memberError);
+        throw memberError;
+      }
+
+      console.log('Team member added successfully');
+
+      // Upload logo if provided
+      let logoUrl = null;
+      if (logoFile) {
+        console.log('Uploading logo for team:', team.id);
+        logoUrl = await uploadLogo(team.id);
+        
+        if (logoUrl) {
+          console.log('Updating team with logo URL:', logoUrl);
+          const { error: updateError } = await supabase
+            .from('teams')
+            .update({ logo_url: logoUrl })
+            .eq('id', team.id);
+
+          if (updateError) {
+            console.error('Error updating logo URL:', updateError);
+            toast({
+              title: "Warning",
+              description: "Company created but logo upload failed. You can update it later.",
+              variant: "destructive",
+            });
+          } else {
+            console.log('Team logo URL updated successfully');
+          }
+        }
+      }
 
       toast({
         title: "Success",
@@ -389,6 +459,9 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
                       <div className="flex-1">
                         <p className="font-medium">Logo Preview</p>
                         <p className="text-sm text-gray-600">{logoFile?.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {logoFile ? `${(logoFile.size / 1024).toFixed(1)} KB` : ''}
+                        </p>
                       </div>
                       <Button
                         type="button"
@@ -539,7 +612,7 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={isSubmitting || uploadingLogo}>
-              {isSubmitting ? 'Creating...' : 'Create Company'}
+              {isSubmitting ? 'Creating...' : uploadingLogo ? 'Uploading Logo...' : 'Create Company'}
             </Button>
           )}
         </div>

@@ -18,14 +18,34 @@ export const useInvoicePDFGenerator = () => {
 
   const loadImageAsBase64 = async (url: string): Promise<string | null> => {
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch image');
+      console.log('Loading image from URL:', url);
+      
+      // Add cache busting parameter and CORS headers
+      const response = await fetch(url + '?t=' + Date.now(), {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-cache'
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to fetch image, status:', response.status);
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
       
       const blob = await response.blob();
+      console.log('Image blob received, size:', blob.size, 'type:', blob.type);
+      
       return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => resolve(null);
+        reader.onload = () => {
+          const result = reader.result as string;
+          console.log('Image converted to base64, length:', result.length);
+          resolve(result);
+        };
+        reader.onerror = (error) => {
+          console.error('FileReader error:', error);
+          resolve(null);
+        };
         reader.readAsDataURL(blob);
       });
     } catch (error) {
@@ -35,10 +55,21 @@ export const useInvoicePDFGenerator = () => {
   };
 
   const generatePDF = async ({ invoice, items, contact, company }: PDFGeneratorOptions) => {
+    console.log('Generating PDF for invoice:', invoice.invoice_number);
+    console.log('Company data:', company);
+    
     // Load company logo as base64 if available
     let logoBase64 = null;
     if (company?.logo_url) {
+      console.log('Company has logo URL:', company.logo_url);
       logoBase64 = await loadImageAsBase64(company.logo_url);
+      if (logoBase64) {
+        console.log('Logo successfully loaded as base64');
+      } else {
+        console.log('Failed to load logo as base64');
+      }
+    } else {
+      console.log('No logo URL found for company');
     }
 
     // Create a temporary div element for the PDF content
@@ -51,7 +82,7 @@ export const useInvoicePDFGenerator = () => {
           <div style="flex: 1;">
             ${logoBase64 ? `
               <div style="margin-bottom: 15px;">
-                <img src="${logoBase64}" alt="Company Logo" style="max-height: 80px; max-width: 200px; object-fit: contain;">
+                <img src="${logoBase64}" alt="Company Logo" style="max-height: 80px; max-width: 200px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px;">
               </div>
             ` : ''}
             <h1 style="color: #1f2937; margin: 0 0 10px 0; font-size: 24px; font-weight: bold;">${company?.company_legal_name || company?.name || 'Company Name'}</h1>
@@ -200,7 +231,8 @@ export const useInvoicePDFGenerator = () => {
       html2canvas: { 
         scale: 2,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        logging: false
       },
       jsPDF: { 
         unit: 'in', 
@@ -210,8 +242,12 @@ export const useInvoicePDFGenerator = () => {
       }
     };
 
+    console.log('Starting PDF generation with options:', options);
+
     // Generate and download PDF
     await html2pdf().set(options).from(element).save();
+    
+    console.log('PDF generation completed');
   };
 
   return { generatePDF };
