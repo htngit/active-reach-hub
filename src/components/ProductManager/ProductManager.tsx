@@ -74,7 +74,7 @@ export const ProductManager: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="space-y-6">
       {currentView === ProductView.LIST && (
         <ProductList
           onSelectProduct={handleSelectProduct}
