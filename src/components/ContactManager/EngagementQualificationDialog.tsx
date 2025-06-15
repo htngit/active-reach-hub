@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -34,6 +33,17 @@ interface QualificationCriteria {
   qualification_notes: string;
   contact_status?: string;
 }
+
+// Define status hierarchy: New < Qualified < Converted
+const STATUS_HIERARCHY = {
+  'New': 1,
+  'Qualified': 2,
+  'Converted': 3
+};
+
+const getStatusRank = (status: string): number => {
+  return STATUS_HIERARCHY[status as keyof typeof STATUS_HIERARCHY] || 0;
+};
 
 export const EngagementQualificationDialog: React.FC<EngagementQualificationDialogProps> = ({
   open,
@@ -129,10 +139,22 @@ export const EngagementQualificationDialog: React.FC<EngagementQualificationDial
     setSaving(true);
     try {
       const score = calculateScore();
-      let finalStatus = criteria.contact_status;
+      const currentStatus = criteria.contact_status || 'New';
       
-      if (score >= 75 && criteria.contact_status !== 'Qualified') {
+      // Implement proper status hierarchy logic
+      let finalStatus = currentStatus;
+      
+      // Only auto-promote to Qualified if:
+      // 1. Score is >= 75 AND
+      // 2. Current status is lower than Qualified (i.e., "New")
+      // 3. User hasn't explicitly selected a higher status like "Converted"
+      if (score >= 75 && getStatusRank(currentStatus) < getStatusRank('Qualified')) {
         finalStatus = 'Qualified';
+        console.log('Auto-promoting status from', currentStatus, 'to Qualified due to high BANT score');
+      } else {
+        // Keep the user-selected status (including "Converted")
+        finalStatus = currentStatus;
+        console.log('Keeping user-selected status:', finalStatus);
       }
 
       const qualificationData = {
@@ -140,6 +162,8 @@ export const EngagementQualificationDialog: React.FC<EngagementQualificationDial
         qualification_score: score,
         contact_status: finalStatus,
       };
+
+      console.log('Saving qualification with final status:', finalStatus);
 
       if (criteria.id) {
         const { error } = await supabase
@@ -174,9 +198,11 @@ export const EngagementQualificationDialog: React.FC<EngagementQualificationDial
             invoice_id: invoiceId,
             converted_by: user.id,
           }]);
+        
+        console.log('Created conversion record for engagement:', engagementId);
       }
 
-      toast.success('Qualification saved successfully');
+      toast.success(`Engagement status updated to ${finalStatus}`);
       onQualificationUpdate();
       onOpenChange(false);
     } catch (error: any) {
