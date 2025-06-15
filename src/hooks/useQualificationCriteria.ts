@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,8 +27,9 @@ export const useQualificationCriteria = (contactId: string) => {
     need_identified: false,
     timeline_defined: false,
     qualification_score: 0,
-    qualification_method: 'manual',
+    qualification_method: 'initial_contact',
     qualification_notes: '',
+    contact_status: 'New', // Add default status
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -96,7 +96,7 @@ export const useQualificationCriteria = (contactId: string) => {
     return score;
   };
 
-  const saveQualificationCriteria = async (currentStatus: string, onQualificationUpdate: () => void) => {
+  const saveQualificationCriteria = async (selectedStatus: string, onQualificationUpdate: () => void) => {
     if (!user) {
       toast.error('You must be logged in to save qualification criteria');
       return;
@@ -105,10 +105,17 @@ export const useQualificationCriteria = (contactId: string) => {
     setSaving(true);
     try {
       const score = calculateScore();
+      
+      // Determine final status based on score and user selection
+      let finalStatus = selectedStatus;
+      if (score >= 75 && selectedStatus !== 'Qualified') {
+        finalStatus = 'Qualified';
+      }
+      
       const qualificationData = {
         ...criteria,
         qualification_score: score,
-        qualification_method: 'manual',
+        contact_status: finalStatus,
       };
 
       console.log('Attempting to save qualification data:', qualificationData);
@@ -129,6 +136,7 @@ export const useQualificationCriteria = (contactId: string) => {
       console.log('Contact check result:', contactCheck);
       console.log('Current contact status:', contactCheck.status);
       console.log('Calculated score:', score);
+      console.log('Final status to be set:', finalStatus);
 
       if (criteria.id) {
         // Update existing
@@ -159,34 +167,21 @@ export const useQualificationCriteria = (contactId: string) => {
         setCriteria(data);
       }
 
-      // IMPORTANT: Always update contact status if score is high enough
-      if (score >= 75) {
-        console.log('Score is 75+, updating contact status to Qualified');
-        const { error: contactError } = await supabase
-          .from('contacts')
-          .update({ status: 'Qualified' })
-          .eq('id', contactId);
+      // Always update contact status to match the qualification
+      console.log('Updating contact status to:', finalStatus);
+      const { error: contactError } = await supabase
+        .from('contacts')
+        .update({ status: finalStatus })
+        .eq('id', contactId);
 
-        if (contactError) {
-          console.error('Error updating contact status:', contactError);
-          toast.error('Qualification saved but failed to update contact status');
-        } else {
-          console.log('Successfully updated contact status to Qualified');
-        }
-      } else if (score < 75 && contactCheck.status === 'Qualified') {
-        // If score drops below 75, revert to previous status
-        console.log('Score below 75, reverting contact status');
-        const { error: contactError } = await supabase
-          .from('contacts')
-          .update({ status: 'New' })
-          .eq('id', contactId);
-
-        if (contactError) {
-          console.error('Error reverting contact status:', contactError);
-        }
+      if (contactError) {
+        console.error('Error updating contact status:', contactError);
+        toast.error('Qualification saved but failed to update contact status');
+      } else {
+        console.log('Successfully updated contact status to:', finalStatus);
       }
 
-      toast.success('Qualification criteria saved successfully');
+      toast.success('Qualification criteria and status saved successfully');
       onQualificationUpdate();
     } catch (error: any) {
       console.error('Error saving qualification criteria:', error);

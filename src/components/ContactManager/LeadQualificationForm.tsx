@@ -9,6 +9,7 @@ import { QualificationNotes } from './QualificationNotes';
 import { QualificationStatusMessages } from './QualificationStatusMessages';
 import { ActivityStatusSelection } from './ActivityStatusSelection';
 import { useQualificationCriteria } from '@/hooks/useQualificationCriteria';
+import { toast } from 'sonner';
 
 interface LeadQualificationFormProps {
   contactId: string;
@@ -35,6 +36,21 @@ export const LeadQualificationForm: React.FC<LeadQualificationFormProps> = ({
   const currentScore = calculateScore();
   const isQualified = currentScore >= 75;
 
+  const handleSaveQualification = async () => {
+    // Validation guards for Status & Activity
+    if (!criteria.contact_status) {
+      toast.error('Please select a contact status before saving');
+      return;
+    }
+
+    if (!criteria.qualification_method) {
+      toast.error('Please select a current activity before saving');
+      return;
+    }
+
+    await saveQualificationCriteria(criteria.contact_status, onQualificationUpdate);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -46,53 +62,51 @@ export const LeadQualificationForm: React.FC<LeadQualificationFormProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <QualificationScoreDisplay 
-              contactName={contactName}
-              currentScore={currentScore}
-              isQualified={isQualified}
-            />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <QualificationCriteriaChecklist 
-            budgetConfirmed={criteria.budget_confirmed}
-            authorityConfirmed={criteria.authority_confirmed}
-            needIdentified={criteria.need_identified}
-            timelineDefined={criteria.timeline_defined}
-            onCriteriaChange={handleCriteriaChange}
-          />
-
-          <QualificationNotes 
-            notes={criteria.qualification_notes}
-            onNotesChange={(notes) => handleCriteriaChange('qualification_notes', notes)}
-          />
-
-          <QualificationStatusMessages 
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <QualificationScoreDisplay 
+            contactName={contactName}
             currentScore={currentScore}
             isQualified={isQualified}
           />
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <QualificationCriteriaChecklist 
+          budgetConfirmed={criteria.budget_confirmed}
+          authorityConfirmed={criteria.authority_confirmed}
+          needIdentified={criteria.need_identified}
+          timelineDefined={criteria.timeline_defined}
+          onCriteriaChange={handleCriteriaChange}
+        />
 
-          <Button 
-            onClick={() => saveQualificationCriteria(currentStatus, onQualificationUpdate)} 
-            disabled={saving}
-            className="w-full"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save Qualification'}
-          </Button>
-        </CardContent>
-      </Card>
+        <ActivityStatusSelection
+          currentStatus={criteria.contact_status || currentStatus}
+          currentActivity={criteria.qualification_method || 'initial_contact'}
+          onStatusChange={(status) => handleCriteriaChange('contact_status', status)}
+          onActivityChange={(activity) => handleCriteriaChange('qualification_method', activity)}
+        />
 
-      <ActivityStatusSelection
-        currentStatus={currentStatus}
-        currentActivity={criteria.qualification_method || 'initial_contact'}
-        onStatusChange={(status) => handleCriteriaChange('contact_status', status)}
-        onActivityChange={(activity) => handleCriteriaChange('qualification_method', activity)}
-      />
-    </div>
+        <QualificationNotes 
+          notes={criteria.qualification_notes}
+          onNotesChange={(notes) => handleCriteriaChange('qualification_notes', notes)}
+        />
+
+        <QualificationStatusMessages 
+          currentScore={currentScore}
+          isQualified={isQualified}
+        />
+
+        <Button 
+          onClick={handleSaveQualification}
+          disabled={saving}
+          className="w-full"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {saving ? 'Saving...' : 'Save Qualification'}
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
