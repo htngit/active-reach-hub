@@ -1,8 +1,14 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Edit, MoreHorizontal } from 'lucide-react';
 import { Team } from '@/types/team';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface TeamHeaderProps {
   team: Team;
@@ -21,32 +27,42 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({
   onInviteClick,
   onEditClick,
 }) => {
+  // Show actions dropdown if user can invite OR edit
+  const showActions = canManageTeam || isOwner;
+
   return (
     <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" onClick={onBack}>
-          ← Back to Teams
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{team.name}</h1>
-          <p className="text-gray-600">{team.description}</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">{team.name}</h1>
+        <p className="text-gray-600">{team.description}</p>
       </div>
-      <div className="flex space-x-2">
-        {/* Managers and owners can invite members */}
-        {canManageTeam && (
-          <Button onClick={onInviteClick}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invite Member
-          </Button>
-        )}
-        {/* Only owners can edit team details */}
-        {isOwner && (
-          <Button variant="outline" onClick={onEditClick}>
-            Edit Team
-          </Button>
-        )}
-      </div>
+      
+      {showActions && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">
+              <MoreHorizontal className="h-4 w-4 mr-2" />
+              Actions
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {/* Managers and owners can invite members */}
+            {canManageTeam && (
+              <DropdownMenuItem onClick={onInviteClick}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invite Member
+              </DropdownMenuItem>
+            )}
+            {/* Only owners can edit team details */}
+            {isOwner && (
+              <DropdownMenuItem onClick={onEditClick}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Team
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 };
