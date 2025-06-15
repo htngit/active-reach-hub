@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, DollarSign, Shield } from 'lucide-react';
+import { Settings, DollarSign, Shield, Building2 } from 'lucide-react';
 import { CurrencySettings } from './CurrencySettings';
 import { RoleManagement } from '@/components/RoleManagement/RoleManagement';
+import { TeamManagement } from '@/components/TeamManagement/TeamManagement';
 
 export const SystemsManager: React.FC = () => {
   return (
@@ -18,7 +19,7 @@ export const SystemsManager: React.FC = () => {
       </div>
 
       <Tabs defaultValue="currency" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="currency" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
             Currency Settings
@@ -26,6 +27,10 @@ export const SystemsManager: React.FC = () => {
           <TabsTrigger value="role-management" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Role Management
+          </TabsTrigger>
+          <TabsTrigger value="team-management" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Team Management
           </TabsTrigger>
         </TabsList>
 
@@ -53,6 +58,20 @@ export const SystemsManager: React.FC = () => {
             </CardHeader>
             <CardContent>
               <RoleManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="team-management">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Team Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TeamManagement />
             </CardContent>
           </Card>
         </TabsContent>
