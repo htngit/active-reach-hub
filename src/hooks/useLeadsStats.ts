@@ -104,7 +104,7 @@ export const useLeadsStats = () => {
       isEngagementQualified(engagement.id)
     ).length;
     
-    // Count validated conversions (linked to paid invoices)
+    // Count validated conversions (linked to paid invoices) - attribution is based on contact ownership
     const validatedConversions = conversionData.filter(conversion => 
       isConversionValidated(conversion.id)
     ).length;
@@ -114,7 +114,7 @@ export const useLeadsStats = () => {
       .filter(conversion => isConversionValidated(conversion.id))
       .reduce((sum, conversion) => sum + (conversion.invoices?.total || 0), 0);
 
-    console.log('Enhanced leads stats:', {
+    console.log('Enhanced leads stats (conversions attributed to contact owners):', {
       totalContacts,
       newLeads,
       qualifiedEngagements,

@@ -34,6 +34,7 @@ export const LeadsDistribution: React.FC = () => {
     
     const members = getTeamMemberNames(teamId);
     return members.map(member => {
+      // Get contacts owned by this member (either as owner_id or user_id)
       const memberContacts = contacts.filter(c => c.owner_id === member.id || c.user_id === member.id);
       const newLeads = memberContacts.filter(c => c.status === 'New').length;
       
@@ -45,10 +46,15 @@ export const LeadsDistribution: React.FC = () => {
         isEngagementQualified(engagement.id)
       ).length;
       
-      // Count validated conversions for this member's contacts
-      const memberConversions = conversionData.filter(conversion => 
-        memberEngagements.some(engagement => engagement.id === conversion.engagement_id)
-      );
+      // Count validated conversions for this member's contacts (based on contact ownership, not who converted)
+      const memberConversions = conversionData.filter(conversion => {
+        const engagement = engagementData.find(e => e.id === conversion.engagement_id);
+        if (!engagement) return false;
+        
+        // Check if the engagement belongs to a contact owned by this member
+        return memberContacts.some(contact => contact.id === engagement.contact_id);
+      });
+      
       const converted = memberConversions.filter(conversion => 
         isConversionValidated(conversion.id)
       ).length;
@@ -109,7 +115,7 @@ export const LeadsDistribution: React.FC = () => {
                     Lead Distribution by Team
                   </CardTitle>
                   <CardDescription>
-                    View how leads are distributed among your team members (Qualified = BANT score ≥ 75%, Converted = Validated by paid invoice)
+                    View how leads are distributed among your team members (Qualified = BANT score ≥ 75%, Converted = Validated by paid invoice, attributed to contact owner)
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">

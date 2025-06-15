@@ -43,15 +43,31 @@ export const ConversionInvoiceSelection: React.FC<ConversionInvoiceSelectionProp
   const fetchInvoices = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First, get all invoices for this contact
+      const { data: allInvoices, error: invoicesError } = await supabase
         .from('invoices')
         .select('id, invoice_number, total, status, created_at')
         .eq('contact_id', contactId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (invoicesError) throw invoicesError;
 
-      setInvoices(data || []);
+      // Then, get all invoice IDs that have already been used for conversions
+      const { data: usedInvoices, error: conversionsError } = await supabase
+        .from('engagement_conversions')
+        .select('invoice_id');
+
+      if (conversionsError) throw conversionsError;
+
+      // Create a set of used invoice IDs for efficient lookup
+      const usedInvoiceIds = new Set(usedInvoices?.map(conversion => conversion.invoice_id) || []);
+
+      // Filter out invoices that have already been used for conversions
+      const availableInvoices = (allInvoices || []).filter(invoice => 
+        !usedInvoiceIds.has(invoice.id)
+      );
+
+      setInvoices(availableInvoices);
     } catch (error: any) {
       console.error('Error fetching invoices:', error);
       toast.error('Failed to load invoices');
@@ -96,9 +112,9 @@ export const ConversionInvoiceSelection: React.FC<ConversionInvoiceSelectionProp
           ) : invoices.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500">No invoices found for this contact</p>
+              <p className="text-gray-500">No available invoices found for this contact</p>
               <p className="text-xs text-gray-400 mt-1">
-                Create an invoice first to track this conversion
+                All invoices may have already been used for conversions or no invoices exist
               </p>
             </div>
           ) : (
