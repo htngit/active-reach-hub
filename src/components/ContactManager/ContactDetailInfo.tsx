@@ -1,13 +1,8 @@
 
-import React, { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Phone, Mail, Building, MapPin, Edit, Save, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { Phone, Mail, Building, MapPin } from 'lucide-react';
 
 interface Contact {
   id: string;
@@ -28,51 +23,10 @@ interface ContactDetailInfoProps {
   onContactUpdated: () => void;
 }
 
-const statusOptions = ['New', 'Approached', 'Follow-up Required', 'Paid', 'Lost'];
-
 export const ContactDetailInfo: React.FC<ContactDetailInfoProps> = ({
   contact,
   onContactUpdated,
 }) => {
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [newStatus, setNewStatus] = useState(contact.status);
-  const { user } = useAuth();
-
-  const handleStatusUpdate = async () => {
-    if (newStatus === contact.status) {
-      setIsUpdatingStatus(false);
-      return;
-    }
-
-    if (!user) {
-      toast.error("You must be logged in to update contact status");
-      return;
-    }
-
-    try {
-      console.log('Updating contact status:', { contactId: contact.id, newStatus, userId: user.id });
-
-      const { error } = await supabase
-        .from('contacts')
-        .update({ status: newStatus })
-        .eq('id', contact.id);
-
-      if (error) {
-        console.error('Supabase error updating status:', error);
-        throw error;
-      }
-
-      toast.success("Contact status updated successfully");
-      setIsUpdatingStatus(false);
-      onContactUpdated();
-    } catch (error: any) {
-      console.error('Error updating contact status:', error);
-      toast.error(error.message || "Failed to update contact status");
-      setNewStatus(contact.status);
-      setIsUpdatingStatus(false);
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -108,42 +62,6 @@ export const ContactDetailInfo: React.FC<ContactDetailInfoProps> = ({
           <div className="text-right space-y-2">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="mb-2">{contact.status}</Badge>
-              {!isUpdatingStatus ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsUpdatingStatus(true)}
-                >
-                  <h5 className="text-xs font-normal italic">Update Status</h5>
-                  <Edit className="h-3 w-3" />
-                </Button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Select value={newStatus} onValueChange={setNewStatus}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map(status => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" onClick={handleStatusUpdate}>
-                    <Save className="h-3 w-3" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => {
-                      setIsUpdatingStatus(false);
-                      setNewStatus(contact.status);
-                    }}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
             </div>
             {contact.labels && contact.labels.length > 0 && (
               <div className="flex flex-wrap gap-1">

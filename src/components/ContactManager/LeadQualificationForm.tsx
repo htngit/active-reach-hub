@@ -7,6 +7,7 @@ import { QualificationScoreDisplay } from './QualificationScoreDisplay';
 import { QualificationCriteriaChecklist } from './QualificationCriteriaChecklist';
 import { QualificationNotes } from './QualificationNotes';
 import { QualificationStatusMessages } from './QualificationStatusMessages';
+import { ActivityStatusSelection } from './ActivityStatusSelection';
 import { useQualificationCriteria } from '@/hooks/useQualificationCriteria';
 
 interface LeadQualificationFormProps {
@@ -45,44 +46,53 @@ export const LeadQualificationForm: React.FC<LeadQualificationFormProps> = ({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <QualificationScoreDisplay 
-            contactName={contactName}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <QualificationScoreDisplay 
+              contactName={contactName}
+              currentScore={currentScore}
+              isQualified={isQualified}
+            />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <QualificationCriteriaChecklist 
+            budgetConfirmed={criteria.budget_confirmed}
+            authorityConfirmed={criteria.authority_confirmed}
+            needIdentified={criteria.need_identified}
+            timelineDefined={criteria.timeline_defined}
+            onCriteriaChange={handleCriteriaChange}
+          />
+
+          <QualificationNotes 
+            notes={criteria.qualification_notes}
+            onNotesChange={(notes) => handleCriteriaChange('qualification_notes', notes)}
+          />
+
+          <QualificationStatusMessages 
             currentScore={currentScore}
             isQualified={isQualified}
           />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <QualificationCriteriaChecklist 
-          budgetConfirmed={criteria.budget_confirmed}
-          authorityConfirmed={criteria.authority_confirmed}
-          needIdentified={criteria.need_identified}
-          timelineDefined={criteria.timeline_defined}
-          onCriteriaChange={handleCriteriaChange}
-        />
 
-        <QualificationNotes 
-          notes={criteria.qualification_notes}
-          onNotesChange={(notes) => handleCriteriaChange('qualification_notes', notes)}
-        />
+          <Button 
+            onClick={() => saveQualificationCriteria(currentStatus, onQualificationUpdate)} 
+            disabled={saving}
+            className="w-full"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save Qualification'}
+          </Button>
+        </CardContent>
+      </Card>
 
-        <QualificationStatusMessages 
-          currentScore={currentScore}
-          isQualified={isQualified}
-        />
-
-        <Button 
-          onClick={() => saveQualificationCriteria(currentStatus, onQualificationUpdate)} 
-          disabled={saving}
-          className="w-full"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save Qualification'}
-        </Button>
-      </CardContent>
-    </Card>
+      <ActivityStatusSelection
+        currentStatus={currentStatus}
+        currentActivity={criteria.qualification_method || 'initial_contact'}
+        onStatusChange={(status) => handleCriteriaChange('contact_status', status)}
+        onActivityChange={(activity) => handleCriteriaChange('qualification_method', activity)}
+      />
+    </div>
   );
 };

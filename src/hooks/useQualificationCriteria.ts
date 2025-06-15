@@ -16,6 +16,7 @@ interface QualificationCriteria {
   qualification_notes: string;
   qualified_at?: string;
   qualified_by?: string;
+  contact_status?: string; // Add this for managing contact status
 }
 
 export const useQualificationCriteria = (contactId: string) => {
