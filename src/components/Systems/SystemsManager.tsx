@@ -2,10 +2,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, DollarSign, Shield, Building2 } from 'lucide-react';
+import { Settings, DollarSign, Shield } from 'lucide-react';
 import { CurrencySettings } from './CurrencySettings';
 import { RoleManagement } from '@/components/RoleManagement/RoleManagement';
-import { SystemsTeamManagement } from './SystemsTeamManagement';
 
 export const SystemsManager: React.FC = () => {
   return (
@@ -19,7 +18,7 @@ export const SystemsManager: React.FC = () => {
       </div>
 
       <Tabs defaultValue="currency" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="currency" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
             Currency Settings
@@ -27,10 +26,6 @@ export const SystemsManager: React.FC = () => {
           <TabsTrigger value="role-management" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Role Management
-          </TabsTrigger>
-          <TabsTrigger value="team-management" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Team Management
           </TabsTrigger>
         </TabsList>
 
@@ -60,10 +55,6 @@ export const SystemsManager: React.FC = () => {
               <RoleManagement />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="team-management">
-          <SystemsTeamManagement />
         </TabsContent>
       </Tabs>
     </div>
