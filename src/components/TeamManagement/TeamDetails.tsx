@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
@@ -79,6 +80,11 @@ export const TeamDetails: React.FC<TeamDetailsProps> = ({
     onTeamUpdated();
   };
 
+  const handleTeamDeleted = () => {
+    onTeamUpdated();
+    onBack();
+  };
+
   return (
     <div className="space-y-6">
       <TeamHeader
@@ -88,6 +94,7 @@ export const TeamDetails: React.FC<TeamDetailsProps> = ({
         isOwner={isOwner}
         onInviteClick={() => setIsInviteDialogOpen(true)}
         onEditClick={() => setIsEditDialogOpen(true)}
+        onTeamDeleted={handleTeamDeleted}
       />
 
       <CompanyInformation team={team} />

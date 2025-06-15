@@ -7,7 +7,6 @@ import {
   Package, 
   Target, 
   BarChart3, 
-  UserCheck, 
   Map,
   Settings,
   User,
@@ -74,19 +73,6 @@ const analyticsMenuItems = [
   },
 ];
 
-const managementMenuItems = [
-  {
-    title: 'Team Management',
-    url: '/team-management',
-    icon: UserCheck,
-  },
-  {
-    title: 'Role Management',
-    url: '/role-management',
-    icon: Settings,
-  },
-];
-
 const settingsMenuItems = [
   {
     title: 'Personal Settings',
@@ -150,32 +136,6 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {analyticsMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent ${
-                          isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
-                        }`
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Management */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {managementMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 
