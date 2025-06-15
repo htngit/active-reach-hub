@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDeals } from '@/hooks/useDeals';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { useTeamData } from '@/hooks/useTeamData';
+import { Deal } from '@/types/deal';
 
 interface CreateDealDialogProps {
   open: boolean;
@@ -24,7 +25,7 @@ export const CreateDealDialog = ({ open, onOpenChange }: CreateDealDialogProps) 
     title: '',
     description: '',
     contact_id: '',
-    stage: 'Lead' as const,
+    stage: 'Lead' as Deal['stage'],
     value: '',
     probability: '10',
     expected_close_date: '',
@@ -36,13 +37,26 @@ export const CreateDealDialog = ({ open, onOpenChange }: CreateDealDialogProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.contact_id) {
+      return;
+    }
+
     try {
       await createDeal({
-        ...formData,
+        title: formData.title,
+        description: formData.description || undefined,
+        contact_id: formData.contact_id,
+        stage: formData.stage,
         value: parseFloat(formData.value) || 0,
         probability: parseInt(formData.probability) || 0,
         expected_close_date: formData.expected_close_date || undefined,
+        actual_close_date: undefined,
+        created_by: '', // This will be set in the hook
+        assigned_to: undefined,
         team_id: formData.team_id || undefined,
+        closed_at: undefined,
+        notes: formData.notes || undefined,
+        source: formData.source || undefined
       });
       
       onOpenChange(false);

@@ -39,22 +39,33 @@ export const useDeals = () => {
     try {
       const { data, error } = await supabase.rpc('get_pipeline_analytics');
       if (error) throw error;
-      setAnalytics(data);
+      setAnalytics(data as PipelineAnalytics);
     } catch (error) {
       console.error('Error fetching analytics:', error);
       toast.error('Failed to fetch pipeline analytics');
     }
   };
 
-  const createDeal = async (dealData: Partial<Deal>) => {
+  const createDeal = async (dealData: Omit<Deal, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('deals')
         .insert({
-          ...dealData,
+          title: dealData.title,
+          description: dealData.description,
+          contact_id: dealData.contact_id,
+          stage: dealData.stage,
+          value: dealData.value,
+          probability: dealData.probability,
+          expected_close_date: dealData.expected_close_date,
+          actual_close_date: dealData.actual_close_date,
           created_by: user.id,
+          assigned_to: dealData.assigned_to,
+          team_id: dealData.team_id,
+          notes: dealData.notes,
+          source: dealData.source
         })
         .select()
         .single();

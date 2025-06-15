@@ -7,7 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarTrigger } from "@/components/SidebarTrigger";
-import { UserMenu } from "@/components/UserMenu";
+import UserMenu from "@/components/UserMenu";
 import { EmailVerificationBanner } from "@/components/Auth/EmailVerificationBanner";
 import { ProtectedRoute } from "@/components/Auth/ProtectedRoute";
 
