@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +35,7 @@ export const LeadsDistribution: React.FC = () => {
     
     // Check if contact status is "Converted"
     if (contact && contact.status === 'Converted') {
+      console.log(`Contact ${contactId} is converted by status`);
       return true;
     }
     
@@ -46,6 +46,10 @@ export const LeadsDistribution: React.FC = () => {
         conversion.engagement_id === engagement.id && isConversionValidated(conversion.id)
       );
     });
+    
+    if (hasValidatedConversion) {
+      console.log(`Contact ${contactId} is converted by validated invoice`);
+    }
     
     return hasValidatedConversion;
   };
@@ -67,7 +71,7 @@ export const LeadsDistribution: React.FC = () => {
         isEngagementQualified(engagement.id)
       ).length;
       
-      // Count converted contacts for this member using the same logic as the main stats
+      // Count converted contacts for this member using our local isContactConverted function
       const converted = memberContacts.filter(contact => 
         isContactConverted(contact.id)
       ).length;
@@ -75,6 +79,7 @@ export const LeadsDistribution: React.FC = () => {
       console.log(`Member ${member.name} (${member.id}) stats:`, {
         totalContacts: memberContacts.length,
         memberContactIds: memberContacts.map(c => c.id),
+        memberContactStatuses: memberContacts.map(c => ({ id: c.id, status: c.status })),
         newLeads,
         qualified,
         converted,
