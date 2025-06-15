@@ -16,7 +16,31 @@ interface PDFGeneratorOptions {
 export const useInvoicePDFGenerator = () => {
   const { formatCurrency } = useCurrency();
 
+  const loadImageAsBase64 = async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch image');
+      
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error loading image:', error);
+      return null;
+    }
+  };
+
   const generatePDF = async ({ invoice, items, contact, company }: PDFGeneratorOptions) => {
+    // Load company logo as base64 if available
+    let logoBase64 = null;
+    if (company?.logo_url) {
+      logoBase64 = await loadImageAsBase64(company.logo_url);
+    }
+
     // Create a temporary div element for the PDF content
     const element = document.createElement('div');
     element.innerHTML = `
@@ -25,7 +49,11 @@ export const useInvoicePDFGenerator = () => {
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 3px solid #2563eb; padding-bottom: 30px;">
           <!-- Company Info -->
           <div style="flex: 1;">
-            ${company?.logo_url ? `<img src="${company.logo_url}" alt="Company Logo" style="max-height: 60px; margin-bottom: 15px;">` : ''}
+            ${logoBase64 ? `
+              <div style="margin-bottom: 15px;">
+                <img src="${logoBase64}" alt="Company Logo" style="max-height: 80px; max-width: 200px; object-fit: contain;">
+              </div>
+            ` : ''}
             <h1 style="color: #1f2937; margin: 0 0 10px 0; font-size: 24px; font-weight: bold;">${company?.company_legal_name || company?.name || 'Company Name'}</h1>
             <div style="color: #6b7280; font-size: 12px; line-height: 1.5;">
               ${company?.company_address ? `<div>${company.company_address}</div>` : ''}

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, Building, MapPin, CreditCard, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Upload, Building, MapPin, CreditCard, ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface CompanySetupFormProps {
@@ -50,6 +50,7 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   
   const [formData, setFormData] = useState<CompanyFormData>({
     name: '',
@@ -74,39 +75,96 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const validateFileType = (file: File): boolean => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    return allowedTypes.includes(file.type);
+  };
+
+  const validateFileSize = (file: File): boolean => {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    return file.size <= maxSize;
+  };
+
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setLogoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Validate file type
+    if (!validateFileType(file)) {
+      toast({
+        title: "Error",
+        description: "Please upload a valid image file (JPEG, PNG, GIF, WebP)",
+        variant: "destructive",
+      });
+      return;
     }
+
+    // Validate file size
+    if (!validateFileSize(file)) {
+      toast({
+        title: "Error",
+        description: "File size must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLogoFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setLogoPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    // Reset file input
+    const fileInput = document.getElementById('logo') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
   };
 
   const uploadLogo = async (teamId: string): Promise<string | null> => {
     if (!logoFile) return null;
 
+    setUploadingLogo(true);
     try {
-      const fileExt = logoFile.name.split('.').pop();
-      const fileName = `${teamId}/logo.${fileExt}`;
+      const fileExt = logoFile.name.split('.').pop()?.toLowerCase();
+      const fileName = `${teamId}/logo-${Date.now()}.${fileExt}`;
+      
+      console.log('Uploading logo to path:', fileName);
       
       const { error: uploadError } = await supabase.storage
         .from('company-assets')
-        .upload(fileName, logoFile, { upsert: true });
+        .upload(fileName, logoFile, { 
+          upsert: true,
+          contentType: logoFile.type
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('company-assets')
         .getPublicUrl(fileName);
 
+      console.log('Logo uploaded successfully, public URL:', publicUrl);
       return publicUrl;
     } catch (error) {
       console.error('Error uploading logo:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload logo. Please try again.",
+        variant: "destructive",
+      });
       return null;
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -147,10 +205,20 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
       if (logoFile) {
         logoUrl = await uploadLogo(team.id);
         if (logoUrl) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('teams')
             .update({ logo_url: logoUrl })
             .eq('id', team.id);
+
+          if (updateError) {
+            console.error('Error updating logo URL:', updateError);
+            // Don't fail the entire process if logo update fails
+            toast({
+              title: "Warning",
+              description: "Company created but logo upload failed. You can update it later.",
+              variant: "destructive",
+            });
+          }
         }
       }
 
@@ -167,7 +235,7 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
 
       toast({
         title: "Success",
-        description: "Company created successfully",
+        description: logoUrl ? "Company created successfully with logo" : "Company created successfully",
       });
 
       onCompanyCreated();
@@ -299,17 +367,39 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
             </div>
             <div>
               <Label htmlFor="logo">Company Logo</Label>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Input
                   id="logo"
                   type="file"
                   accept="image/*"
                   onChange={handleLogoUpload}
+                  disabled={uploadingLogo}
                 />
+                <p className="text-sm text-gray-500">
+                  Supported formats: JPEG, PNG, GIF, WebP. Max size: 5MB
+                </p>
                 {logoPreview && (
-                  <div className="flex items-center gap-2">
-                    <img src={logoPreview} alt="Logo preview" className="h-16 w-16 object-contain" />
-                    <span className="text-sm text-gray-600">Logo preview</span>
+                  <div className="relative inline-block">
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo preview" 
+                        className="h-16 w-16 object-contain rounded border"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">Logo Preview</p>
+                        <p className="text-sm text-gray-600">{logoFile?.name}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={removeLogo}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -432,23 +522,23 @@ export const CompanySetupForm: React.FC<CompanySetupFormProps> = ({
       <div className="flex justify-between mt-6">
         <div>
           {currentStep > 1 && (
-            <Button variant="outline" onClick={prevStep}>
+            <Button variant="outline" onClick={prevStep} disabled={isSubmitting}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
             </Button>
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
           {currentStep < 4 ? (
-            <Button onClick={nextStep} disabled={!isStepValid(currentStep)}>
+            <Button onClick={nextStep} disabled={!isStepValid(currentStep) || isSubmitting}>
               Next
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
+            <Button onClick={handleSubmit} disabled={isSubmitting || uploadingLogo}>
               {isSubmitting ? 'Creating...' : 'Create Company'}
             </Button>
           )}
