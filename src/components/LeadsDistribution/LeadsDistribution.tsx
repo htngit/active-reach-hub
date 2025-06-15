@@ -17,9 +17,12 @@ export const LeadsDistribution: React.FC = () => {
   const { user } = useAuth();
   const {
     contacts,
+    engagementData,
+    conversionData,
     refreshing,
     handleRefresh,
-    isContactQualifiedByBANT,
+    isEngagementQualified,
+    isConversionValidated,
     getLeadsStats
   } = useLeadsStats();
   const [selectedTeam, setSelectedTeam] = useState<string>('');
@@ -31,13 +34,24 @@ export const LeadsDistribution: React.FC = () => {
     
     const members = getTeamMemberNames(teamId);
     return members.map(member => {
-      const memberContacts = contacts.filter(c => c.owner_id === member.id);
+      const memberContacts = contacts.filter(c => c.owner_id === member.id || c.user_id === member.id);
       const newLeads = memberContacts.filter(c => c.status === 'New').length;
       
-      // Count qualified leads based on BANT qualification score
-      const qualified = memberContacts.filter(c => isContactQualifiedByBANT(c.id)).length;
+      // Count qualified engagements for this member's contacts
+      const memberEngagements = engagementData.filter(engagement => 
+        memberContacts.some(contact => contact.id === engagement.contact_id)
+      );
+      const qualified = memberEngagements.filter(engagement => 
+        isEngagementQualified(engagement.id)
+      ).length;
       
-      const converted = memberContacts.filter(c => c.status === 'Converted').length;
+      // Count validated conversions for this member's contacts
+      const memberConversions = conversionData.filter(conversion => 
+        memberEngagements.some(engagement => engagement.id === conversion.engagement_id)
+      );
+      const converted = memberConversions.filter(conversion => 
+        isConversionValidated(conversion.id)
+      ).length;
       
       return {
         ...member,
@@ -95,7 +109,7 @@ export const LeadsDistribution: React.FC = () => {
                     Lead Distribution by Team
                   </CardTitle>
                   <CardDescription>
-                    View how leads are distributed among your team members (Qualified = BANT score ≥ 75%)
+                    View how leads are distributed among your team members (Qualified = BANT score ≥ 75%, Converted = Validated by paid invoice)
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
