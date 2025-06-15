@@ -6,7 +6,6 @@ import {
   Users,
   Package,
   FileText,
-  Building2,
   ChevronDown,
   ChevronRight,
   Target,
@@ -68,14 +67,6 @@ const AppSidebar = () => {
     },
   ];
 
-  const systemPagesItems = [
-    {
-      title: "Team Management",
-      url: "/team-management",
-      icon: Building2,
-    },
-  ];
-
   return (
     <Sidebar>
       <SidebarContent>
@@ -122,17 +113,6 @@ const AppSidebar = () => {
                   </CollapsibleContent>
                 </Collapsible>
               </SidebarMenuItem>
-
-              {systemPagesItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.url}>
-                    <Link to={item.url}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
