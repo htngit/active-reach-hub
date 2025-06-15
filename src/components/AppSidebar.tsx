@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Home, 
   Users, 
@@ -11,9 +11,9 @@ import {
   Map,
   Settings,
   User,
-  CreditCard,
-  Bell,
-  Cog
+  Cog,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import {
   Sidebar,
@@ -26,8 +26,12 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { NavLink } from 'react-router-dom';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const mainMenuItems = [
   {
@@ -97,6 +101,8 @@ const settingsMenuItems = [
 ];
 
 export function AppSidebar() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   return (
     <Sidebar className="border-r">
       <SidebarHeader className="p-4">
@@ -189,33 +195,57 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      </SidebarContent>
 
-      <SidebarFooter className="p-4">
+        {/* Settings with Collapsible Dropdown */}
         <SidebarGroup>
           <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {settingsMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent ${
-                          isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
-                        }`
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
+              <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="w-full">
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                      {settingsOpen ? (
+                        <ChevronDown className="ml-auto h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="ml-auto h-4 w-4" />
+                      )}
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {settingsMenuItems.map((item) => (
+                        <SidebarMenuSubItem key={item.title}>
+                          <SidebarMenuSubButton asChild>
+                            <NavLink 
+                              to={item.url}
+                              className={({ isActive }) => 
+                                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent ${
+                                  isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
+                                }`
+                              }
+                            >
+                              <item.icon className="h-4 w-4" />
+                              <span>{item.title}</span>
+                            </NavLink>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
                 </SidebarMenuItem>
-              ))}
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="p-4">
+        <div className="text-xs text-muted-foreground">
+          © 2024 CRM System
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
