@@ -1,6 +1,20 @@
 
 import React from 'react';
-import { Home, Users, FileText, Package, Settings, Target, BarChart3, UserCheck, Map } from 'lucide-react';
+import { 
+  Home, 
+  Users, 
+  FileText, 
+  Package, 
+  Target, 
+  BarChart3, 
+  UserCheck, 
+  Map,
+  Settings,
+  User,
+  CreditCard,
+  Bell,
+  Cog
+} from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -10,10 +24,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { NavLink } from 'react-router-dom';
 
-const menuItems = [
+const mainMenuItems = [
   {
     title: 'Dashboard',
     url: '/',
@@ -39,6 +55,9 @@ const menuItems = [
     url: '/products',
     icon: Package,
   },
+];
+
+const analyticsMenuItems = [
   {
     title: 'Leads Distribution',
     url: '/leads-distribution',
@@ -49,6 +68,9 @@ const menuItems = [
     url: '/maps-distribution',
     icon: Map,
   },
+];
+
+const managementMenuItems = [
   {
     title: 'Team Management',
     url: '/team-management',
@@ -59,25 +81,105 @@ const menuItems = [
     url: '/role-management',
     icon: Settings,
   },
+];
+
+const settingsMenuItems = [
   {
-    title: 'Settings',
+    title: 'Personal Settings',
     url: '/settings',
-    icon: Settings,
+    icon: User,
+  },
+  {
+    title: 'Systems',
+    url: '/systems',
+    icon: Cog,
   },
 ];
 
 export function AppSidebar() {
   return (
-    <Sidebar>
+    <Sidebar className="border-r">
+      <SidebarHeader className="p-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Target className="h-4 w-4" />
+          </div>
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-semibold">CRM System</span>
+            <span className="truncate text-xs text-muted-foreground">Sales Management</span>
+          </div>
+        </div>
+      </SidebarHeader>
+
       <SidebarContent>
+        {/* Main Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className="flex items-center gap-2">
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent ${
+                          isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
+                        }`
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Analytics */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Analytics</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {analyticsMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent ${
+                          isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
+                        }`
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Management */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {managementMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent ${
+                          isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
+                        }`
+                      }
+                    >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </NavLink>
@@ -88,6 +190,33 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="p-4">
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {settingsMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent ${
+                          isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
+                        }`
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarFooter>
     </Sidebar>
   );
 }

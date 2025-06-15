@@ -39,7 +39,7 @@ export const useDeals = () => {
     try {
       const { data, error } = await supabase.rpc('get_pipeline_analytics');
       if (error) throw error;
-      setAnalytics(data as PipelineAnalytics);
+      setAnalytics(data as unknown as PipelineAnalytics);
     } catch (error) {
       console.error('Error fetching analytics:', error);
       toast.error('Failed to fetch pipeline analytics');

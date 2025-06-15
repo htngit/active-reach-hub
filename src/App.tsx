@@ -34,15 +34,17 @@ function App() {
           <Toaster />
           <BrowserRouter>
             <SidebarProvider>
-              <div className="min-h-screen flex w-full bg-gray-50">
+              <div className="min-h-screen flex w-full bg-background">
                 <AppSidebar />
                 <main className="flex-1 flex flex-col">
-                  <header className="border-b bg-white px-6 py-3 flex items-center justify-between">
-                    <SidebarTrigger />
-                    <UserMenu />
+                  <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                    <div className="container flex h-14 items-center justify-between px-4">
+                      <SidebarTrigger />
+                      <UserMenu />
+                    </div>
                   </header>
                   <EmailVerificationBanner />
-                  <div className="flex-1 overflow-auto">
+                  <div className="flex-1 overflow-auto p-6">
                     <Routes>
                       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                       <Route path="/pipeline" element={<ProtectedRoute><PipelinePage /></ProtectedRoute>} />

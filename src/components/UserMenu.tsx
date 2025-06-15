@@ -1,16 +1,10 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Settings,
   LogOut,
   User,
-  CreditCard,
-  Bell,
-  ChevronDown,
-  Cog,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,65 +14,40 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const UserMenu = () => {
-  const { signOut } = useAuth();
-  const location = useLocation();
+  const { signOut, user } = useAuth();
 
-  const settingsNavItems = [
-    {
-      title: "Account",
-      url: "/settings",
-      icon: User,
-    },
-    {
-      title: "Billing",
-      url: "/settings/billing",
-      icon: CreditCard,
-    },
-    {
-      title: "Notifications",
-      url: "/settings/notifications",
-      icon: Bell,
-    },
-    {
-      title: "Systems",
-      url: "/settings/systems",
-      icon: Cog,
-    },
-  ];
+  const getInitials = (email: string | undefined) => {
+    if (!email) return 'U';
+    return email.charAt(0).toUpperCase();
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="w-full justify-start">
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
-          <ChevronDown className="ml-auto h-4 w-4" />
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {getInitials(user?.email)}
+            </AvatarFallback>
+          </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Settings</p>
+            <p className="text-sm font-medium leading-none">Account</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user?.email}
+            </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {settingsNavItems.map((item) => (
-          <DropdownMenuItem key={item.title} asChild>
-            <Link 
-              to={item.url}
-              className={`w-full ${location.pathname === item.url ? 'bg-accent' : ''}`}
-            >
-              <item.icon className="mr-2 h-4 w-4" />
-              <span>{item.title}</span>
-            </Link>
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Log Out</span>
+          <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
