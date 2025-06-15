@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Edit, Save, X, Phone, Mail, Building, MapPin, Calendar, MessageSquare, User } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ArrowLeft, Edit, Save, X, Phone, Mail, Building, MapPin, Calendar, MessageSquare, User, Trash2, MessageCircle, FileText, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { LeadQualificationForm } from './LeadQualificationForm';
+import { TemplateSelectionModal } from './TemplateSelectionModal';
 
 interface Contact {
   id: string;
@@ -158,10 +160,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
         setContact({ ...contact, status: 'Approached' });
         setNewStatus('Approached');
         
-        toast({
-          title: "Status Updated",
-          description: "Contact status automatically changed to 'Approached' due to activity history",
-        });
+        toast.success("Contact status automatically changed to 'Approached' due to activity history");
 
         onContactUpdated();
       } catch (error: any) {
@@ -198,10 +197,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       // Open WhatsApp
       window.open(whatsappUrl, '_blank');
       
-      toast({
-        title: "Success",
-        description: `WhatsApp opened for ${contact.name}`,
-      });
+      toast.success(`WhatsApp opened for ${contact.name}`);
 
       // Refresh activities and check for auto status update
       await fetchActivities();
@@ -218,11 +214,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
           timestamp: new Date().toISOString(),
         });
 
-      toast({
-        title: "Error",
-        description: "Failed to open WhatsApp",
-        variant: "destructive",
-      });
+      toast.error("Failed to open WhatsApp");
 
       fetchActivities();
     }
@@ -247,11 +239,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
 
   const handleSaveContact = async () => {
     if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to update contacts",
-        variant: "destructive",
-      });
+      toast.error("You must be logged in to update contacts");
       return;
     }
 
@@ -282,20 +270,13 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       setContact(editedContact);
       setNewStatus(editedContact.status);
 
-      toast({
-        title: "Success",
-        description: "Contact updated successfully",
-      });
+      toast.success("Contact updated successfully");
 
       setIsEditing(false);
       onContactUpdated();
     } catch (error: any) {
       console.error('Error updating contact:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update contact",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to update contact");
     }
   };
 
@@ -315,10 +296,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Activity logged successfully",
-      });
+      toast.success("Activity logged successfully");
 
       setNewActivity({ type: '', details: '' });
       setShowAddActivity(false);
@@ -328,11 +306,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       await autoUpdateStatusToApproached();
     } catch (error: any) {
       console.error('Error adding activity:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to log activity",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to log activity");
     }
   };
 
@@ -374,11 +348,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       setNewLabel('');
     } catch (error: any) {
       console.error('Error creating label:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create label",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to create label");
     }
   };
 
@@ -389,11 +359,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
     }
 
     if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to update contact status",
-        variant: "destructive",
-      });
+      toast.error("You must be logged in to update contact status");
       return;
     }
 
@@ -414,20 +380,13 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       // Update local state immediately
       setContact({ ...contact, status: newStatus });
 
-      toast({
-        title: "Success",
-        description: "Contact status updated successfully",
-      });
+      toast.success("Contact status updated successfully");
 
       setIsUpdatingStatus(false);
       onContactUpdated();
     } catch (error: any) {
       console.error('Error updating contact status:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update contact status",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to update contact status");
       // Reset the status to original value on error
       setNewStatus(contact.status);
       setIsUpdatingStatus(false);
@@ -436,11 +395,7 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
 
   const handleDeleteContact = async () => {
     if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to delete contacts",
-        variant: "destructive",
-      });
+      toast.error("You must be logged in to delete contacts");
       return;
     }
 
@@ -458,21 +413,14 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
         throw error;
       }
 
-      toast({
-        title: "Success",
-        description: "Contact deleted successfully",
-      });
+      toast.success("Contact deleted successfully");
 
       // Go back to contact list and refresh
       onContactUpdated();
       onBack();
     } catch (error: any) {
       console.error('Error deleting contact:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete contact",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to delete contact");
     }
   };
 
@@ -533,6 +481,9 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
           )}
         </div>
       </div>
+
+      {/* Lead Qualification Section */}
+      <LeadQualificationForm contactId={contact.id} />
 
       <Card>
         <CardHeader>
