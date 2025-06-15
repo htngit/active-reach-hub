@@ -12,6 +12,7 @@ interface InvoiceDetailHeaderProps {
   isUpdatingStatus: boolean;
   onBack: () => void;
   onStatusUpdate: (status: string) => void;
+  actionsElement?: React.ReactNode;
 }
 
 export const InvoiceDetailHeader: React.FC<InvoiceDetailHeaderProps> = ({
@@ -21,6 +22,7 @@ export const InvoiceDetailHeader: React.FC<InvoiceDetailHeaderProps> = ({
   isUpdatingStatus,
   onBack,
   onStatusUpdate,
+  actionsElement,
 }) => {
   const statusOptions = ['Draft', 'Sent', 'Viewed', 'Paid', 'Overdue'];
 
@@ -50,29 +52,37 @@ export const InvoiceDetailHeader: React.FC<InvoiceDetailHeaderProps> = ({
         </div>
       </div>
       
-      {/* Status and actions - separate row */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <Badge className={getStatusColor(status)}>
-          {status}
-        </Badge>
+      {/* Status, update dropdown, and actions - single row */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Badge className={getStatusColor(status)}>
+            {status}
+          </Badge>
+          
+          {status !== 'Void' && (
+            <Select
+              value={status}
+              onValueChange={onStatusUpdate}
+              disabled={isUpdatingStatus}
+            >
+              <SelectTrigger className="w-full sm:w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map(statusOption => (
+                  <SelectItem key={statusOption} value={statusOption}>
+                    {statusOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
         
-        {status !== 'Void' && (
-          <Select
-            value={status}
-            onValueChange={onStatusUpdate}
-            disabled={isUpdatingStatus}
-          >
-            <SelectTrigger className="w-full sm:w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map(statusOption => (
-                <SelectItem key={statusOption} value={statusOption}>
-                  {statusOption}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {actionsElement && (
+          <div className="flex justify-end">
+            {actionsElement}
+          </div>
         )}
       </div>
     </div>

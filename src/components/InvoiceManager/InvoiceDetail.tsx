@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useInvoiceData } from '@/hooks/useInvoiceData';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
@@ -109,17 +108,14 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <InvoiceDetailHeader
-          invoiceNumber={invoice.invoice_number}
-          status={invoice.status}
-          canEdit={canEdit}
-          isUpdatingStatus={isUpdatingStatus}
-          onBack={onBack}
-          onStatusUpdate={handleStatusUpdate}
-        />
-        
-        <div className="flex justify-end">
+      <InvoiceDetailHeader
+        invoiceNumber={invoice.invoice_number}
+        status={invoice.status}
+        canEdit={canEdit}
+        isUpdatingStatus={isUpdatingStatus}
+        onBack={onBack}
+        onStatusUpdate={handleStatusUpdate}
+        actionsElement={
           <InvoiceDetailActions
             canEdit={canEdit}
             status={invoice.status}
@@ -129,8 +125,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             onEdit={() => setShowEditForm(true)}
             onVoidInvoice={handleVoidInvoice}
           />
-        </div>
-      </div>
+        }
+      />
 
       {invoice.status === 'Void' && (
         <Card className="border-red-200 bg-red-50">
