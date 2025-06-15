@@ -1,15 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
-import { QualificationScoreDisplay } from './QualificationScoreDisplay';
-import { QualificationCriteriaChecklist } from './QualificationCriteriaChecklist';
-import { QualificationNotes } from './QualificationNotes';
-import { QualificationStatusMessages } from './QualificationStatusMessages';
-import { ActivityStatusSelection } from './ActivityStatusSelection';
-import { useQualificationCriteria } from '@/hooks/useQualificationCriteria';
-import { toast } from 'sonner';
+import { Plus, Target } from 'lucide-react';
+import { EngagementDialog } from './EngagementDialog';
+import { EngagementCard } from './EngagementCard';
+import { EngagementQualificationDialog } from './EngagementQualificationDialog';
+import { useEngagements } from '@/hooks/useEngagements';
 
 interface LeadQualificationFormProps {
   contactId: string;
@@ -24,89 +21,98 @@ export const LeadQualificationForm: React.FC<LeadQualificationFormProps> = ({
   currentStatus,
   onQualificationUpdate,
 }) => {
-  const {
-    criteria,
-    loading,
-    saving,
-    handleCriteriaChange,
-    calculateScore,
-    saveQualificationCriteria,
-  } = useQualificationCriteria(contactId);
+  const [showNewEngagementDialog, setShowNewEngagementDialog] = useState(false);
+  const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
+  const [showQualificationDialog, setShowQualificationDialog] = useState(false);
+  
+  const { engagements, loading, refetchEngagements } = useEngagements(contactId);
 
-  const currentScore = calculateScore();
-  const isQualified = currentScore >= 75;
-
-  const handleSaveQualification = async () => {
-    // Validation guards for Status & Activity
-    if (!criteria.contact_status) {
-      toast.error('Please select a contact status before saving');
-      return;
-    }
-
-    if (!criteria.qualification_method) {
-      toast.error('Please select a current activity before saving');
-      return;
-    }
-
-    await saveQualificationCriteria(criteria.contact_status, onQualificationUpdate);
+  const handleNewEngagement = () => {
+    setShowNewEngagementDialog(true);
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">Loading qualification criteria...</div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleEngagementCreated = () => {
+    refetchEngagements();
+    onQualificationUpdate();
+  };
+
+  const handleQualifyEngagement = (engagementId: string) => {
+    setSelectedEngagementId(engagementId);
+    setShowQualificationDialog(true);
+  };
+
+  const handleQualificationUpdate = () => {
+    refetchEngagements();
+    onQualificationUpdate();
+  };
+
+  const selectedEngagement = engagements.find(e => e.id === selectedEngagementId);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <QualificationScoreDisplay 
-            contactName={contactName}
-            currentScore={currentScore}
-            isQualified={isQualified}
-          />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <QualificationCriteriaChecklist 
-          budgetConfirmed={criteria.budget_confirmed}
-          authorityConfirmed={criteria.authority_confirmed}
-          needIdentified={criteria.need_identified}
-          timelineDefined={criteria.timeline_defined}
-          onCriteriaChange={handleCriteriaChange}
-        />
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Engagement Management
+            </CardTitle>
+            <Button onClick={handleNewEngagement}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Engagement
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">Loading engagements...</div>
+          ) : engagements.length === 0 ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="text-gray-500">
+                No engagements yet. Create your first engagement to start the qualification process.
+              </div>
+              <Button onClick={handleNewEngagement} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Engagement
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-sm text-gray-600">
+                Manage multiple sales opportunities with this contact. Each engagement can have its own BANT qualification.
+              </div>
+              <div className="grid gap-4">
+                {engagements.map((engagement) => (
+                  <EngagementCard
+                    key={engagement.id}
+                    engagement={engagement}
+                    onQualify={handleQualifyEngagement}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        <ActivityStatusSelection
-          currentStatus={criteria.contact_status || currentStatus}
-          currentActivity={criteria.qualification_method || 'initial_contact'}
-          onStatusChange={(status) => handleCriteriaChange('contact_status', status)}
-          onActivityChange={(activity) => handleCriteriaChange('qualification_method', activity)}
-        />
+      <EngagementDialog
+        open={showNewEngagementDialog}
+        onOpenChange={setShowNewEngagementDialog}
+        contactId={contactId}
+        contactName={contactName}
+        onEngagementCreated={handleEngagementCreated}
+      />
 
-        <QualificationNotes 
-          notes={criteria.qualification_notes}
-          onNotesChange={(notes) => handleCriteriaChange('qualification_notes', notes)}
+      {selectedEngagement && (
+        <EngagementQualificationDialog
+          open={showQualificationDialog}
+          onOpenChange={setShowQualificationDialog}
+          engagementId={selectedEngagement.id}
+          engagementName={selectedEngagement.name}
+          contactId={contactId}
+          onQualificationUpdate={handleQualificationUpdate}
         />
-
-        <QualificationStatusMessages 
-          currentScore={currentScore}
-          isQualified={isQualified}
-        />
-
-        <Button 
-          onClick={handleSaveQualification}
-          disabled={saving}
-          className="w-full"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save Qualification'}
-        </Button>
-      </CardContent>
-    </Card>
+      )}
+    </>
   );
 };

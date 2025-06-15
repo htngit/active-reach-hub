@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ChevronRight,
   Target,
-  Settings,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -37,7 +36,6 @@ import UserMenu from "./UserMenu";
 const AppSidebar = () => {
   const location = useLocation();
   const [crmOpen, setCrmOpen] = useState(true);
-  const [systemPagesOpen, setSystemPagesOpen] = useState(true);
 
   const mainNavItems = [
     {
@@ -124,6 +122,17 @@ const AppSidebar = () => {
                   </CollapsibleContent>
                 </Collapsible>
               </SidebarMenuItem>
+
+              {systemPagesItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location.pathname === item.url}>
+                    <Link to={item.url}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

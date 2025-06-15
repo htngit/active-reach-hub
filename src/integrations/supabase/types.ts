@@ -109,6 +109,89 @@ export type Database = {
           },
         ]
       }
+      engagement_conversions: {
+        Row: {
+          converted_at: string
+          converted_by: string
+          engagement_id: string
+          id: string
+          invoice_id: string
+        }
+        Insert: {
+          converted_at?: string
+          converted_by: string
+          engagement_id: string
+          id?: string
+          invoice_id: string
+        }
+        Update: {
+          converted_at?: string
+          converted_by?: string
+          engagement_id?: string
+          id?: string
+          invoice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_conversion_engagement"
+            columns: ["engagement_id"]
+            isOneToOne: true
+            referencedRelation: "engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_conversion_invoice"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engagements: {
+        Row: {
+          contact_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          potential_product: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          potential_product?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          potential_product?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_engagement_contact"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_activities: {
         Row: {
           activity_type: string
@@ -410,6 +493,7 @@ export type Database = {
           contact_id: string
           contact_status: string | null
           created_at: string
+          engagement_id: string | null
           id: string
           need_identified: boolean | null
           qualification_method: string | null
@@ -426,6 +510,7 @@ export type Database = {
           contact_id: string
           contact_status?: string | null
           created_at?: string
+          engagement_id?: string | null
           id?: string
           need_identified?: boolean | null
           qualification_method?: string | null
@@ -442,6 +527,7 @@ export type Database = {
           contact_id?: string
           contact_status?: string | null
           created_at?: string
+          engagement_id?: string | null
           id?: string
           need_identified?: boolean | null
           qualification_method?: string | null
@@ -458,6 +544,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_qualification_engagement"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "engagements"
             referencedColumns: ["id"]
           },
         ]
