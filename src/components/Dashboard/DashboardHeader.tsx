@@ -4,10 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLeadsStats } from '@/hooks/useLeadsStats';
+import { useUserData } from '@/hooks/useUserData';
 
 export const DashboardHeader = () => {
   const { user } = useAuth();
   const { handleRefresh, refreshing } = useLeadsStats();
+  const { getUserNameById } = useUserData();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -17,8 +19,8 @@ export const DashboardHeader = () => {
   };
 
   const getUserName = () => {
-    if (user?.email) {
-      return user.email.split('@')[0];
+    if (user?.id) {
+      return getUserNameById(user.id);
     }
     return 'User';
   };
