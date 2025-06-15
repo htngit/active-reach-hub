@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,15 +108,6 @@ export const EngagementDialog: React.FC<EngagementDialogProps> = ({
 
     setSaving(true);
     try {
-      console.log('Attempting to create engagement with data:', {
-        contact_id: contactId,
-        name: name.trim(),
-        description: description.trim() || null,
-        potential_product: potentialProducts.length > 0 ? potentialProducts : null,
-        created_by: user.id,
-        status: 'New'
-      });
-
       const { data, error } = await supabase
         .from('engagements')
         .insert([{
@@ -132,11 +122,9 @@ export const EngagementDialog: React.FC<EngagementDialogProps> = ({
         .single();
 
       if (error) {
-        console.error('Engagement creation error:', error);
         throw error;
       }
 
-      console.log('Successfully created engagement:', data);
       toast.success('New engagement created successfully');
       setName('');
       setDescription('');
