@@ -1,104 +1,98 @@
-
-import { useState } from 'react';
-import { useProductData } from '@/hooks/useProductData';
-import { useTeamData } from '@/hooks/useTeamData';
+import React, { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { Team } from '@/types/team';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTeamData } from '@/hooks/useTeamData';
 import { ProductFormFields } from './ProductFormFields';
-import { ProductFormValidation, useProductFormValidation } from './ProductFormValidation';
+import { useProductFormValidation } from './ProductFormValidation';
 import { NoOwnershipMessage } from './NoOwnershipMessage';
 
 interface AddProductFormProps {
+  teams: Team[];
   onBack: () => void;
   onProductAdded: () => void;
 }
 
 export const AddProductForm: React.FC<AddProductFormProps> = ({
+  teams,
   onBack,
   onProductAdded,
 }) => {
-  const initialFormState = {
-    name: '',
-    description: '',
-    price: null as number | null,
-    stock: 0,
-    status: 'Draft',
-    category: '',
-    team_id: '',
-  };
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState<number | null>(null);
+  const [stock, setStock] = useState(0);
+  const [status, setStatus] = useState('active');
+  const [category, setCategory] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState(initialFormState);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addProduct } = useProductData();
-  const { teams, isTeamOwner } = useTeamData();
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const { isTeamOwner } = useTeamData();
   const { validateForm } = useProductFormValidation();
 
-  // Filter teams where user is owner
+  // Filter teams to only show those where user is owner
   const ownedTeams = teams.filter(team => isTeamOwner(team.id));
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => {
-      if (name === 'price') {
-        // Convert to number or null if empty
-        const numValue = value === '' ? null : parseFloat(value);
-        return {
-          ...prev,
-          [name]: numValue,
-        };
-      }
-      if (name === 'stock') {
-        // Convert to number, default to 0 if empty
-        const numValue = value === '' ? 0 : parseInt(value);
-        return {
-          ...prev,
-          [name]: numValue,
-        };
-      }
-      return {
-        ...prev,
-        [name]: value,
-      };
-    });
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  if (ownedTeams.length === 0) {
+    return <NoOwnershipMessage onBack={onBack} />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const formData = {
+      name,
+      description,
+      price,
+      stock,
+      status,
+      category,
+      team_id: selectedTeamId,
+    };
 
     if (!validateForm(formData)) {
       return;
     }
 
+    setSubmitting(true);
     try {
-      setIsSubmitting(true);
-      const result = await addProduct(formData);
-      if (result) {
-        toast({
-          title: 'Success',
-          description: 'Product added successfully',
+      const { error } = await supabase
+        .from('products')
+        .insert({
+          name,
+          description,
+          price,
+          stock_quantity: stock,
+          status,
+          category,
+          team_id: selectedTeamId,
+          created_by: user?.id,
         });
-        onProductAdded();
-      }
-    } catch (error) {
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Product added successfully",
+      });
+
+      onProductAdded();
+    } catch (error: any) {
       console.error('Error adding product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add product",
+        variant: "destructive",
+      });
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
-
-  if (ownedTeams.length === 0) {
-    return <NoOwnershipMessage onBack={onBack} />;
-  }
 
   return (
     <div className="space-y-4">
@@ -107,42 +101,45 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Products
         </Button>
-        <h2 className="text-2xl font-bold">Add New Product</h2>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Product Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Add New Product</CardTitle>
+          <CardDescription>Fill in the details to add a new product</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <ProductFormFields
-              formData={formData}
+              name={name}
+              setName={setName}
+              description={description}
+              setDescription={setDescription}
+              price={price}
+              setPrice={setPrice}
+              stock={stock}
+              setStock={setStock}
+              status={status}
+              setStatus={setStatus}
+              category={category}
+              setCategory={setCategory}
+              selectedTeamId={selectedTeamId}
+              setSelectedTeamId={setSelectedTeamId}
               teams={ownedTeams}
-              onInputChange={handleInputChange}
-              onSelectChange={handleSelectChange}
+              submitting={submitting}
             />
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button type="button" variant="outline" onClick={onBack}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Product
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
-      </form>
+
+            <div className="flex gap-2">
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Adding...' : 'Add Product'}
+              </Button>
+              <Button type="button" variant="outline" onClick={onBack}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
