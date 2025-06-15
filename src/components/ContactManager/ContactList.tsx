@@ -171,9 +171,9 @@ export const ContactList: React.FC<ContactListProps> = ({
       </div>
 
       <ContactEmptyState
-        loading={loading}
+        loading={Boolean(loading)}
         error={error}
-        hasFilters={hasFilters}
+        hasFilters={Boolean(hasFilters)}
         onRefresh={refreshContacts}
       />
     </div>
