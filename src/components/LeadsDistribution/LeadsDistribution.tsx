@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Users, TrendingUp, Target, BarChart3, UserPlus, Filter, RefreshCw } fro
 import { useTeamData } from '@/hooks/useTeamData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
+import { supabase } from '@/integrations/supabase/client';
 
 export const LeadsDistribution: React.FC = () => {
   const { teams, teamMembers, getTeamMemberNames } = useTeamData();
@@ -16,12 +16,32 @@ export const LeadsDistribution: React.FC = () => {
   const { contacts, refetch: refetchContacts } = useCachedContacts();
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
+  const [qualificationData, setQualificationData] = useState<any[]>([]);
+
+  // Fetch qualification criteria data
+  const fetchQualificationData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('qualification_criteria')
+        .select('contact_id, qualification_score');
+
+      if (error) {
+        console.error('Error fetching qualification data:', error);
+        return;
+      }
+
+      setQualificationData(data || []);
+    } catch (error) {
+      console.error('Error fetching qualification data:', error);
+    }
+  };
 
   // Function to manually refresh the contacts data
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       await refetchContacts();
+      await fetchQualificationData();
     } finally {
       setRefreshing(false);
     }
@@ -30,18 +50,31 @@ export const LeadsDistribution: React.FC = () => {
   // Auto-refresh on mount to ensure latest data
   useEffect(() => {
     refetchContacts();
+    fetchQualificationData();
   }, [refetchContacts]);
 
-  // Mock data for leads distribution stats
+  // Helper function to check if a contact is qualified based on BANT score
+  const isContactQualifiedByBANT = (contactId: string) => {
+    const qualificationRecord = qualificationData.find(q => q.contact_id === contactId);
+    return qualificationRecord ? qualificationRecord.qualification_score >= 75 : false;
+  };
+
+  // Function to get leads distribution stats
   const getLeadsStats = () => {
     const totalContacts = contacts.length;
     const newLeads = contacts.filter(c => c.status === 'New').length;
-    const qualifiedLeads = contacts.filter(c => c.status === 'Qualified').length;
+    
+    // Count qualified leads based on BANT qualification score (75% or higher)
+    const qualifiedLeads = contacts.filter(c => isContactQualifiedByBANT(c.id)).length;
+    
     const convertedLeads = contacts.filter(c => c.status === 'Converted').length;
 
     console.log('Contacts breakdown:', {
       total: totalContacts,
-      statuses: contacts.map(c => ({ name: c.name, status: c.status }))
+      new: newLeads,
+      qualified: qualifiedLeads,
+      converted: convertedLeads,
+      qualificationData: qualificationData.length
     });
 
     return {
@@ -62,7 +95,10 @@ export const LeadsDistribution: React.FC = () => {
     return members.map(member => {
       const memberContacts = contacts.filter(c => c.owner_id === member.id);
       const newLeads = memberContacts.filter(c => c.status === 'New').length;
-      const qualified = memberContacts.filter(c => c.status === 'Qualified').length;
+      
+      // Count qualified leads based on BANT qualification score
+      const qualified = memberContacts.filter(c => isContactQualifiedByBANT(c.id)).length;
+      
       const converted = memberContacts.filter(c => c.status === 'Converted').length;
       
       return {
@@ -76,6 +112,7 @@ export const LeadsDistribution: React.FC = () => {
     });
   };
 
+  // Mock data for leads distribution stats
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'owner':
@@ -140,7 +177,7 @@ export const LeadsDistribution: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats.qualified}</div>
-            <p className="text-xs text-muted-foreground">Ready for conversion</p>
+            <p className="text-xs text-muted-foreground">BANT score ≥ 75%</p>
           </CardContent>
         </Card>
 
@@ -178,7 +215,7 @@ export const LeadsDistribution: React.FC = () => {
                     Lead Distribution by Team
                   </CardTitle>
                   <CardDescription>
-                    View how leads are distributed among your team members
+                    View how leads are distributed among your team members (Qualified = BANT score ≥ 75%)
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -283,7 +320,8 @@ export const LeadsDistribution: React.FC = () => {
         </h4>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• Distribute leads evenly among team members for optimal performance</li>
-          <li>• Monitor conversion rates to identify top performers</li>
+          <li>• Monitor BANT qualification scores to identify high-quality leads</li>
+          <li>• Qualified leads are automatically identified when BANT score reaches 75%</li>
           <li>• Use team insights to improve lead qualification processes</li>
           <li>• Regular follow-up increases conversion rates significantly</li>
         </ul>
