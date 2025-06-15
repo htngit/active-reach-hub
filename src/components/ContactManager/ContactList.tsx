@@ -1,19 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, Building, Plus, Search, Filter, MessageCircle, RefreshCw, Trash2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { TemplateSelectionModal } from './TemplateSelectionModal';
-import { ExportDropdown } from './ExportDropdown';
-import { ImportDropdown } from './ImportDropdown';
+import { supabase } from '@/integrations/supabase/client';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { useTeamData } from '@/hooks/useTeamData';
 import { useUserData } from '@/hooks/useUserData';
-import { supabase } from '@/integrations/supabase/client';
 import { Contact } from '@/types/contact';
+import { ContactCacheControls } from './ContactCacheControls';
+import { ContactSearchBar } from './ContactSearchBar';
+import { ContactLabelFilter } from './ContactLabelFilter';
+import { ContactCard } from './ContactCard';
+import { ContactEmptyState } from './ContactEmptyState';
 
 interface ContactListProps {
   onSelectContact: (contact: Contact) => void;
@@ -127,19 +124,6 @@ export const ContactList: React.FC<ContactListProps> = ({
     return `${ownerName} (Team Member)`;
   };
 
-  const statusOptions = ['All', 'New', 'Contacted', 'Qualified', 'Converted', 'Lost'];
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'new': return 'bg-blue-100 text-blue-800';
-      case 'contacted': return 'bg-yellow-100 text-yellow-800';
-      case 'qualified': return 'bg-purple-100 text-purple-800';
-      case 'converted': return 'bg-green-100 text-green-800';
-      case 'lost': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   if (loading || teamsLoading) {
     return (
       <div className="p-4 text-center">
@@ -149,189 +133,49 @@ export const ContactList: React.FC<ContactListProps> = ({
     );
   }
 
+  const hasFilters = searchTerm || selectedLabels.length > 0;
+
   return (
     <div className="space-y-4">
-      {/* Cache Info and Controls - Rearranged for mobile */}
-      {cacheInfo && (
-        <div className="p-3 bg-blue-50 rounded-lg border space-y-3">
-          {/* Cache Status - Full width row */}
-          <div className="text-sm text-blue-700">
-            <span className="font-medium">Cache Status:</span> {cacheInfo}
-          </div>
-          
-          {/* Action Buttons - Single row */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={refreshContacts}
-              className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-100"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Refresh
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearCache}
-              className="flex-1 text-red-600 border-red-200 hover:bg-red-100"
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Clear Cache
-            </Button>
-          </div>
-        </div>
-      )}
+      <ContactCacheControls
+        cacheInfo={cacheInfo}
+        error={error}
+        onRefresh={refreshContacts}
+        onClearCache={clearCache}
+      />
 
-      {error && (
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-700">{error}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshContacts}
-            className="mt-2 text-yellow-600 border-yellow-200 hover:bg-yellow-100"
-          >
-            Try Again
-          </Button>
-        </div>
-      )}
+      <ContactSearchBar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onAddContact={onAddContact}
+        onImportSuccess={handleImportSuccess}
+      />
 
-      {/* Search and Actions Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search contacts..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-          <ExportDropdown />
-          <ImportDropdown onImportSuccess={handleImportSuccess} />
-          <Button onClick={onAddContact} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contact
-          </Button>
-        </div>
-      </div>
-
-      {/* Labels Filter */}
-      {availableLabels.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filter by labels:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {availableLabels.map(label => (
-              <Badge
-                key={label}
-                variant={selectedLabels.includes(label) ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => toggleLabelFilter(label)}
-              >
-                {label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
+      <ContactLabelFilter
+        availableLabels={availableLabels}
+        selectedLabels={selectedLabels}
+        onToggleLabel={toggleLabelFilter}
+      />
 
       {/* Contact Cards */}
       <div className="space-y-2">
         {filteredContacts.map(contact => (
-          <Card 
-            key={contact.id} 
-            className="hover:shadow-md transition-shadow"
-          >
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                <div 
-                  className="space-y-1 cursor-pointer flex-1"
-                  onClick={() => onSelectContact(contact)}
-                >
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-base sm:text-lg">{contact.name}</h3>
-                    <Badge 
-                      variant={contact.user_id === user?.id ? "default" : "outline"} 
-                      className="text-xs"
-                    >
-                      {getOwnerDisplay(contact)}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-3 w-3 shrink-0" />
-                      {contact.phone_number}
-                    </div>
-                    {contact.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3 w-3 shrink-0" />
-                        {contact.email}
-                      </div>
-                    )}
-                    {contact.company && (
-                      <div className="flex items-center gap-2">
-                        <Building className="h-3 w-3 shrink-0" />
-                        {contact.company}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 items-start sm:items-end">
-                  <Badge variant="outline">{contact.status}</Badge>
-                  {contact.labels && contact.labels.length > 0 && (
-                    <div className="flex flex-wrap gap-1 justify-end">
-                      {contact.labels.slice(0, 2).map(label => (
-                        <Badge key={label} variant="secondary" className="text-xs">
-                          {label}
-                        </Badge>
-                      ))}
-                      {contact.labels.length > 2 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{contact.labels.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  <div className="w-full sm:w-auto">
-                    <TemplateSelectionModal contact={contact}>
-                      <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                        <MessageCircle className="h-3 w-3 mr-1" />
-                        Template Follow Up
-                      </Button>
-                    </TemplateSelectionModal>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ContactCard
+            key={contact.id}
+            contact={contact}
+            currentUserId={user?.id}
+            onSelectContact={onSelectContact}
+            getOwnerDisplay={getOwnerDisplay}
+          />
         ))}
       </div>
 
-      {filteredContacts.length === 0 && !loading && (
-        <div className="text-center py-8 text-gray-500">
-          {error ? (
-            <div>
-              <p>Failed to load contacts</p>
-              <Button
-                variant="outline"
-                onClick={refreshContacts}
-                className="mt-2"
-              >
-                Try Again
-              </Button>
-            </div>
-          ) : searchTerm || selectedLabels.length > 0 ? (
-            "No contacts found matching your filters"
-          ) : (
-            "No contacts yet. Add your first contact!"
-          )}
-        </div>
-      )}
+      <ContactEmptyState
+        loading={loading}
+        error={error}
+        hasFilters={hasFilters}
+        onRefresh={refreshContacts}
+      />
     </div>
   );
 };
