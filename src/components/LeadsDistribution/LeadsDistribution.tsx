@@ -30,6 +30,26 @@ export const LeadsDistribution: React.FC = () => {
 
   const stats = getLeadsStats();
 
+  // Helper function to check if a contact is converted (either by status or invoice validation)
+  const isContactConverted = (contactId: string) => {
+    const contact = contacts.find(c => c.id === contactId);
+    
+    // Check if contact status is "Converted"
+    if (contact && contact.status === 'Converted') {
+      return true;
+    }
+    
+    // Check if contact has validated conversions through invoices
+    const contactEngagements = engagementData.filter(e => e.contact_id === contactId);
+    const hasValidatedConversion = contactEngagements.some(engagement => {
+      return conversionData.some(conversion => 
+        conversion.engagement_id === engagement.id && isConversionValidated(conversion.id)
+      );
+    });
+    
+    return hasValidatedConversion;
+  };
+
   const getTeamMembersData = (teamId: string) => {
     if (!teamId) return [];
     
@@ -47,17 +67,9 @@ export const LeadsDistribution: React.FC = () => {
         isEngagementQualified(engagement.id)
       ).length;
       
-      // Count validated conversions for this member's contacts (based on contact ownership, not who converted)
-      const memberConversions = conversionData.filter(conversion => {
-        const engagement = engagementData.find(e => e.id === conversion.engagement_id);
-        if (!engagement) return false;
-        
-        // Check if the engagement belongs to a contact owned by this member
-        return memberContacts.some(contact => contact.id === engagement.contact_id);
-      });
-      
-      const converted = memberConversions.filter(conversion => 
-        isConversionValidated(conversion.id)
+      // Count converted contacts for this member (including status-based conversions)
+      const converted = memberContacts.filter(contact => 
+        isContactConverted(contact.id)
       ).length;
       
       return {
@@ -89,7 +101,7 @@ export const LeadsDistribution: React.FC = () => {
                   <h4 className="text-sm font-semibold">Lead Distribution Metrics</h4>
                   <div className="text-sm text-gray-600 space-y-1">
                     <p><strong>Qualified:</strong> Engagements with BANT score ≥ 75%</p>
-                    <p><strong>Converted:</strong> Validated by paid invoice</p>
+                    <p><strong>Converted:</strong> Contacts with "Converted" status or validated by paid invoice</p>
                     <p><strong>Attribution:</strong> All metrics are attributed to the contact owner, regardless of who performs the actions</p>
                   </div>
                 </div>

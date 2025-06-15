@@ -94,7 +94,27 @@ export const useLeadsStats = () => {
     return conversion && conversion.invoices && conversion.invoices.status === 'Paid';
   };
 
-  // Function to get leads distribution stats with engagement-based counting
+  // Helper function to check if a contact is converted (either by status or invoice validation)
+  const isContactConverted = (contactId: string) => {
+    const contact = contacts.find(c => c.id === contactId);
+    
+    // Check if contact status is "Converted"
+    if (contact && contact.status === 'Converted') {
+      return true;
+    }
+    
+    // Check if contact has validated conversions through invoices
+    const contactEngagements = engagementData.filter(e => e.contact_id === contactId);
+    const hasValidatedConversion = contactEngagements.some(engagement => {
+      return conversionData.some(conversion => 
+        conversion.engagement_id === engagement.id && isConversionValidated(conversion.id)
+      );
+    });
+    
+    return hasValidatedConversion;
+  };
+
+  // Function to get leads distribution stats with enhanced conversion counting
   const getLeadsStats = () => {
     const totalContacts = contacts.length;
     const newLeads = contacts.filter(c => c.status === 'New').length;
@@ -104,9 +124,9 @@ export const useLeadsStats = () => {
       isEngagementQualified(engagement.id)
     ).length;
     
-    // Count validated conversions (linked to paid invoices) - attribution is based on contact ownership
-    const validatedConversions = conversionData.filter(conversion => 
-      isConversionValidated(conversion.id)
+    // Count converted contacts (either by status or validated conversions)
+    const convertedContacts = contacts.filter(contact => 
+      isContactConverted(contact.id)
     ).length;
 
     // Calculate total revenue from validated conversions
@@ -114,11 +134,11 @@ export const useLeadsStats = () => {
       .filter(conversion => isConversionValidated(conversion.id))
       .reduce((sum, conversion) => sum + (conversion.invoices?.total || 0), 0);
 
-    console.log('Enhanced leads stats (conversions attributed to contact owners):', {
+    console.log('Enhanced leads stats (including status-based conversions):', {
       totalContacts,
       newLeads,
       qualifiedEngagements,
-      validatedConversions,
+      convertedContacts,
       totalRevenue,
       engagementCount: engagementData.length,
       conversionCount: conversionData.length
@@ -128,9 +148,9 @@ export const useLeadsStats = () => {
       total: totalContacts,
       new: newLeads,
       qualified: qualifiedEngagements,
-      converted: validatedConversions,
+      converted: convertedContacts,
       totalRevenue,
-      conversionRate: totalContacts > 0 ? ((validatedConversions / totalContacts) * 100).toFixed(1) : '0',
+      conversionRate: totalContacts > 0 ? ((convertedContacts / totalContacts) * 100).toFixed(1) : '0',
       qualificationRate: engagementData.length > 0 ? ((qualifiedEngagements / engagementData.length) * 100).toFixed(1) : '0'
     };
   };
