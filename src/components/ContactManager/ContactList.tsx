@@ -151,18 +151,21 @@ export const ContactList: React.FC<ContactListProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Cache Info and Controls */}
+      {/* Cache Info and Controls - Rearranged for mobile */}
       {cacheInfo && (
-        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
+        <div className="p-3 bg-blue-50 rounded-lg border space-y-3">
+          {/* Cache Status - Full width row */}
           <div className="text-sm text-blue-700">
             <span className="font-medium">Cache Status:</span> {cacheInfo}
           </div>
+          
+          {/* Action Buttons - Single row */}
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={refreshContacts}
-              className="text-blue-600 border-blue-200 hover:bg-blue-100"
+              className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-100"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
               Refresh
@@ -171,7 +174,7 @@ export const ContactList: React.FC<ContactListProps> = ({
               variant="outline"
               size="sm"
               onClick={clearCache}
-              className="text-red-600 border-red-200 hover:bg-red-100"
+              className="flex-1 text-red-600 border-red-200 hover:bg-red-100"
             >
               <Trash2 className="h-3 w-3 mr-1" />
               Clear Cache
