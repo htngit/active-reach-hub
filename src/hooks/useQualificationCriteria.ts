@@ -116,7 +116,7 @@ export const useQualificationCriteria = (contactId: string) => {
       // First, let's verify the contact exists and get its details
       const { data: contactCheck, error: contactCheckError } = await supabase
         .from('contacts')
-        .select('id, owner_id, user_id, team_id')
+        .select('id, owner_id, user_id, team_id, status')
         .eq('id', contactId)
         .single();
 
@@ -126,9 +126,8 @@ export const useQualificationCriteria = (contactId: string) => {
       }
 
       console.log('Contact check result:', contactCheck);
-      console.log('User can access contact based on:');
-      console.log('- owner_id match:', contactCheck.owner_id === user.id);
-      console.log('- user_id match:', contactCheck.user_id === user.id);
+      console.log('Current contact status:', contactCheck.status);
+      console.log('Calculated score:', score);
 
       if (criteria.id) {
         // Update existing
@@ -159,8 +158,9 @@ export const useQualificationCriteria = (contactId: string) => {
         setCriteria(data);
       }
 
-      // Update contact status if score is high enough
-      if (score >= 75 && currentStatus !== 'Qualified') {
+      // IMPORTANT: Always update contact status if score is high enough
+      if (score >= 75) {
+        console.log('Score is 75+, updating contact status to Qualified');
         const { error: contactError } = await supabase
           .from('contacts')
           .update({ status: 'Qualified' })
@@ -168,7 +168,20 @@ export const useQualificationCriteria = (contactId: string) => {
 
         if (contactError) {
           console.error('Error updating contact status:', contactError);
-          throw contactError;
+          toast.error('Qualification saved but failed to update contact status');
+        } else {
+          console.log('Successfully updated contact status to Qualified');
+        }
+      } else if (score < 75 && contactCheck.status === 'Qualified') {
+        // If score drops below 75, revert to previous status
+        console.log('Score below 75, reverting contact status');
+        const { error: contactError } = await supabase
+          .from('contacts')
+          .update({ status: 'New' })
+          .eq('id', contactId);
+
+        if (contactError) {
+          console.error('Error reverting contact status:', contactError);
         }
       }
 
