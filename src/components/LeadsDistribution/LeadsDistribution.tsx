@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,7 +81,7 @@ export const LeadsDistribution: React.FC = () => {
             <p className="text-gray-600">Track and manage lead distribution across your team</p>
             <HoverCard>
               <HoverCardTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-auto p-1">
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
                   <Info className="h-4 w-4 text-gray-500 hover:text-gray-700" />
                 </Button>
               </HoverCardTrigger>
