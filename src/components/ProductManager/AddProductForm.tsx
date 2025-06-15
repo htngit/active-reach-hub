@@ -1,24 +1,21 @@
+
 import React, { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { Team } from '@/types/team';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamData } from '@/hooks/useTeamData';
+import { useProductData } from '@/hooks/useProductData';
 import { ProductFormFields } from './ProductFormFields';
 import { useProductFormValidation } from './ProductFormValidation';
 import { NoOwnershipMessage } from './NoOwnershipMessage';
 
 interface AddProductFormProps {
-  teams: Team[];
   onBack: () => void;
   onProductAdded: () => void;
 }
 
 export const AddProductForm: React.FC<AddProductFormProps> = ({
-  teams,
   onBack,
   onProductAdded,
 }) => {
@@ -26,13 +23,14 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState<number | null>(null);
   const [stock, setStock] = useState(0);
-  const [status, setStatus] = useState('active');
+  const [status, setStatus] = useState('Draft');
   const [category, setCategory] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const { user } = useAuth();
-  const { isTeamOwner } = useTeamData();
+  const { teams, isTeamOwner } = useTeamData();
+  const { addProduct } = useProductData();
   const { validateForm } = useProductFormValidation();
 
   // Filter teams to only show those where user is owner
@@ -61,34 +59,10 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('products')
-        .insert({
-          name,
-          description,
-          price,
-          stock_quantity: stock,
-          status,
-          category,
-          team_id: selectedTeamId,
-          created_by: user?.id,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Product added successfully",
-      });
-
-      onProductAdded();
-    } catch (error: any) {
-      console.error('Error adding product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add product",
-        variant: "destructive",
-      });
+      const result = await addProduct(formData);
+      if (result) {
+        onProductAdded();
+      }
     } finally {
       setSubmitting(false);
     }

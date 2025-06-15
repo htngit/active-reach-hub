@@ -1,82 +1,77 @@
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { useCurrency } from '@/hooks/useCurrency';
-
-interface ProductFormData {
-  name: string;
-  description: string;
-  price: number | null;
-  stock: number;
-  status: string;
-  category: string;
-  team_id: string;
-}
-
-interface Team {
-  id: string;
-  name: string;
-}
+import { Team } from '@/types/team';
 
 interface ProductFormFieldsProps {
-  formData: ProductFormData;
+  name: string;
+  setName: (value: string) => void;
+  description: string;
+  setDescription: (value: string) => void;
+  price: number | null;
+  setPrice: (value: number | null) => void;
+  stock: number;
+  setStock: (value: number) => void;
+  status: string;
+  setStatus: (value: string) => void;
+  category: string;
+  setCategory: (value: string) => void;
+  selectedTeamId: string;
+  setSelectedTeamId: (value: string) => void;
   teams: Team[];
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onSelectChange: (name: string, value: string) => void;
+  submitting: boolean;
 }
 
 export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
-  formData,
+  name,
+  setName,
+  description,
+  setDescription,
+  price,
+  setPrice,
+  stock,
+  setStock,
+  status,
+  setStatus,
+  category,
+  setCategory,
+  selectedTeamId,
+  setSelectedTeamId,
   teams,
-  onInputChange,
-  onSelectChange,
+  submitting,
 }) => {
-  const { symbol } = useCurrency();
-
   return (
     <>
-      <div className="space-y-2">
-        <Label htmlFor="team_id">Team *</Label>
-        <Select
-          value={formData.team_id}
-          onValueChange={(value) => onSelectChange('team_id', value)}
-          required
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a team" />
-          </SelectTrigger>
-          <SelectContent>
-            {teams.map((team) => (
-              <SelectItem key={team.id} value={team.id}>
-                {team.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Product Name *</Label>
           <Input
             id="name"
-            name="name"
-            value={formData.name}
-            onChange={onInputChange}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter product name"
+            disabled={submitting}
             required
           />
         </div>
+
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Input
-            id="category"
-            name="category"
-            value={formData.category}
-            onChange={onInputChange}
-          />
+          <Label htmlFor="team">Team *</Label>
+          <Select value={selectedTeamId} onValueChange={setSelectedTeamId} disabled={submitting}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a team" />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map((team) => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -84,44 +79,45 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
-          name="description"
-          value={formData.description}
-          onChange={onInputChange}
-          rows={4}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Enter product description"
+          disabled={submitting}
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="price">Price ({symbol}) (optional)</Label>
+          <Label htmlFor="price">Price</Label>
           <Input
             id="price"
-            name="price"
             type="number"
-            value={formData.price === null ? '' : formData.price}
-            onChange={onInputChange}
-            min={0}
+            value={price || ''}
+            onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : null)}
+            placeholder="0.00"
+            disabled={submitting}
             step="0.01"
-            placeholder="Leave empty if no price"
+            min="0"
           />
         </div>
+
         <div className="space-y-2">
-          <Label htmlFor="stock">Stock</Label>
+          <Label htmlFor="stock">Stock Quantity *</Label>
           <Input
             id="stock"
-            name="stock"
             type="number"
-            value={formData.stock}
-            onChange={onInputChange}
-            min={0}
+            value={stock}
+            onChange={(e) => setStock(parseInt(e.target.value) || 0)}
+            placeholder="0"
+            disabled={submitting}
+            min="0"
+            required
           />
         </div>
+
         <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
-          <Select
-            value={formData.status}
-            onValueChange={(value) => onSelectChange('status', value)}
-          >
+          <Label htmlFor="status">Status *</Label>
+          <Select value={status} onValueChange={setStatus} disabled={submitting}>
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
@@ -133,6 +129,17 @@ export const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="category">Category</Label>
+        <Input
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder="Enter product category"
+          disabled={submitting}
+        />
       </div>
     </>
   );
