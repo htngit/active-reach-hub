@@ -14,24 +14,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Show loading spinner while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Checking authentication...</p>
+          <p className="text-muted-foreground">Checking authentication...</p>
         </div>
       </div>
     );
   }
 
-  // If user is not authenticated, show login form
+  // If user is not authenticated, show login form in full screen
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
-        <div className="w-full max-w-md">
-          <LoginForm />
-        </div>
-      </div>
-    );
+    return <LoginForm />;
   }
 
   // User is authenticated, render the protected content

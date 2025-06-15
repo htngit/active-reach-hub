@@ -45,16 +45,32 @@ export const LoginForm = () => {
   };
 
   if (showForgotPassword) {
-    return <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md">
+          <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>{isLogin ? 'Sign In' : 'Sign Up'}</CardTitle>
+        <CardHeader className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <span className="text-xl font-bold">CRM System</span>
+          </div>
+          <CardTitle>{isLogin ? 'Welcome Back' : 'Create Account'}</CardTitle>
           <CardDescription>
-            {isLogin ? 'Welcome back to your contact manager' : 'Create your contact manager account'}
+            {isLogin ? 'Sign in to your account to continue' : 'Create your account to get started'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -87,7 +103,7 @@ export const LoginForm = () => {
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(true)}
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-primary hover:underline"
               >
                 Forgot your password?
               </button>
@@ -98,7 +114,7 @@ export const LoginForm = () => {
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-primary hover:underline"
             >
               {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
             </button>
