@@ -76,9 +76,8 @@ export const LeadsDistribution: React.FC = () => {
       <div className="flex items-center gap-3">
         <Target className="h-8 w-8" />
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Leads Distribution</h1>
           <div className="flex items-center gap-2">
-            <p className="text-gray-600">Track and manage lead distribution across your team</p>
+            <h1 className="text-3xl font-bold">Leads Distribution</h1>
             <HoverCard>
               <HoverCardTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
@@ -97,6 +96,7 @@ export const LeadsDistribution: React.FC = () => {
               </HoverCardContent>
             </HoverCard>
           </div>
+          <p className="text-gray-600">Track and manage lead distribution across your team</p>
         </div>
         <Button
           onClick={handleRefresh}
