@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,7 +16,7 @@ interface QualificationCriteria {
   qualification_notes: string;
   qualified_at?: string;
   qualified_by?: string;
-  contact_status?: string; // Add this for managing contact status
+  contact_status?: string;
 }
 
 export const useQualificationCriteria = (contactId: string) => {
@@ -29,7 +30,7 @@ export const useQualificationCriteria = (contactId: string) => {
     qualification_score: 0,
     qualification_method: 'initial_contact',
     qualification_notes: '',
-    contact_status: 'New', // Add default status
+    contact_status: 'New',
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -72,6 +73,13 @@ export const useQualificationCriteria = (contactId: string) => {
         setCriteria(data);
       } else {
         console.log('No existing qualification criteria found');
+        // Set initial status from contact data if available
+        if (contactData) {
+          setCriteria(prev => ({
+            ...prev,
+            contact_status: contactData.status
+          }));
+        }
       }
     } catch (error: any) {
       console.error('Error fetching qualification criteria:', error);

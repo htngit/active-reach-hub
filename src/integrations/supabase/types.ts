@@ -408,6 +408,7 @@ export type Database = {
           authority_confirmed: boolean | null
           budget_confirmed: boolean | null
           contact_id: string
+          contact_status: string | null
           created_at: string
           id: string
           need_identified: boolean | null
@@ -423,6 +424,7 @@ export type Database = {
           authority_confirmed?: boolean | null
           budget_confirmed?: boolean | null
           contact_id: string
+          contact_status?: string | null
           created_at?: string
           id?: string
           need_identified?: boolean | null
@@ -438,6 +440,7 @@ export type Database = {
           authority_confirmed?: boolean | null
           budget_confirmed?: boolean | null
           contact_id?: string
+          contact_status?: string | null
           created_at?: string
           id?: string
           need_identified?: boolean | null
