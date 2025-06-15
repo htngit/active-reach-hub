@@ -4,8 +4,10 @@ import { LeadsDistribution } from '@/components/LeadsDistribution/LeadsDistribut
 
 const LeadsDistributionPage: React.FC = () => {
   return (
-    <div className="container mx-auto p-6">
-      <LeadsDistribution />
+    <div className="w-full">
+      <div className="container mx-auto p-6 max-w-7xl">
+        <LeadsDistribution />
+      </div>
     </div>
   );
 };

@@ -58,7 +58,7 @@ export const ContactManager = () => {
 
   if (selectedContact) {
     return (
-      <div className="p-6">
+      <div className="space-y-6">
         <EmailVerificationBanner />
         <ContactDetail
           contact={selectedContact}
@@ -71,7 +71,7 @@ export const ContactManager = () => {
 
   if (showAddForm) {
     return (
-      <div className="p-6">
+      <div className="space-y-6">
         <EmailVerificationBanner />
         <AddContactForm
           onBack={handleBackToList}
@@ -82,34 +82,25 @@ export const ContactManager = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       <EmailVerificationBanner />
       
-      <div className="mb-6">
+      <div className="space-y-2">
         <h1 className="text-3xl font-bold">Contact Manager</h1>
         <p className="text-gray-600">Manage your contacts and follow-ups</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger
-            value="contacts"
-            className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'contacts' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
-          >
+          <TabsTrigger value="contacts" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Contacts
           </TabsTrigger>
-          <TabsTrigger
-            value="follow-up"
-            className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'follow-up' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
-          >
+          <TabsTrigger value="follow-up" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             Follow Up
           </TabsTrigger>
-          <TabsTrigger
-            value="templates"
-            className={`flex items-center gap-2 transition-all duration-300 ${activeTab === 'templates' ? 'text-[1rem] px-3 py-1' : 'text-sm px-2 py-1'}`}
-          >
+          <TabsTrigger value="templates" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Templates
           </TabsTrigger>
