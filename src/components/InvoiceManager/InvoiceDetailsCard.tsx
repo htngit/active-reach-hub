@@ -103,7 +103,7 @@ export const InvoiceDetailsCard: React.FC<InvoiceDetailsCardProps> = ({
                   min="0"
                   max="100"
                   {...field}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                 />
               </FormControl>
               <FormMessage />
