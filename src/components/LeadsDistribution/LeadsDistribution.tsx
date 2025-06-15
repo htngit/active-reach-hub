@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, TrendingUp, Target, BarChart3, UserPlus, Filter } from 'lucide-react';
+import { Users, TrendingUp, Target, BarChart3, UserPlus, Filter, RefreshCw } from 'lucide-react';
 import { useTeamData } from '@/hooks/useTeamData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
@@ -13,8 +13,24 @@ import { useCachedContacts } from '@/hooks/useCachedContacts';
 export const LeadsDistribution: React.FC = () => {
   const { teams, teamMembers, getTeamMemberNames } = useTeamData();
   const { user } = useAuth();
-  const { contacts } = useCachedContacts();
+  const { contacts, refetch: refetchContacts } = useCachedContacts();
   const [selectedTeam, setSelectedTeam] = useState<string>('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Function to manually refresh the contacts data
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetchContacts();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Auto-refresh on mount to ensure latest data
+  useEffect(() => {
+    refetchContacts();
+  }, [refetchContacts]);
 
   // Mock data for leads distribution stats
   const getLeadsStats = () => {
@@ -22,6 +38,11 @@ export const LeadsDistribution: React.FC = () => {
     const newLeads = contacts.filter(c => c.status === 'New').length;
     const qualifiedLeads = contacts.filter(c => c.status === 'Qualified').length;
     const convertedLeads = contacts.filter(c => c.status === 'Converted').length;
+
+    console.log('Contacts breakdown:', {
+      total: totalContacts,
+      statuses: contacts.map(c => ({ name: c.name, status: c.status }))
+    });
 
     return {
       total: totalContacts,
@@ -72,10 +93,20 @@ export const LeadsDistribution: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Target className="h-8 w-8" />
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold">Leads Distribution</h1>
           <p className="text-gray-600">Track and manage lead distribution across your team</p>
         </div>
+        <Button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh Data'}
+        </Button>
       </div>
 
       {/* Overall Stats */}
@@ -108,7 +139,7 @@ export const LeadsDistribution: React.FC = () => {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.qualified}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.qualified}</div>
             <p className="text-xs text-muted-foreground">Ready for conversion</p>
           </CardContent>
         </Card>
@@ -194,11 +225,11 @@ export const LeadsDistribution: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Qualified</p>
-                          <p className="font-bold text-yellow-600">{member.qualified}</p>
+                          <p className="font-bold text-green-600">{member.qualified}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Converted</p>
-                          <p className="font-bold text-green-600">{member.converted}</p>
+                          <p className="font-bold text-purple-600">{member.converted}</p>
                         </div>
                       </div>
                     </div>
