@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useInvoiceData } from '@/hooks/useInvoiceData';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, FileText, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Search, FileText, Calendar } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
 import { format } from 'date-fns';
 
@@ -132,7 +133,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
                   </div>
                 </div>
                 <div className="text-right space-y-1">
-                  <div className="flex items-center gap-1 text-lg font-semibold">
+                  <div className="text-lg font-semibold">
                     {formatCurrency(invoice.total)}
                   </div>
                   <p className="text-sm text-gray-500">
