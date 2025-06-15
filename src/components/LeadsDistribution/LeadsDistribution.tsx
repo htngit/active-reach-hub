@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Target, BarChart3, Filter, RefreshCw } from 'lucide-react';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { Users, Target, BarChart3, Filter, RefreshCw, Info } from 'lucide-react';
 import { useTeamData } from '@/hooks/useTeamData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLeadsStats } from '@/hooks/useLeadsStats';
@@ -76,7 +76,26 @@ export const LeadsDistribution: React.FC = () => {
         <Target className="h-8 w-8" />
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Leads Distribution</h1>
-          <p className="text-gray-600">Track and manage lead distribution across your team</p>
+          <div className="flex items-center gap-2">
+            <p className="text-gray-600">Track and manage lead distribution across your team</p>
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-auto p-1">
+                  <Info className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                </Button>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold">Lead Distribution Metrics</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Qualified:</strong> Engagements with BANT score ≥ 75%</p>
+                    <p><strong>Converted:</strong> Validated by paid invoice</p>
+                    <p><strong>Attribution:</strong> All metrics are attributed to the contact owner, regardless of who performs the actions</p>
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          </div>
         </div>
         <Button
           onClick={handleRefresh}
@@ -115,7 +134,7 @@ export const LeadsDistribution: React.FC = () => {
                     Lead Distribution by Team
                   </CardTitle>
                   <CardDescription>
-                    View how leads are distributed among your team members (Qualified = BANT score ≥ 75%, Converted = Validated by paid invoice, attributed to contact owner)
+                    View how leads are distributed among your team members
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
