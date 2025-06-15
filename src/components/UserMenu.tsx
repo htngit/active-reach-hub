@@ -9,6 +9,8 @@ import {
   Bell,
   ChevronDown,
   Cog,
+  Building2,
+  ChevronRight,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -18,6 +20,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
@@ -48,6 +53,14 @@ const UserMenu = () => {
     },
   ];
 
+  const systemPagesItems = [
+    {
+      title: "Team Management",
+      url: "/team-management",
+      icon: Building2,
+    },
+  ];
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -75,6 +88,27 @@ const UserMenu = () => {
             </Link>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>System Pages</span>
+            <ChevronRight className="ml-auto h-4 w-4" />
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-48">
+            {systemPagesItems.map((item) => (
+              <DropdownMenuItem key={item.title} asChild>
+                <Link 
+                  to={item.url}
+                  className={`w-full ${location.pathname === item.url ? 'bg-accent' : ''}`}
+                >
+                  <item.icon className="mr-2 h-4 w-4" />
+                  <span>{item.title}</span>
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut}>
           <LogOut className="mr-2 h-4 w-4" />

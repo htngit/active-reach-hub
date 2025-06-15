@@ -124,35 +124,6 @@ const AppSidebar = () => {
                   </CollapsibleContent>
                 </Collapsible>
               </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <Collapsible open={systemPagesOpen} onOpenChange={setSystemPagesOpen}>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
-                      {systemPagesOpen ? (
-                        <ChevronDown className="mr-2 h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="mr-2 h-4 w-4" />
-                      )}
-                      <span>System Pages</span>
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {systemPagesItems.map((item) => (
-                        <SidebarMenuSubItem key={item.title}>
-                          <SidebarMenuSubButton asChild isActive={location.pathname === item.url}>
-                            <Link to={item.url}>
-                              <item.icon className="mr-2 h-4 w-4" />
-                              <span>{item.title}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </Collapsible>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
