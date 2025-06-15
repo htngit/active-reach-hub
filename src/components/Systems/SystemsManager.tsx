@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, DollarSign, Shield, Building2 } from 'lucide-react';
 import { CurrencySettings } from './CurrencySettings';
 import { RoleManagement } from '@/components/RoleManagement/RoleManagement';
-import { TeamManagement } from '@/components/TeamManagement/TeamManagement';
+import { SystemsTeamManagement } from './SystemsTeamManagement';
 
 export const SystemsManager: React.FC = () => {
   return (
@@ -63,17 +63,7 @@ export const SystemsManager: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="team-management">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Team Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TeamManagement />
-            </CardContent>
-          </Card>
+          <SystemsTeamManagement />
         </TabsContent>
       </Tabs>
     </div>
