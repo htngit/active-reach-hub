@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/hooks/useUserData';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TeamRoleDialog } from './TeamRoleDialog';
 
 export const RoleManagement: React.FC = () => {
   const { teams, teamMembers, loading, refetch } = useTeamData();
@@ -117,8 +118,11 @@ export const RoleManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Users className="h-8 w-8" />
-        <div>
-          <h1 className="text-3xl font-bold">Role Management</h1>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">Role Management</h1>
+            <TeamRoleDialog />
+          </div>
           <p className="text-gray-600">Manage team member roles and permissions</p>
         </div>
       </div>
