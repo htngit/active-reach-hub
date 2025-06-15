@@ -37,9 +37,10 @@ export const InvoiceDetailHeader: React.FC<InvoiceDetailHeaderProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onBack}>
+    <div className="space-y-4">
+      {/* Back button and Invoice number - separate row */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <Button variant="outline" onClick={onBack} className="w-fit">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Invoices
         </Button>
@@ -48,7 +49,9 @@ export const InvoiceDetailHeader: React.FC<InvoiceDetailHeaderProps> = ({
           <h1 className="text-2xl font-bold">{invoiceNumber}</h1>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      
+      {/* Status and actions - separate row */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         <Badge className={getStatusColor(status)}>
           {status}
         </Badge>
@@ -59,7 +62,7 @@ export const InvoiceDetailHeader: React.FC<InvoiceDetailHeaderProps> = ({
             onValueChange={onStatusUpdate}
             disabled={isUpdatingStatus}
           >
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-full sm:w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -109,7 +109,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="space-y-4">
         <InvoiceDetailHeader
           invoiceNumber={invoice.invoice_number}
           status={invoice.status}
@@ -119,15 +119,17 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
           onStatusUpdate={handleStatusUpdate}
         />
         
-        <InvoiceDetailActions
-          canEdit={canEdit}
-          status={invoice.status}
-          isDownloading={isDownloading}
-          isVoiding={isVoiding}
-          onDownloadPDF={handleDownloadPDF}
-          onEdit={() => setShowEditForm(true)}
-          onVoidInvoice={handleVoidInvoice}
-        />
+        <div className="flex justify-end">
+          <InvoiceDetailActions
+            canEdit={canEdit}
+            status={invoice.status}
+            isDownloading={isDownloading}
+            isVoiding={isVoiding}
+            onDownloadPDF={handleDownloadPDF}
+            onEdit={() => setShowEditForm(true)}
+            onVoidInvoice={handleVoidInvoice}
+          />
+        </div>
       </div>
 
       {invoice.status === 'Void' && (
