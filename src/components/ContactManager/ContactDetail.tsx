@@ -483,7 +483,12 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       </div>
 
       {/* Lead Qualification Section */}
-      <LeadQualificationForm contactId={contact.id} />
+      <LeadQualificationForm 
+        contactId={contact.id}
+        contactName={contact.name}
+        currentStatus={contact.status}
+        onQualificationUpdate={onContactUpdated}
+      />
 
       <Card>
         <CardHeader>
