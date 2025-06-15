@@ -25,24 +25,29 @@ export const generateInvoicePDFTemplate = ({
     <div style="font-family: 'Arial', sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; background: white; color: #333;">
       <!-- Header Section -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 3px solid #2563eb; padding-bottom: 30px;">
-        <!-- Company Info with Logo and Name Side by Side -->
-        <div style="flex: 1; display: flex; align-items: flex-start; gap: 20px;">
-          ${logoBase64 ? `
-            <div style="flex-shrink: 0;">
-              <img src="${logoBase64}" alt="Company Logo" style="max-height: 80px; max-width: 120px; object-fit: contain;">
+        <!-- Company Info with Logo and Name Side by Side, Additional Info Below -->
+        <div style="flex: 1;">
+          <!-- Logo and Company Name Row -->
+          <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px;">
+            ${logoBase64 ? `
+              <div style="flex-shrink: 0;">
+                <img src="${logoBase64}" alt="Company Logo" style="max-height: 60px; max-width: 80px; object-fit: contain;">
+              </div>
+            ` : ''}
+            <div>
+              <h1 style="color: #1f2937; margin: 0; font-size: 24px; font-weight: bold;">${company?.company_legal_name || company?.name || 'Company Name'}</h1>
             </div>
-          ` : ''}
-          <div style="flex: 1;">
-            <h1 style="color: #1f2937; margin: 0 0 15px 0; font-size: 24px; font-weight: bold;">${company?.company_legal_name || company?.name || 'Company Name'}</h1>
-            <div style="color: #6b7280; font-size: 12px; line-height: 1.5;">
-              ${company?.company_address ? `<div>${company.company_address}</div>` : ''}
-              ${company?.city ? `<div>${company.city}${company.state ? `, ${company.state}` : ''} ${company.postal_code || ''}</div>` : ''}
-              ${company?.country ? `<div>${company.country}</div>` : ''}
-              ${company?.company_phone ? `<div>Phone: ${company.company_phone}</div>` : ''}
-              ${company?.company_email ? `<div>Email: ${company.company_email}</div>` : ''}
-              ${company?.website ? `<div>Website: ${company.website}</div>` : ''}
-              ${company?.tax_id ? `<div>Tax ID: ${company.tax_id}</div>` : ''}
-            </div>
+          </div>
+          
+          <!-- Additional Company Information Below Logo and Name -->
+          <div style="color: #6b7280; font-size: 12px; line-height: 1.5; margin-left: 0;">
+            ${company?.company_address ? `<div>${company.company_address}</div>` : ''}
+            ${company?.city ? `<div>${company.city}${company.state ? `, ${company.state}` : ''} ${company.postal_code || ''}</div>` : ''}
+            ${company?.country ? `<div>${company.country}</div>` : ''}
+            ${company?.company_phone ? `<div>Phone: ${company.company_phone}</div>` : ''}
+            ${company?.company_email ? `<div>Email: ${company.company_email}</div>` : ''}
+            ${company?.website ? `<div>Website: ${company.website}</div>` : ''}
+            ${company?.tax_id ? `<div>Tax ID: ${company.tax_id}</div>` : ''}
           </div>
         </div>
         
