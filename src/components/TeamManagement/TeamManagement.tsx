@@ -64,7 +64,8 @@ export const TeamManagement = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header Section - Desktop Layout */}
+      <div className="hidden md:flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">My Companies</h1>
           <p className="text-gray-600">Manage your companies and collaborate with team members</p>
@@ -73,6 +74,23 @@ export const TeamManagement = () => {
           <Plus className="h-4 w-4 mr-2" />
           Create Company
         </Button>
+      </div>
+
+      {/* Header Section - Mobile Layout */}
+      <div className="md:hidden space-y-4">
+        {/* Title and Description Row */}
+        <div>
+          <h1 className="text-3xl font-bold">My Companies</h1>
+          <p className="text-gray-600">Manage your companies and collaborate with team members</p>
+        </div>
+        
+        {/* Create Company Button Row */}
+        <div className="flex justify-center">
+          <Button onClick={() => setShowCreateForm(true)} className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Company
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
