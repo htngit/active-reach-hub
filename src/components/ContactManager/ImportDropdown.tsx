@@ -17,7 +17,8 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
   const { user } = useAuth();
 
   const downloadTemplate = () => {
-    const headers = ['Name', 'Phone Number', 'Email', 'Company', 'Address', 'Notes', 'Labels', 'Status', 'Potential Products'];
+    // Pastikan nama kolom di template sesuai dengan yang diharapkan oleh kode
+    const headers = ['Name', 'Phone Number', 'Email', 'Company', 'Address', 'Notes', 'Labels', 'Status', 'Potential Product'];
     const sampleData = ['John Doe', '+1234567890', 'john@example.com', 'ABC Corp', '123 Main St', 'Sample notes', 'Client; VIP', 'New', 'Product A; Product B'];
     
     const csvContent = [
@@ -92,7 +93,7 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
       notes: row.notes || null,
       labels: row.labels ? row.labels.split(';').map((label: string) => label.trim()).filter(Boolean) : null,
       status: row.status || 'New',
-      potential_product: row.potential_products ? row.potential_products.split(';').map((product: string) => product.trim()).filter(Boolean) : null,
+      potential_product: row.potential_product ? row.potential_product.split(';').map((product: string) => product.trim()).filter(Boolean) : null,
       team_id: null // Default to personal contacts for imports
     })).filter(contact => contact.name && contact.phone_number);
 
