@@ -10,6 +10,7 @@ import { Phone, Mail, Building, Clock, MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
+import { ContactLabelFilter } from './ContactLabelFilter';
 
 interface Contact {
   id: string;
@@ -34,6 +35,8 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('needs-approach');
+  const [availableLabels, setAvailableLabels] = useState<string[]>([]);
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   
   // Use cached contacts instead of direct database queries
   const { contacts, loading: contactsLoading, error: contactsError } = useCachedContacts();
@@ -42,14 +45,50 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     if (!contactsLoading && contacts.length >= 0) {
       fetchFollowUpContacts();
     }
-  }, [contacts, contactsLoading, user]);
+  }, [contacts, contactsLoading, user, selectedLabels]);
+  
+  useEffect(() => {
+    fetchLabels();
+  }, [user]);
+  
+  const fetchLabels = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('labels')
+        .select('name')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      setAvailableLabels(data?.map(label => label.name) || []);
+    } catch (error: any) {
+      console.error('Error fetching labels:', error);
+    }
+  };
+  
+  const toggleLabelFilter = (label: string) => {
+    setSelectedLabels(prev => 
+      prev.includes(label)
+        ? prev.filter(l => l !== label)
+        : [...prev, label]
+    );
+  };
 
   const fetchFollowUpContacts = async () => {
     if (!user || contactsLoading) return;
 
     try {
       // Filter contacts that are not "Paid"
-      const activeContacts = contacts.filter(contact => contact.status !== 'Paid');
+      let activeContacts = contacts.filter(contact => contact.status !== 'Paid');
+      
+      // Apply label filter if any labels are selected
+      if (selectedLabels.length > 0) {
+        activeContacts = activeContacts.filter(contact => 
+          contact.labels && selectedLabels.some(label => contact.labels.includes(label))
+        );
+      }
 
       // Get all activities to determine last contact time
       const { data: activities, error: activitiesError } = await supabase
@@ -188,7 +227,14 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   }
 
   return (
-    <Tabs defaultValue="needs-approach" onValueChange={setActiveTab} className="w-full">
+    <div className="space-y-4">
+      <ContactLabelFilter
+        availableLabels={availableLabels}
+        selectedLabels={selectedLabels}
+        onToggleLabel={toggleLabelFilter}
+      />
+      
+      <Tabs defaultValue="needs-approach" onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-4 h-12">
         <TabsTrigger
           value="needs-approach"
@@ -268,5 +314,6 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         )}
       </TabsContent>
     </Tabs>
+    </div>
   );
 };

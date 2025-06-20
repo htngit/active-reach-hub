@@ -82,6 +82,43 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
   const processImportData = async (data: any[]) => {
     if (!user) return;
 
+    // Extract all unique labels from imported contacts
+    const allLabels = new Set<string>();
+    data.forEach(row => {
+      if (row.labels) {
+        const labels = row.labels.split(';').map((label: string) => label.trim()).filter(Boolean);
+        labels.forEach((label: string) => allLabels.add(label));
+      }
+    });
+
+    // Fetch existing labels to avoid duplicates
+    const { data: existingLabelsData } = await supabase
+      .from('labels')
+      .select('name')
+      .eq('user_id', user.id);
+    
+    const existingLabels = new Set(existingLabelsData?.map(l => l.name) || []);
+    
+    // Create new labels that don't exist yet
+    const newLabels = Array.from(allLabels).filter(label => !existingLabels.has(label));
+    
+    if (newLabels.length > 0) {
+      const labelsToInsert = newLabels.map(name => ({
+        user_id: user.id,
+        name,
+        color: null // Default color
+      }));
+      
+      const { error: labelInsertError } = await supabase
+        .from('labels')
+        .insert(labelsToInsert);
+      
+      if (labelInsertError) {
+        console.error('Error inserting new labels:', labelInsertError);
+        // Continue with contact import even if label insert fails
+      }
+    }
+
     const contacts = data.map(row => ({
       user_id: user.id,
       owner_id: user.id, // Set current user as owner for imported contacts
