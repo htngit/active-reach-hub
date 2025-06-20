@@ -64,24 +64,28 @@ export const DashboardCharts = () => {
   ].filter(item => item.value > 0);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 gap-6">
       {/* Lead Funnel */}
-      <Card>
+      <Card className="min-h-[400px]">
         <CardHeader>
           <CardTitle>Lead Funnel</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
+        <CardContent className="flex-1">
+          <ChartContainer config={chartConfig} className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={funnelData}>
+              <BarChart 
+                data={funnelData}
+                margin={{ top: 20, right: 30, left: 10, bottom: 90 }}
+              >
                 <XAxis 
                   dataKey="name" 
                   tick={{ fontSize: 12 }}
                   angle={-45}
                   textAnchor="end"
-                  height={60}
+                  height={90}
+                  padding={{ left: 20, right: 20 }}
                 />
-                <YAxis tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} width={50} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -91,21 +95,24 @@ export const DashboardCharts = () => {
       </Card>
 
       {/* Status Distribution */}
-      <Card>
+      <Card className="min-h-[400px]">
         <CardHeader>
           <CardTitle>Contact Status Distribution</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
+        <CardContent className="flex-1">
+          <ChartContainer config={chartConfig} className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
                 <Pie
                   data={statusData}
                   cx="50%"
                   cy="50%"
-                  outerRadius={80}
+                  outerRadius={100}
+                  innerRadius={0}
+                  paddingAngle={2}
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
+                  labelLine={true}
+                  label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
                 >
                   {statusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -119,16 +126,23 @@ export const DashboardCharts = () => {
       </Card>
 
       {/* Monthly Trends */}
-      <Card className="lg:col-span-2">
+      <Card className="min-h-[400px]">
         <CardHeader>
           <CardTitle>Monthly Contact Trends</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
+        <CardContent className="flex-1">
+          <ChartContainer config={chartConfig} className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+              <BarChart 
+                data={monthlyData}
+                margin={{ top: 20, right: 30, left: 10, bottom: 30 }}
+              >
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fontSize: 12 }}
+                  padding={{ left: 20, right: 20 }}
+                />
+                <YAxis tick={{ fontSize: 12 }} width={50} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="new" fill="#3b82f6" name="New" />
                 <Bar dataKey="qualified" fill="#f59e0b" name="Qualified" />
