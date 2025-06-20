@@ -112,6 +112,7 @@ export const ContactManager = () => {
             onAddContact={handleAddContact}
             selectedLabels={selectedLabels}
             onLabelFilterChange={handleLabelFilterChange}
+            onContactsDeleted={handleContactUpdated}
           />
         </TabsContent>
 

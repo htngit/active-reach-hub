@@ -3,6 +3,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Phone, Mail, Building, MessageCircle } from 'lucide-react';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
 import { Contact } from '@/types/contact';
@@ -12,6 +13,9 @@ interface ContactCardProps {
   currentUserId?: string;
   onSelectContact: (contact: Contact) => void;
   getOwnerDisplay: (contact: Contact) => string;
+  isSelected?: boolean;
+  onToggleSelect?: (contact: Contact) => void;
+  selectionMode?: boolean;
 }
 
 export const ContactCard: React.FC<ContactCardProps> = ({
@@ -19,14 +23,25 @@ export const ContactCard: React.FC<ContactCardProps> = ({
   currentUserId,
   onSelectContact,
   getOwnerDisplay,
+  isSelected = false,
+  onToggleSelect,
+  selectionMode = false,
 }) => {
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className={`hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary' : ''}`}>
       <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          {selectionMode && (
+            <div className="flex items-center h-full mr-2" onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelect?.(contact);
+            }}>
+              <Checkbox checked={isSelected} className="mt-1" />
+            </div>
+          )}
           <div 
             className="space-y-1 cursor-pointer flex-1"
-            onClick={() => onSelectContact(contact)}
+            onClick={() => selectionMode ? onToggleSelect?.(contact) : onSelectContact(contact)}
           >
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-base sm:text-lg">{contact.name}</h3>

@@ -11,12 +11,17 @@ import { ContactSearchBar } from './ContactSearchBar';
 import { ContactLabelFilter } from './ContactLabelFilter';
 import { ContactCard } from './ContactCard';
 import { ContactEmptyState } from './ContactEmptyState';
+import { Button } from '@/components/ui/button';
+import { Trash2, CheckSquare } from 'lucide-react';
+import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface ContactListProps {
   onSelectContact: (contact: Contact) => void;
   onAddContact: () => void;
   selectedLabels: string[];
   onLabelFilterChange: (labels: string[]) => void;
+  onContactsDeleted?: () => void;
 }
 
 export const ContactList: React.FC<ContactListProps> = ({
@@ -24,10 +29,14 @@ export const ContactList: React.FC<ContactListProps> = ({
   onAddContact,
   selectedLabels,
   onLabelFilterChange,
+  onContactsDeleted,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { user } = useAuth();
   const { getUserNameById } = useUserData();
   
@@ -108,6 +117,43 @@ export const ContactList: React.FC<ContactListProps> = ({
     refreshContacts();
   };
 
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    if (selectionMode) {
+      setSelectedContacts([]);
+    }
+  };
+
+  const toggleContactSelection = (contact: Contact) => {
+    if (selectedContacts.some(c => c.id === contact.id)) {
+      setSelectedContacts(selectedContacts.filter(c => c.id !== contact.id));
+    } else {
+      setSelectedContacts([...selectedContacts, contact]);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!user || selectedContacts.length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .in('id', selectedContacts.map(c => c.id));
+
+      if (error) throw error;
+
+      toast.success(`${selectedContacts.length} contacts deleted successfully`);
+      setSelectedContacts([]);
+      setSelectionMode(false);
+      refreshContacts();
+      if (onContactsDeleted) onContactsDeleted();
+    } catch (error: any) {
+      console.error('Error deleting contacts:', error);
+      toast.error(error.message || 'Failed to delete contacts');
+    }
+  };
+
   const getOwnerDisplay = (contact: Contact) => {
     if (contact.user_id === user?.id) {
       return 'My Contact';
@@ -144,12 +190,55 @@ export const ContactList: React.FC<ContactListProps> = ({
         onClearCache={clearCache}
       />
 
-      <ContactSearchBar
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onAddContact={onAddContact}
-        onImportSuccess={handleImportSuccess}
-      />
+      <div className="flex flex-col sm:flex-row justify-between gap-2 mb-2">
+        <ContactSearchBar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onAddContact={onAddContact}
+          onImportSuccess={handleImportSuccess}
+        />
+        
+        <div className="flex gap-2">
+          <Button 
+            variant={selectionMode ? "default" : "outline"} 
+            size="sm"
+            onClick={toggleSelectionMode}
+            className="flex items-center gap-1"
+          >
+            <CheckSquare className="h-4 w-4" />
+            {selectionMode ? "Cancel Selection" : "Select Multiple"}
+          </Button>
+          
+          {selectionMode && selectedContacts.length > 0 && (
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="flex items-center gap-1">
+                  <Trash2 className="h-4 w-4" />
+                  Delete Selected ({selectedContacts.length})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Multiple Contacts</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete {selectedContacts.length} contacts? This action cannot be undone.
+                    All activities, invoices, and related data for these contacts will also be deleted.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteSelected}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete Contacts
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+      </div>
 
       <ContactLabelFilter
         availableLabels={availableLabels}
@@ -166,6 +255,9 @@ export const ContactList: React.FC<ContactListProps> = ({
             currentUserId={user?.id}
             onSelectContact={onSelectContact}
             getOwnerDisplay={getOwnerDisplay}
+            selectionMode={selectionMode}
+            isSelected={selectedContacts.some(c => c.id === contact.id)}
+            onToggleSelect={toggleContactSelection}
           />
         ))}
       </div>
