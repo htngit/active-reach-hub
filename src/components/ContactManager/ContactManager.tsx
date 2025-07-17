@@ -56,74 +56,64 @@ export const ContactManager = () => {
     setSelectedLabels(labels);
   };
 
-  if (selectedContact) {
-    return (
-      <div className="space-y-6">
-        <EmailVerificationBanner />
+  return (
+    <div className="flex flex-col space-y-6 max-w-full overflow-hidden">
+      <EmailVerificationBanner />
+      
+      {selectedContact ? (
         <ContactDetail
           contact={selectedContact}
           onBack={handleBackToList}
           onContactUpdated={handleContactUpdated}
         />
-      </div>
-    );
-  }
-
-  if (showAddForm) {
-    return (
-      <div className="space-y-6">
-        <EmailVerificationBanner />
+      ) : showAddForm ? (
         <AddContactForm
           onBack={handleBackToList}
           onContactAdded={handleContactAdded}
         />
-      </div>
-    );
-  }
+      ) : (
+        <>
+          <div className="flex flex-col space-y-2 text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold">Contact Manager</h1>
+            <p className="text-gray-600">Manage your contacts and follow-ups</p>
+          </div>
 
-  return (
-    <div className="space-y-6">
-      <EmailVerificationBanner />
-      
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Contact Manager</h1>
-        <p className="text-gray-600">Manage your contacts and follow-ups</p>
-      </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col space-y-6 max-w-full">
+            <TabsList className="grid grid-cols-3 w-full h-12 sm:h-14">
+              <TabsTrigger value="contacts" className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Contacts</span>
+              </TabsTrigger>
+              <TabsTrigger value="follow-up" className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Follow Up</span>
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium">
+                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Templates</span>
+              </TabsTrigger>
+            </TabsList>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="contacts" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Contacts
-          </TabsTrigger>
-          <TabsTrigger value="follow-up" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Follow Up
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Templates
-          </TabsTrigger>
-        </TabsList>
+            <TabsContent value="contacts" className="max-w-full">
+              <ContactList
+                onSelectContact={handleContactSelect}
+                onAddContact={handleAddContact}
+                selectedLabels={selectedLabels}
+                onLabelFilterChange={handleLabelFilterChange}
+                onContactsDeleted={handleContactUpdated}
+              />
+            </TabsContent>
 
-        <TabsContent value="contacts">
-          <ContactList
-            onSelectContact={handleContactSelect}
-            onAddContact={handleAddContact}
-            selectedLabels={selectedLabels}
-            onLabelFilterChange={handleLabelFilterChange}
-            onContactsDeleted={handleContactUpdated}
-          />
-        </TabsContent>
+            <TabsContent value="follow-up" className="max-w-full">
+              <FollowUpTabs onSelectContact={handleContactSelect} />
+            </TabsContent>
 
-        <TabsContent value="follow-up">
-          <FollowUpTabs onSelectContact={handleContactSelect} />
-        </TabsContent>
-
-        <TabsContent value="templates">
-          <MessageTemplates />
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="templates" className="max-w-full">
+              <MessageTemplates />
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   );
 };

@@ -351,14 +351,15 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
                     </Badge>
                   ))}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     placeholder="Add potential product"
                     value={newProduct}
                     onChange={(e) => setNewProduct(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addProduct())}
+                    className="flex-1"
                   />
-                  <Button type="button" onClick={addProduct}>Add</Button>
+                  <Button type="button" onClick={addProduct} className="flex items-center justify-center gap-1 w-full sm:w-auto">Add</Button>
                 </div>
               </div>
             </div>
@@ -372,11 +373,11 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
               />
             </div>
 
-            <div className="flex gap-2">
-              <Button type="submit" disabled={loading}>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button type="submit" disabled={loading} className="flex items-center justify-center gap-1 w-full sm:w-auto">
                 {loading ? 'Adding...' : 'Add Contact'}
               </Button>
-              <Button type="button" variant="outline" onClick={onBack}>
+              <Button type="button" variant="outline" onClick={onBack} className="flex items-center justify-center gap-1 w-full sm:w-auto">
                 Cancel
               </Button>
             </div>

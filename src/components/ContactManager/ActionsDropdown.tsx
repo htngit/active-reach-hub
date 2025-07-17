@@ -536,43 +536,43 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" disabled={isExporting || isImporting}>
-            <Settings className="h-4 w-4 mr-2" />
-            Actions
+          <Button variant="outline" disabled={isExporting || isImporting} className="flex items-center justify-center gap-2 w-full">
+            <Settings className="h-4 w-4" />
+            <span>Actions</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="bg-background border shadow-md z-50">
           <DropdownMenuItem 
             onClick={() => handleExport('csv')}
-            className="cursor-pointer hover:bg-muted"
+            className="cursor-pointer hover:bg-muted flex items-center gap-2"
             disabled={isExporting}
           >
-            <Download className="h-4 w-4 mr-2" />
-            Export as CSV
+            <Download className="h-4 w-4" />
+            <span>Export as CSV</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => handleExport('xls')}
-            className="cursor-pointer hover:bg-muted"
+            className="cursor-pointer hover:bg-muted flex items-center gap-2"
             disabled={isExporting}
           >
-            <Download className="h-4 w-4 mr-2" />
-            Export as XLS
+            <Download className="h-4 w-4" />
+            <span>Export as XLS</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem 
             onClick={downloadTemplate}
-            className="cursor-pointer hover:bg-muted"
+            className="cursor-pointer hover:bg-muted flex items-center gap-2"
           >
-            <Download className="h-4 w-4 mr-2" />
-            Download Template CSV
+            <Download className="h-4 w-4" />
+            <span>Download Template CSV</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={triggerFileUpload}
-            className="cursor-pointer hover:bg-muted"
+            className="cursor-pointer hover:bg-muted flex items-center gap-2"
             disabled={isImporting}
           >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload CSV
+            <Upload className="h-4 w-4" />
+            <span>Upload CSV</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

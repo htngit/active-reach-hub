@@ -48,7 +48,7 @@ function App() {
                           </div>
                         </header>
                         <EmailVerificationBanner />
-                        <div className="flex-1 overflow-auto p-6">
+                        <div className="flex-1 overflow-auto p-3 sm:p-6 max-w-full">
                           <Routes>
                             <Route path="/" element={<Index />} />
                             <Route path="/pipeline" element={<PipelinePage />} />

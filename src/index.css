@@ -97,5 +97,16 @@
 
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+
+  html {
+    overflow-x: hidden;
+  }
+
+  /* Prevent horizontal scroll on all containers */
+  .container {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }

@@ -19,11 +19,11 @@ export const QualificationCriteriaChecklist: React.FC<QualificationCriteriaCheck
   onCriteriaChange,
 }) => {
   return (
-    <div className="space-y-4">
-      <h4 className="font-medium text-gray-900">BANT Qualification Criteria</h4>
+    <div className="flex flex-col space-y-4">
+      <h4 className="font-medium text-gray-900 text-left">BANT Qualification Criteria</h4>
       
-      <div className="space-y-3">
-        <div className="flex items-center space-x-3">
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center gap-3">
           <Checkbox
             id="budget"
             checked={budgetConfirmed}
@@ -31,13 +31,13 @@ export const QualificationCriteriaChecklist: React.FC<QualificationCriteriaCheck
               onCriteriaChange('budget_confirmed', checked as boolean)
             }
           />
-          <label htmlFor="budget" className="text-sm font-medium">
+          <label htmlFor="budget" className="text-sm font-medium flex-1 text-left">
             Budget Confirmed (25 points)
           </label>
           {budgetConfirmed && <CheckCircle className="h-4 w-4 text-green-500" />}
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <Checkbox
             id="authority"
             checked={authorityConfirmed}
@@ -45,13 +45,13 @@ export const QualificationCriteriaChecklist: React.FC<QualificationCriteriaCheck
               onCriteriaChange('authority_confirmed', checked as boolean)
             }
           />
-          <label htmlFor="authority" className="text-sm font-medium">
+          <label htmlFor="authority" className="text-sm font-medium flex-1 text-left">
             Authority Confirmed (25 points)
           </label>
           {authorityConfirmed && <CheckCircle className="h-4 w-4 text-green-500" />}
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <Checkbox
             id="need"
             checked={needIdentified}
@@ -59,13 +59,13 @@ export const QualificationCriteriaChecklist: React.FC<QualificationCriteriaCheck
               onCriteriaChange('need_identified', checked as boolean)
             }
           />
-          <label htmlFor="need" className="text-sm font-medium">
+          <label htmlFor="need" className="text-sm font-medium flex-1 text-left">
             Need Identified (25 points)
           </label>
           {needIdentified && <CheckCircle className="h-4 w-4 text-green-500" />}
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <Checkbox
             id="timeline"
             checked={timelineDefined}
@@ -73,7 +73,7 @@ export const QualificationCriteriaChecklist: React.FC<QualificationCriteriaCheck
               onCriteriaChange('timeline_defined', checked as boolean)
             }
           />
-          <label htmlFor="timeline" className="text-sm font-medium">
+          <label htmlFor="timeline" className="text-sm font-medium flex-1 text-left">
             Timeline Defined (25 points)
           </label>
           {timelineDefined && <CheckCircle className="h-4 w-4 text-green-500" />}

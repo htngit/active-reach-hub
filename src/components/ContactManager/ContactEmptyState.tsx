@@ -18,22 +18,22 @@ export const ContactEmptyState: React.FC<ContactEmptyStateProps> = ({
   if (loading) return null;
 
   return (
-    <div className="text-center py-8 text-gray-500">
+    <div className="flex flex-col items-center justify-center py-8 text-gray-500 space-y-4">
       {error ? (
-        <div>
-          <p>Failed to load contacts</p>
+        <div className="flex flex-col items-center space-y-3">
+          <p className="text-center">Failed to load contacts</p>
           <Button
             variant="outline"
             onClick={onRefresh}
-            className="mt-2"
+            className="flex items-center justify-center gap-2"
           >
             Try Again
           </Button>
         </div>
       ) : hasFilters ? (
-        "No contacts found matching your filters"
+        <p className="text-center">No contacts found matching your filters</p>
       ) : (
-        "No contacts yet. Add your first contact!"
+        <p className="text-center">No contacts yet. Add your first contact!</p>
       )}
     </div>
   );

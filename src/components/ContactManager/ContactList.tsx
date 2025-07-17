@@ -195,7 +195,7 @@ export const ContactList: React.FC<ContactListProps> = ({
   const hasFilters = searchTerm || selectedLabels.length > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full overflow-hidden">
       <ContactCacheControls
         cacheInfo={cacheInfo}
         error={error}
@@ -203,7 +203,7 @@ export const ContactList: React.FC<ContactListProps> = ({
         onClearCache={clearCache}
       />
 
-      <div className="flex flex-col sm:flex-row justify-between gap-2 mb-2">
+      <div className="flex flex-col space-y-4">
         <ContactSearchBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -211,15 +211,16 @@ export const ContactList: React.FC<ContactListProps> = ({
           onImportSuccess={handleImportSuccess}
         />
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button 
             variant={selectionMode ? "default" : "outline"} 
             size="sm"
             onClick={toggleSelectionMode}
-            className="flex items-center gap-1"
+            className="flex items-center justify-center gap-1 text-xs sm:text-sm"
           >
             <CheckSquare className="h-4 w-4" />
-            {selectionMode ? "Cancel Selection" : "Select Multiple"}
+            <span className="hidden sm:inline">{selectionMode ? "Cancel Selection" : "Select Multiple"}</span>
+            <span className="sm:hidden">{selectionMode ? "Cancel" : "Select"}</span>
           </Button>
           
           {selectionMode && filteredContacts.length > 0 && (
@@ -227,19 +228,21 @@ export const ContactList: React.FC<ContactListProps> = ({
               variant="outline" 
               size="sm"
               onClick={handleSelectAll}
-              className="flex items-center gap-1"
+              className="flex items-center justify-center gap-1 text-xs sm:text-sm"
             >
               <CheckSquare className="h-4 w-4" />
-              {selectedContacts.length === filteredContacts.length ? "Deselect All" : "Select All"}
+              <span className="hidden sm:inline">{selectedContacts.length === filteredContacts.length ? "Deselect All" : "Select All"}</span>
+              <span className="sm:hidden">{selectedContacts.length === filteredContacts.length ? "Deselect" : "Select"}</span>
             </Button>
           )}
           
           {selectionMode && selectedContacts.length > 0 && (
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="flex items-center gap-1">
+                <Button variant="destructive" size="sm" className="flex items-center justify-center gap-1 text-xs sm:text-sm">
                   <Trash2 className="h-4 w-4" />
-                  Delete Selected ({selectedContacts.length})
+                  <span className="hidden sm:inline">Delete Selected ({selectedContacts.length})</span>
+                  <span className="sm:hidden">Delete ({selectedContacts.length})</span>
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>

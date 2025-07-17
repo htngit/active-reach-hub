@@ -20,23 +20,25 @@ export const ContactLabelFilter: React.FC<ContactLabelFilterProps> = ({
   if (availableLabels.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col space-y-3 max-w-full overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4" />
-          <span className="text-sm font-medium">Filter by labels:</span>
+          <Filter className="h-4 w-4 shrink-0" />
+          <span className="text-xs sm:text-sm font-medium">Filter by labels:</span>
         </div>
-        <LabelManager 
-          availableLabels={availableLabels}
-          onLabelsChanged={onLabelsChanged}
-        />
+        <div className="flex justify-center sm:justify-end">
+          <LabelManager 
+            availableLabels={availableLabels}
+            onLabelsChanged={onLabelsChanged}
+          />
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-1 sm:gap-2 max-w-full">
         {availableLabels.map(label => (
           <Badge
             key={label}
             variant={selectedLabels.includes(label) ? "default" : "outline"}
-            className="cursor-pointer"
+            className="cursor-pointer text-xs truncate max-w-32 text-center"
             onClick={() => onToggleLabel(label)}
           >
             {label}

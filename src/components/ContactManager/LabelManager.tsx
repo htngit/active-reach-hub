@@ -80,9 +80,9 @@ export const LabelManager: React.FC<LabelManagerProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Settings className="h-4 w-4 mr-2" />
-          Manage Labels
+        <Button variant="outline" size="sm" className="flex items-center justify-center gap-2">
+          <Settings className="h-4 w-4" />
+          <span>Manage Labels</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
@@ -93,10 +93,10 @@ export const LabelManager: React.FC<LabelManagerProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-3 max-h-60 overflow-y-auto">
+        <div className="flex flex-col space-y-3 max-h-60 overflow-y-auto">
           {availableLabels.map(label => (
-            <div key={label} className="flex items-center justify-between p-2 border rounded">
-              <Badge variant="outline">{label}</Badge>
+            <div key={label} className="flex items-center justify-between p-3 border rounded">
+              <Badge variant="outline" className="flex-1 text-left">{label}</Badge>
               
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -105,6 +105,7 @@ export const LabelManager: React.FC<LabelManagerProps> = ({
                     size="sm"
                     disabled={isDeleting}
                     onClick={() => setLabelToDelete(label)}
+                    className="flex items-center justify-center p-2"
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -116,11 +117,11 @@ export const LabelManager: React.FC<LabelManagerProps> = ({
                       Are you sure you want to delete the label "{label}"? This will remove the label from all contacts that have it. This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogFooter className="flex gap-2">
+                    <AlertDialogCancel className="flex items-center justify-center">Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => handleDeleteLabel(label)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center"
                       disabled={isDeleting}
                     >
                       {isDeleting ? 'Deleting...' : 'Delete Label'}
@@ -132,8 +133,8 @@ export const LabelManager: React.FC<LabelManagerProps> = ({
           ))}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
+        <DialogFooter className="flex justify-end">
+          <Button variant="outline" onClick={() => setIsOpen(false)} className="flex items-center justify-center">
             Close
           </Button>
         </DialogFooter>
