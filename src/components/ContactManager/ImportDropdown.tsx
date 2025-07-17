@@ -83,7 +83,7 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
   const processImportData = async (data: any[]) => {
     if (!user) return;
 
-    // Extract all unique labels from imported contacts
+    // Extract all unique labels from imported contacts for later processing
     const allLabels = new Set<string>();
     data.forEach(row => {
       if (row.labels) {
@@ -91,34 +91,6 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
         labels.forEach((label: string) => allLabels.add(label));
       }
     });
-
-    // Fetch existing labels to avoid duplicates
-    const { data: existingLabelsData } = await supabase
-      .from('labels')
-      .select('name')
-      .eq('user_id', user.id);
-    
-    const existingLabels = new Set(existingLabelsData?.map(l => l.name) || []);
-    
-    // Create new labels that don't exist yet
-    const newLabels = Array.from(allLabels).filter(label => !existingLabels.has(label));
-    
-    if (newLabels.length > 0) {
-      const labelsToInsert = newLabels.map(name => ({
-        user_id: user.id,
-        name,
-        color: null // Default color
-      }));
-      
-      const { error: labelInsertError } = await supabase
-        .from('labels')
-        .insert(labelsToInsert);
-      
-      if (labelInsertError) {
-        console.error('Error inserting new labels:', labelInsertError);
-        // Continue with contact import even if label insert fails
-      }
-    }
 
     const contacts = data.map(row => {
       const rawPhone = row.phone_number || '';
@@ -172,6 +144,8 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
       })
       .select();
 
+    let finalSuccessCount = 0;
+
     if (error) {
       console.error('Upsert error:', error);
       // If upsert fails, try individual inserts with better error handling
@@ -199,24 +173,62 @@ export const ImportDropdown: React.FC<ImportDropdownProps> = ({ onImportSuccess 
         }
       }
       
+      finalSuccessCount = successCount;
+      
       toast({
         title: "Import Complete",
         description: `${successCount} contacts imported, ${duplicateCount + (contacts.length - newContacts.length)} duplicates skipped`,
       });
+    } else {
+      finalSuccessCount = insertedData?.length || 0;
       
-      return successCount;
+      // Show notification about duplicates if any were skipped
+      const skipped = contacts.length - finalSuccessCount;
+      if (skipped > 0) {
+        toast({
+          title: "Import Complete",
+          description: `${finalSuccessCount} contacts imported, ${skipped} duplicates skipped`,
+        });
+      }
     }
 
-    // Show notification about duplicates if any were skipped
-    const skipped = contacts.length - (insertedData?.length || 0);
-    if (skipped > 0) {
-      toast({
-        title: "Import Complete",
-        description: `${insertedData?.length || 0} contacts imported, ${skipped} duplicates skipped`,
-      });
+    // Only create labels if contacts were successfully imported
+    if (finalSuccessCount > 0 && allLabels.size > 0) {
+      try {
+        // Fetch existing labels to avoid duplicates
+        const { data: existingLabelsData } = await supabase
+          .from('labels')
+          .select('name')
+          .eq('user_id', user.id);
+        
+        const existingLabels = new Set(existingLabelsData?.map(l => l.name) || []);
+        
+        // Create new labels that don't exist yet
+        const newLabels = Array.from(allLabels).filter(label => !existingLabels.has(label));
+        
+        if (newLabels.length > 0) {
+          const labelsToInsert = newLabels.map(name => ({
+            user_id: user.id,
+            name,
+            color: null // Default color
+          }));
+          
+          const { error: labelInsertError } = await supabase
+            .from('labels')
+            .insert(labelsToInsert);
+          
+          if (labelInsertError) {
+            console.error('Error inserting new labels:', labelInsertError);
+            // Don't throw error, just log it since contacts were already imported
+          }
+        }
+      } catch (labelError) {
+        console.error('Error processing labels after successful import:', labelError);
+        // Don't throw error since contacts were successfully imported
+      }
     }
 
-    return insertedData?.length || 0;
+    return finalSuccessCount;
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

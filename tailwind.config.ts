@@ -10,6 +10,14 @@ export default {
 	],
 	prefix: "",
 	theme: {
+		screens: {
+			'xs': '480px',
+			'sm': '640px',
+			'md': '768px',
+			'lg': '1024px',
+			'xl': '1280px',
+			'2xl': '1536px',
+		},
 		container: {
 			center: true,
 			padding: '2rem',
@@ -87,10 +95,27 @@ export default {
 				}
 			},
 			animation: {
-				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+					'accordion-down': 'accordion-down 0.2s ease-out',
+					'accordion-up': 'accordion-up 0.2s ease-out'
+				}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		// Custom utilities for responsive design
+		function({ addUtilities }: { addUtilities: any }) {
+			addUtilities({
+				'.scrollbar-hide': {
+					/* IE and Edge */
+					'-ms-overflow-style': 'none',
+					/* Firefox */
+					'scrollbar-width': 'none',
+					/* Safari and Chrome */
+					'&::-webkit-scrollbar': {
+						display: 'none'
+					}
+				}
+			})
+		}
+	],
 } satisfies Config;

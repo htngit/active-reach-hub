@@ -11,11 +11,13 @@ import { toast } from 'sonner';
 interface LabelManagerProps {
   availableLabels: string[];
   onLabelsChanged: () => void;
+  className?: string;
 }
 
 export const LabelManager: React.FC<LabelManagerProps> = ({
   availableLabels,
   onLabelsChanged,
+  className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [labelToDelete, setLabelToDelete] = useState<string | null>(null);
@@ -80,9 +82,10 @@ export const LabelManager: React.FC<LabelManagerProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center justify-center gap-2">
+        <Button variant="outline" className={`flex items-center justify-center gap-2 text-xs sm:text-sm ${className || ''}`}>
           <Settings className="h-4 w-4" />
-          <span>Manage Labels</span>
+          <span className="hidden sm:inline">Manage Labels</span>
+          <span className="sm:hidden">Labels</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">

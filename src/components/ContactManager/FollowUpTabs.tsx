@@ -55,14 +55,20 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('labels')
-        .select('name')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      // Get all unique labels from contacts that actually have labels
+      const allContactLabels = new Set<string>();
+      contacts.forEach(contact => {
+        if (contact.labels && Array.isArray(contact.labels)) {
+          contact.labels.forEach(label => {
+            if (label && label.trim()) {
+              allContactLabels.add(label.trim());
+            }
+          });
+        }
+      });
       
-      setAvailableLabels(data?.map(label => label.name) || []);
+      // Only show labels that are actually used by contacts
+      setAvailableLabels(Array.from(allContactLabels).sort());
     } catch (error: any) {
       console.error('Error fetching labels:', error);
     }
@@ -94,7 +100,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         );
       }
 
-      // Get all activities to determine last contact time
+      // Get all activities to determine if contact has any activity
       const { data: activities, error: activitiesError } = await supabase
         .from('activities')
         .select('contact_id, timestamp')
@@ -103,9 +109,11 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
 
       if (activitiesError) throw activitiesError;
 
-      // Create a map of contact_id to last activity timestamp
+      // Create a set of contact_ids that have activities
+      const contactsWithActivities = new Set();
       const lastActivityMap = new Map();
       activities?.forEach(activity => {
+        contactsWithActivities.add(activity.contact_id);
         if (!lastActivityMap.has(activity.contact_id)) {
           lastActivityMap.set(activity.contact_id, activity.timestamp);
         }
@@ -122,22 +130,29 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
       const stale30DaysList: Contact[] = [];
 
       activeContacts.forEach(contact => {
-        const lastActivity = lastActivityMap.get(contact.id);
+        const hasActivity = contactsWithActivities.has(contact.id);
         
-        if (!lastActivity) {
-          // No activities logged yet
+        if (!hasActivity) {
+          // No activities logged yet - use "Need Approach" tab
           needsApproachList.push({ ...contact, last_activity: null });
         } else {
-          const lastActivityDate = new Date(lastActivity);
-          
-          if (lastActivityDate < thirtyDaysAgo) {
-            stale30DaysList.push({ ...contact, last_activity: lastActivity });
-          } else if (lastActivityDate < sevenDaysAgo) {
-            stale7DaysList.push({ ...contact, last_activity: lastActivity });
-          } else if (lastActivityDate < threeDaysAgo) {
-            stale3DaysList.push({ ...contact, last_activity: lastActivity });
+            // Has activity - use last activity for staleness calculation with created_at baseline
+            const lastActivity = lastActivityMap.get(contact.id);
+            const lastActivityDate = new Date(lastActivity);
+            const contactCreatedDate = new Date(contact.created_at);
+            
+            const daysSinceLastActivity = Math.floor((now.getTime() - lastActivityDate.getTime()) / msPerDay);
+            const daysSinceCreated = Math.floor((now.getTime() - contactCreatedDate.getTime()) / msPerDay);
+
+            // Contact must have been created long enough AND last activity must be stale for the period
+            if (daysSinceLastActivity >= 30 && daysSinceCreated >= 30) {
+              stale30DaysList.push({ ...contact, last_activity: lastActivity });
+            } else if (daysSinceLastActivity >= 7 && daysSinceCreated >= 7) {
+              stale7DaysList.push({ ...contact, last_activity: lastActivity });
+            } else if (daysSinceLastActivity >= 3 && daysSinceCreated >= 3) {
+              stale3DaysList.push({ ...contact, last_activity: lastActivity });
+            }
           }
-        }
       });
 
       setNeedsApproach(needsApproachList);

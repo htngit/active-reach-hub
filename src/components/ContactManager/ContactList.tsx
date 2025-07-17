@@ -11,8 +11,11 @@ import { ContactSearchBar } from './ContactSearchBar';
 import { ContactLabelFilter } from './ContactLabelFilter';
 import { ContactCard } from './ContactCard';
 import { ContactEmptyState } from './ContactEmptyState';
+import { LabelManager } from './LabelManager';
+import { ActionsDropdown } from './ActionsDropdown';
 import { Button } from '@/components/ui/button';
-import { Trash2, CheckSquare } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Trash2, CheckSquare, Search, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -204,31 +207,56 @@ export const ContactList: React.FC<ContactListProps> = ({
       />
 
       <div className="flex flex-col space-y-4">
-        <ContactSearchBar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onAddContact={onAddContact}
-          onImportSuccess={handleImportSuccess}
-        />
+        {/* Search Bar */}
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search contacts..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
         
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Action Buttons Grid */}
+        <div className={`grid gap-2 w-full ${
+          selectionMode 
+            ? (selectedContacts.length > 0 
+                ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6' 
+                : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-5')
+            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+        }`}>
+          {/* Add Contact Button */}
           <Button 
-            variant={selectionMode ? "default" : "outline"} 
-            size="sm"
-            onClick={toggleSelectionMode}
-            className="flex items-center justify-center gap-1 text-xs sm:text-sm"
+            onClick={onAddContact} 
+            className="w-full text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2"
           >
-            <CheckSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">{selectionMode ? "Cancel Selection" : "Select Multiple"}</span>
-            <span className="sm:hidden">{selectionMode ? "Cancel" : "Select"}</span>
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add Contact</span>
+            <span className="sm:hidden">Add</span>
           </Button>
           
+          {/* Manage Labels Button */}
+          {availableLabels.length > 0 && (
+            <LabelManager 
+              availableLabels={availableLabels}
+              onLabelsChanged={handleLabelsChanged}
+              className="w-full"
+            />
+          )}
+          
+          {/* Actions Dropdown */}
+          <ActionsDropdown 
+            onImportSuccess={handleImportSuccess} 
+            className="w-full"
+          />
+          
+          {/* Select All Button - Only shown in selection mode */}
           {selectionMode && filteredContacts.length > 0 && (
             <Button 
               variant="outline" 
-              size="sm"
               onClick={handleSelectAll}
-              className="flex items-center justify-center gap-1 text-xs sm:text-sm"
+              className="w-full flex items-center justify-center gap-1 text-xs sm:text-sm"
             >
               <CheckSquare className="h-4 w-4" />
               <span className="hidden sm:inline">{selectedContacts.length === filteredContacts.length ? "Deselect All" : "Select All"}</span>
@@ -236,10 +264,14 @@ export const ContactList: React.FC<ContactListProps> = ({
             </Button>
           )}
           
+          {/* Delete Selected Button - Only shown when contacts are selected */}
           {selectionMode && selectedContacts.length > 0 && (
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="flex items-center justify-center gap-1 text-xs sm:text-sm">
+                <Button 
+                  variant="destructive" 
+                  className="w-full flex items-center justify-center gap-1 text-xs sm:text-sm"
+                >
                   <Trash2 className="h-4 w-4" />
                   <span className="hidden sm:inline">Delete Selected ({selectedContacts.length})</span>
                   <span className="sm:hidden">Delete ({selectedContacts.length})</span>
@@ -265,6 +297,17 @@ export const ContactList: React.FC<ContactListProps> = ({
               </AlertDialogContent>
             </AlertDialog>
           )}
+          
+          {/* Select Multiple / Cancel Selection Button */}
+          <Button 
+            variant={selectionMode ? "default" : "outline"} 
+            onClick={toggleSelectionMode}
+            className="w-full flex items-center justify-center gap-1 text-xs sm:text-sm"
+          >
+            <CheckSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">{selectionMode ? "Cancel Selection" : "Select Multiple"}</span>
+            <span className="sm:hidden">{selectionMode ? "Cancel" : "Select"}</span>
+          </Button>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { MessageCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useUserMetadata } from '@/hooks/useUserMetadata';
 
 interface Contact {
   id: string;
@@ -46,6 +47,11 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
+  const { 
+    validateContactAccess, 
+    refreshMetadata, 
+    isMetadataStale 
+  } = useUserMetadata();
 
   useEffect(() => {
     if (open) {
@@ -138,8 +144,85 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     return { variation: variations[randomIndex], variationNumber: randomIndex + 1 };
   };
 
+  /**
+   * Performs metadata validation for template selection
+   */
+  const performMetadataValidation = async (): Promise<boolean> => {
+    try {
+      console.log('🔍 Starting metadata validation for template selection...');
+      
+      // Validate contact access using metadata
+      const validationResult = await validateContactAccess(contact.id);
+      
+      if (!validationResult.isValid) {
+        console.error('❌ Metadata validation failed:', validationResult.error);
+        toast({
+          title: "Validation Failed",
+          description: "System validation failed. Please try again.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      if (!validationResult.hasAccess) {
+        console.error('❌ Contact access denied:', {
+          contactId: contact.id,
+          contactName: contact.name,
+          error: validationResult.error
+        });
+        toast({
+          title: "Access Denied",
+          description: "Contact not found in your authorized list.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      if (validationResult.isCacheStale) {
+        console.log('⚠️ Cache was stale, metadata refreshed automatically');
+        toast({
+          title: "Data Refreshed",
+          description: "Data refreshed for accuracy."
+        });
+      }
+      
+      console.log('✅ Metadata validation passed for template selection');
+      return true;
+    } catch (error) {
+      console.error('❌ Metadata validation failed:', error);
+      toast({
+        title: "Validation Error",
+        description: "System validation error. Please refresh and try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   const handleTemplateSelect = async (templateSet: MessageTemplateSet) => {
     try {
+      setLoading(true);
+      
+      // Check if metadata is stale and refresh if needed
+      if (isMetadataStale(2)) {
+        console.log('🔄 Metadata is stale, refreshing...');
+        const refreshSuccess = await refreshMetadata();
+        if (!refreshSuccess) {
+          toast({
+            title: "Refresh Failed",
+            description: "Failed to refresh data. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
+      // Perform metadata validation before template selection
+      const isValid = await performMetadataValidation();
+      if (!isValid) {
+        return; // Error already shown in performMetadataValidation
+      }
+      
       // Select random variation
       const { variation, variationNumber } = selectRandomVariation(templateSet);
       
@@ -153,7 +236,7 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
       const encodedMessage = encodeURIComponent(personalizedMessage);
       const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
       
-      // Log activity to database
+      // Log activity to database with enhanced error handling
       const { error: activityError } = await supabase
         .from('activities')
         .insert({
@@ -166,6 +249,13 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
 
       if (activityError) {
         console.error('Failed to log activity:', activityError);
+        toast({
+          title: "Activity Logging Failed",
+          description: "WhatsApp will open but activity logging failed.",
+          variant: "destructive"
+        });
+      } else {
+        console.log('✅ Template activity logged successfully');
       }
 
       // Open WhatsApp
@@ -181,11 +271,14 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
       });
       
     } catch (error: any) {
+      console.error('❌ Template selection failed:', error);
       toast({
         title: "Error",
-        description: "Gagal membuka link WhatsApp",
+        description: "Gagal membuka link WhatsApp. Silakan coba lagi.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 

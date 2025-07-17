@@ -23,9 +23,10 @@ interface Contact {
 
 interface ActionsDropdownProps {
   onImportSuccess: () => void;
+  className?: string;
 }
 
-export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSuccess }) => {
+export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSuccess, className }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -308,6 +309,8 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
   const processImportData = async (data: any[]) => {
     if (!user) return;
 
+
+    // Extract all unique labels from imported contacts for later processing
     const allLabels = new Set<string>();
     data.forEach(row => {
       if (row.labels) {
@@ -315,24 +318,6 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
         labels.forEach((label: string) => allLabels.add(label));
       }
     });
-
-    const { data: existingLabelsData } = await supabase
-      .from('labels')
-      .select('name')
-      .eq('user_id', user.id);
-    
-    const existingLabels = new Set(existingLabelsData?.map(l => l.name) || []);
-    const newLabels = Array.from(allLabels).filter(label => !existingLabels.has(label));
-    
-    if (newLabels.length > 0) {
-      const labelsToInsert = newLabels.map(name => ({
-        user_id: user.id,
-        name,
-        color: null
-      }));
-      
-      await supabase.from('labels').insert(labelsToInsert);
-    }
 
     const contacts = data.map(row => {
       const rawPhone = row.phone_number || '';
@@ -386,6 +371,8 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
       })
       .select();
 
+    let finalSuccessCount = 0;
+
     if (error) {
       console.error('Upsert error:', error);
       // If upsert fails, try individual inserts with better error handling
@@ -413,23 +400,62 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
         }
       }
       
+      finalSuccessCount = successCount;
+      
       toast({
         title: "Import Complete",
         description: `${successCount} contacts imported, ${duplicateCount + (contacts.length - newContacts.length)} duplicates skipped`,
       });
+    } else {
+      finalSuccessCount = insertedData?.length || 0;
       
-      return successCount;
+      // Show notification about duplicates if any were skipped
+      const skipped = contacts.length - finalSuccessCount;
+      if (skipped > 0) {
+        toast({
+          title: "Import Complete",
+          description: `${finalSuccessCount} contacts imported, ${skipped} duplicates skipped`,
+        });
+      }
     }
 
-    const skipped = contacts.length - (insertedData?.length || 0);
-    if (skipped > 0) {
-      toast({
-        title: "Import Complete",
-        description: `${insertedData?.length || 0} contacts imported, ${skipped} duplicates skipped`,
-      });
+    // Only create labels if contacts were successfully imported
+    if (finalSuccessCount > 0 && allLabels.size > 0) {
+      try {
+        // Fetch existing labels to avoid duplicates
+        const { data: existingLabelsData } = await supabase
+          .from('labels')
+          .select('name')
+          .eq('user_id', user.id);
+        
+        const existingLabels = new Set(existingLabelsData?.map(l => l.name) || []);
+        
+        // Create new labels that don't exist yet
+        const newLabels = Array.from(allLabels).filter(label => !existingLabels.has(label));
+        
+        if (newLabels.length > 0) {
+          const labelsToInsert = newLabels.map(name => ({
+            user_id: user.id,
+            name,
+            color: null // Default color
+          }));
+          
+          const { error: labelInsertError } = await supabase
+            .from('labels')
+            .insert(labelsToInsert);
+          
+          if (labelInsertError) {
+            console.error('Error inserting new labels:', labelInsertError);
+            // Don't throw error, just log it since contacts were already imported
+          }
+        }
+      } catch (labelError) {
+        console.error('Error processing labels after successful import:', labelError);
+        // Don't throw error since contacts were successfully imported
+      }
     }
     
-    return insertedData?.length || 0;
+    return finalSuccessCount;
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -536,9 +562,10 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" disabled={isExporting || isImporting} className="flex items-center justify-center gap-2 w-full">
+          <Button variant="outline" disabled={isExporting || isImporting} className={`flex items-center justify-center gap-2 text-xs sm:text-sm ${className || ''}`}>
             <Settings className="h-4 w-4" />
-            <span>Actions</span>
+            <span className="hidden sm:inline">Actions</span>
+            <span className="sm:hidden">More</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="bg-background border shadow-md z-50">

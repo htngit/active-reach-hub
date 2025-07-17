@@ -2,7 +2,6 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Filter } from 'lucide-react';
-import { LabelManager } from './LabelManager';
 
 interface ContactLabelFilterProps {
   availableLabels: string[];
@@ -15,23 +14,14 @@ export const ContactLabelFilter: React.FC<ContactLabelFilterProps> = ({
   availableLabels,
   selectedLabels,
   onToggleLabel,
-  onLabelsChanged,
 }) => {
   if (availableLabels.length === 0) return null;
 
   return (
     <div className="flex flex-col space-y-3 max-w-full overflow-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 shrink-0" />
-          <span className="text-xs sm:text-sm font-medium">Filter by labels:</span>
-        </div>
-        <div className="flex justify-center sm:justify-end">
-          <LabelManager 
-            availableLabels={availableLabels}
-            onLabelsChanged={onLabelsChanged}
-          />
-        </div>
+      <div className="flex items-center gap-2">
+        <Filter className="h-4 w-4 shrink-0" />
+        <span className="text-xs sm:text-sm font-medium">Filter by labels:</span>
       </div>
       <div className="flex flex-wrap items-center gap-1 sm:gap-2 max-w-full">
         {availableLabels.map(label => (
