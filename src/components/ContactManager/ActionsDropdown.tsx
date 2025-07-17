@@ -173,9 +173,100 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
     });
   };
 
-  const parseCSV = (text: string): any[] => {
+  const validateCSVFormat = (text: string): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
     const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length < 2) return [];
+    
+    // Check if file has content
+    if (lines.length === 0) {
+      errors.push("File is empty");
+      return { isValid: false, errors };
+    }
+    
+    // Check minimum lines (header + at least 1 data row)
+    if (lines.length < 2) {
+      errors.push("File must contain at least a header row and one data row");
+      return { isValid: false, errors };
+    }
+
+    // Validate headers
+    const expectedHeaders = ['Name', 'Phone Number', 'Email', 'Company', 'Address', 'Notes', 'Labels', 'Status', 'Potential Product'];
+    const actualHeaders = lines[0].split(',').map(header => header.replace(/"/g, '').trim());
+    
+    // Check if all required headers are present
+    const requiredHeaders = ['Name', 'Phone Number'];
+    const missingRequired = requiredHeaders.filter(header => !actualHeaders.includes(header));
+    if (missingRequired.length > 0) {
+      errors.push(`Missing required headers: ${missingRequired.join(', ')}`);
+    }
+
+    // Check for unexpected headers
+    const unexpectedHeaders = actualHeaders.filter(header => 
+      header !== '' && !expectedHeaders.includes(header)
+    );
+    if (unexpectedHeaders.length > 0) {
+      errors.push(`Unexpected headers found: ${unexpectedHeaders.join(', ')}`);
+    }
+
+    // Check header count
+    if (actualHeaders.length !== expectedHeaders.length) {
+      errors.push(`Expected ${expectedHeaders.length} columns, but found ${actualHeaders.length}`);
+    }
+
+    return { isValid: errors.length === 0, errors };
+  };
+
+  const validateCSVData = (data: any[]): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    if (data.length === 0) {
+      errors.push("No valid data rows found");
+      return { isValid: false, errors };
+    }
+
+    // Validate each row
+    data.forEach((row, index) => {
+      const rowNumber = index + 2; // +2 because index starts at 0 and we skip header
+      
+      // Check required fields
+      if (!row.name || row.name.trim() === '') {
+        errors.push(`Row ${rowNumber}: Name is required`);
+      }
+      
+      if (!row.phone_number || row.phone_number.trim() === '') {
+        errors.push(`Row ${rowNumber}: Phone Number is required`);
+      }
+      
+      // Validate phone number format (basic validation)
+      if (row.phone_number && !/^[\+]?[0-9\-\(\)\s]+$/.test(row.phone_number.trim())) {
+        errors.push(`Row ${rowNumber}: Invalid phone number format`);
+      }
+      
+      // Validate email format if provided
+      if (row.email && row.email.trim() !== '') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(row.email.trim())) {
+          errors.push(`Row ${rowNumber}: Invalid email format`);
+        }
+      }
+      
+      // Validate status if provided
+      const validStatuses = ['New', 'Qualified', 'Contacted', 'Lost', 'Won'];
+      if (row.status && row.status.trim() !== '' && !validStatuses.includes(row.status.trim())) {
+        errors.push(`Row ${rowNumber}: Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+      }
+    });
+
+    return { isValid: errors.length === 0, errors };
+  };
+
+  const parseCSV = (text: string): { data: any[]; errors: string[] } => {
+    const lines = text.split('\n').filter(line => line.trim());
+    const errors: string[] = [];
+    
+    if (lines.length < 2) {
+      return { data: [], errors: ["Invalid CSV format"] };
+    }
 
     const headers = lines[0].split(',').map(header => header.replace(/"/g, '').trim());
     const data = [];
@@ -201,13 +292,16 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
       if (values.length === headers.length) {
         const row: any = {};
         headers.forEach((header, index) => {
-          row[header.toLowerCase().replace(/\s+/g, '_')] = values[index];
+          const cleanValue = values[index].replace(/^"|"$/g, '').trim();
+          row[header.toLowerCase().replace(/\s+/g, '_')] = cleanValue;
         });
         data.push(row);
+      } else {
+        errors.push(`Row ${i + 1}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
       }
     }
 
-    return data;
+    return { data, errors };
   };
 
   const processImportData = async (data: any[]) => {
@@ -271,10 +365,21 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
     if (!file.name.toLowerCase().endsWith('.csv')) {
       toast({
-        title: "Invalid File",
-        description: "Please select a CSV file",
+        title: "Invalid File Type",
+        description: "Please select a CSV file (.csv extension required)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "File size must be less than 5MB",
         variant: "destructive",
       });
       return;
@@ -284,12 +389,30 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
     
     try {
       const text = await file.text();
-      const data = parseCSV(text);
+      
+      // Validate CSV format
+      const formatValidation = validateCSVFormat(text);
+      if (!formatValidation.isValid) {
+        throw new Error(`CSV Format Errors:\n${formatValidation.errors.join('\n')}`);
+      }
+
+      // Parse CSV
+      const { data, errors: parseErrors } = parseCSV(text);
+      if (parseErrors.length > 0) {
+        throw new Error(`CSV Parse Errors:\n${parseErrors.join('\n')}`);
+      }
       
       if (data.length === 0) {
         throw new Error('No valid data found in the CSV file');
       }
 
+      // Validate data content
+      const dataValidation = validateCSVData(data);
+      if (!dataValidation.isValid) {
+        throw new Error(`Data Validation Errors:\n${dataValidation.errors.join('\n')}`);
+      }
+
+      // Process import if all validations pass
       const importedCount = await processImportData(data);
       
       toast({
@@ -300,11 +423,25 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
       onImportSuccess();
     } catch (error: any) {
       console.error('Import error:', error);
+      
+      // Display detailed error message
+      const errorMessage = error.message || "Failed to import contacts";
+      const isValidationError = errorMessage.includes('Format Errors') || 
+                               errorMessage.includes('Parse Errors') || 
+                               errorMessage.includes('Validation Errors');
+      
       toast({
-        title: "Import Failed",
-        description: error.message || "Failed to import contacts",
+        title: isValidationError ? "Import Validation Failed" : "Import Failed",
+        description: errorMessage.length > 200 
+          ? errorMessage.substring(0, 200) + "..."
+          : errorMessage,
         variant: "destructive",
       });
+      
+      // Log full error for debugging
+      if (isValidationError) {
+        console.warn("CSV Validation Details:", errorMessage);
+      }
     } finally {
       setIsImporting(false);
       if (fileInputRef.current) {
