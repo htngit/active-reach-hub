@@ -3,8 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
-import { ExportDropdown } from './ExportDropdown';
-import { ImportDropdown } from './ImportDropdown';
+import { ActionsDropdown } from './ActionsDropdown';
 
 interface ContactSearchBarProps {
   searchTerm: string;
@@ -31,8 +30,7 @@ export const ContactSearchBar: React.FC<ContactSearchBarProps> = ({
         />
       </div>
       <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-        <ExportDropdown />
-        <ImportDropdown onImportSuccess={onImportSuccess} />
+        <ActionsDropdown onImportSuccess={onImportSuccess} />
         <Button onClick={onAddContact} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Contact

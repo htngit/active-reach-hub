@@ -76,6 +76,10 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     );
   };
 
+  const handleLabelsChanged = () => {
+    fetchLabels();
+  };
+
   const fetchFollowUpContacts = async () => {
     if (!user || contactsLoading) return;
 
@@ -232,6 +236,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         availableLabels={availableLabels}
         selectedLabels={selectedLabels}
         onToggleLabel={toggleLabelFilter}
+        onLabelsChanged={handleLabelsChanged}
       />
       
       <Tabs defaultValue="needs-approach" onValueChange={setActiveTab} className="w-full">

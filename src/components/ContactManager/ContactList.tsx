@@ -70,6 +70,11 @@ export const ContactList: React.FC<ContactListProps> = ({
     }
   };
 
+  const handleLabelsChanged = () => {
+    fetchLabels();
+    refreshContacts();
+  };
+
   useEffect(() => {
     fetchLabels();
   }, [user]);
@@ -129,6 +134,14 @@ export const ContactList: React.FC<ContactListProps> = ({
       setSelectedContacts(selectedContacts.filter(c => c.id !== contact.id));
     } else {
       setSelectedContacts([...selectedContacts, contact]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedContacts.length === filteredContacts.length) {
+      setSelectedContacts([]);
+    } else {
+      setSelectedContacts([...filteredContacts]);
     }
   };
 
@@ -209,6 +222,18 @@ export const ContactList: React.FC<ContactListProps> = ({
             {selectionMode ? "Cancel Selection" : "Select Multiple"}
           </Button>
           
+          {selectionMode && filteredContacts.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleSelectAll}
+              className="flex items-center gap-1"
+            >
+              <CheckSquare className="h-4 w-4" />
+              {selectedContacts.length === filteredContacts.length ? "Deselect All" : "Select All"}
+            </Button>
+          )}
+          
           {selectionMode && selectedContacts.length > 0 && (
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
@@ -244,6 +269,7 @@ export const ContactList: React.FC<ContactListProps> = ({
         availableLabels={availableLabels}
         selectedLabels={selectedLabels}
         onToggleLabel={toggleLabelFilter}
+        onLabelsChanged={handleLabelsChanged}
       />
 
       {/* Contact Cards */}
