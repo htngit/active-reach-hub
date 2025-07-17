@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Save, X, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { normalizePhoneNumber, isValidPhoneNumber } from '@/utils/phoneUtils';
 import { LeadQualificationForm } from './LeadQualificationForm';
 import { ContactDetailHeader } from './ContactDetailHeader';
 import { ContactDetailInfo } from './ContactDetailInfo';
@@ -54,14 +55,39 @@ export const ContactDetail: React.FC<ContactDetailProps> = ({
       return;
     }
 
+    // Validate phone number format
+    if (!isValidPhoneNumber(editedContact.phone_number)) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+
     try {
       console.log('Updating contact with data:', editedContact);
+
+      // Normalize phone numbers for comparison
+      const normalizedNewPhone = normalizePhoneNumber(editedContact.phone_number);
+      const normalizedCurrentPhone = normalizePhoneNumber(contact.phone_number);
+
+      if (normalizedNewPhone !== normalizedCurrentPhone) {
+        const { data: existing, error: checkError } = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('phone_number', normalizedNewPhone)
+          .maybeSingle();
+
+        if (checkError) throw checkError;
+
+        if (existing) {
+          throw new Error('A contact with this phone number already exists');
+        }
+      }
 
       const { error } = await supabase
         .from('contacts')
         .update({
           name: editedContact.name,
-          phone_number: editedContact.phone_number,
+          phone_number: normalizedNewPhone, // Use normalized phone number
           email: editedContact.email || null,
           company: editedContact.company || null,
           address: editedContact.address || null,

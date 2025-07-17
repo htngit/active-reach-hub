@@ -5,6 +5,7 @@ import { Settings, Download, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { normalizePhoneNumber, isValidPhoneNumber } from '@/utils/phoneUtils';
 
 interface Contact {
   id: string;
@@ -333,31 +334,101 @@ export const ActionsDropdown: React.FC<ActionsDropdownProps> = ({ onImportSucces
       await supabase.from('labels').insert(labelsToInsert);
     }
 
-    const contacts = data.map(row => ({
-      user_id: user.id,
-      owner_id: user.id,
-      name: row.name || '',
-      phone_number: row.phone_number || '',
-      email: row.email || null,
-      company: row.company || null,
-      address: row.address || null,
-      notes: row.notes || null,
-      labels: row.labels ? row.labels.split(';').map((label: string) => label.trim()).filter(Boolean) : null,
-      status: row.status || 'New',
-      potential_product: row.potential_product ? row.potential_product.split(';').map((product: string) => product.trim()).filter(Boolean) : null,
-      team_id: null
-    })).filter(contact => contact.name && contact.phone_number);
+    const contacts = data.map(row => {
+      const rawPhone = row.phone_number || '';
+      const normalizedPhone = normalizePhoneNumber(rawPhone);
+      
+      return {
+        user_id: user.id,
+        owner_id: user.id,
+        name: row.name || '',
+        phone_number: normalizedPhone,
+        email: row.email || null,
+        company: row.company || null,
+        address: row.address || null,
+        notes: row.notes || null,
+        labels: row.labels ? row.labels.split(';').map((label: string) => label.trim()).filter(Boolean) : null,
+        status: row.status || 'New',
+        potential_product: row.potential_product ? row.potential_product.split(';').map((product: string) => product.trim()).filter(Boolean) : null,
+        team_id: null
+      };
+    }).filter(contact => contact.name && contact.phone_number && isValidPhoneNumber(contact.phone_number));
 
     if (contacts.length === 0) {
       throw new Error('No valid contacts found in the file');
     }
 
+    // Get existing normalized phone numbers for this user
+    const { data: existingPhones } = await supabase
+      .from('contacts')
+      .select('phone_number')
+      .eq('user_id', user.id);
+
+    const existingSet = new Set(existingPhones?.map(p => normalizePhoneNumber(p.phone_number)) || []);
+
+    // Filter out contacts with existing phone numbers
+    const newContacts = contacts.filter(c => !existingSet.has(c.phone_number));
+
+    if (newContacts.length === 0) {
+      toast({
+        title: "Import Complete",
+        description: `0 contacts imported, ${contacts.length} duplicates skipped`,
+      });
+      return 0;
+    }
+
+    // Use upsert with ON CONFLICT DO NOTHING to handle race conditions
     const { data: insertedData, error } = await supabase
       .from('contacts')
-      .insert(contacts)
+      .upsert(newContacts, {
+        onConflict: 'user_id,phone_number',
+        ignoreDuplicates: true
+      })
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Upsert error:', error);
+      // If upsert fails, try individual inserts with better error handling
+      let successCount = 0;
+      let duplicateCount = 0;
+      
+      for (const contact of newContacts) {
+        try {
+          const { error: insertError } = await supabase
+            .from('contacts')
+            .insert([contact]);
+          
+          if (insertError) {
+            if (insertError.code === '23505') {
+              duplicateCount++;
+            } else {
+              throw insertError;
+            }
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          console.error('Individual insert error:', err);
+          throw err;
+        }
+      }
+      
+      toast({
+        title: "Import Complete",
+        description: `${successCount} contacts imported, ${duplicateCount + (contacts.length - newContacts.length)} duplicates skipped`,
+      });
+      
+      return successCount;
+    }
+
+    const skipped = contacts.length - (insertedData?.length || 0);
+    if (skipped > 0) {
+      toast({
+        title: "Import Complete",
+        description: `${insertedData?.length || 0} contacts imported, ${skipped} duplicates skipped`,
+      });
+    }
+    
     return insertedData?.length || 0;
   };
 

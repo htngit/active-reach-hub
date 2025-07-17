@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { normalizePhoneNumber, isValidPhoneNumber } from '@/utils/phoneUtils';
 
 interface AddContactFormProps {
   onBack: () => void;
@@ -75,6 +76,16 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
       return;
     }
 
+    // Validate phone number format
+    if (!isValidPhoneNumber(formData.phone_number)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid phone number",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!user) {
       toast({
         title: "Error",
@@ -87,10 +98,32 @@ export const AddContactForm: React.FC<AddContactFormProps> = ({
     setLoading(true);
 
     try {
+      // Normalize phone number for consistent checking
+      const normalizedPhone = normalizePhoneNumber(formData.phone_number);
+      
+      const { data: existing, error: checkError } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existing) {
+        setLoading(false);
+        toast({
+          title: "Error",
+          description: "A contact with this phone number already exists",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Simplified contact data - no team categorization, just user ownership
       const contactData = {
         name: formData.name,
-        phone_number: formData.phone_number,
+        phone_number: normalizedPhone, // Use normalized phone number
         email: formData.email || null,
         company: formData.company || null,
         address: formData.address || null,
