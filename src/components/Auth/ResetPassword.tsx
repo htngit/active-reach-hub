@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff, AlertCircle, CheckCircle, Shield } from 'lucide-react';
 import { useAuthValidation } from '@/hooks/useAuthValidation';
-import { mapAuthError } from '@/utils/authErrors';
+import { mapAuthError, parseAuthErrorFromUrl, mapUrlAuthError } from '@/utils/authErrors';
 
 export const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -19,6 +19,8 @@ export const ResetPassword = () => {
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [hasUrlError, setHasUrlError] = useState(false);
+  const [urlErrorMessage, setUrlErrorMessage] = useState<{title: string; description: string} | null>(null);
   const navigate = useNavigate();
   
   const {
@@ -30,17 +32,41 @@ export const ResetPassword = () => {
   } = useAuthValidation();
 
   useEffect(() => {
+    // Check for URL error parameters first
+    const checkUrlErrors = () => {
+      const urlError = parseAuthErrorFromUrl();
+      const errorMessage = mapUrlAuthError(urlError);
+      
+      if (errorMessage) {
+        console.error('URL Error detected:', urlError);
+        setHasUrlError(true);
+        setUrlErrorMessage(errorMessage);
+        
+        // Clear the URL hash to prevent showing error again
+        window.history.replaceState(null, '', window.location.pathname);
+        
+        return true;
+      }
+      return false;
+    };
+
     // Check if we're in password recovery mode by examining URL hash
     const checkRecoveryMode = async () => {
       try {
+        // First check for URL errors
+        if (checkUrlErrors()) {
+          return;
+        }
+
         // Get the current session to check if user is in recovery mode
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
+          const authError = mapAuthError(error);
           toast({
-            title: "Error",
-            description: "Invalid or expired reset link. Please request a new password reset.",
+            title: authError.title,
+            description: authError.description,
             variant: "destructive",
           });
           navigate('/login');
@@ -53,17 +79,18 @@ export const ResetPassword = () => {
         } else {
           console.log('No session found, redirecting to login');
           toast({
-            title: "Error",
-            description: "Invalid or expired reset link. Please request a new password reset.",
+            title: "Session Required",
+            description: "Please use the reset link from your email to access this page.",
             variant: "destructive",
           });
           navigate('/login');
         }
       } catch (error) {
         console.error('Error checking recovery mode:', error);
+        const authError = mapAuthError(error);
         toast({
-          title: "Error",
-          description: "Something went wrong. Please try again.",
+          title: authError.title,
+          description: authError.description,
           variant: "destructive",
         });
         navigate('/login');
@@ -137,6 +164,56 @@ export const ResetPassword = () => {
       default: return '';
     }
   };
+
+  // Show error page if URL contains error parameters
+  if (hasUrlError && urlErrorMessage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              {urlErrorMessage.title}
+            </CardTitle>
+            <CardDescription className="text-red-700">
+              {urlErrorMessage.description}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                The password reset link you clicked is no longer valid. This can happen if:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>The link has expired (links are valid for 1 hour)</li>
+                  <li>The link has already been used</li>
+                  <li>A newer reset request was made</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-3">
+               <Button 
+                 onClick={() => navigate('/forgot-password')} 
+                 className="w-full"
+                 variant="outline"
+               >
+                 Request New Password Reset
+               </Button>
+               
+               <Button 
+                 onClick={() => navigate('/login')} 
+                 className="w-full"
+                 variant="secondary"
+               >
+                 Back to Login
+               </Button>
+             </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isRecoveryMode) {
     return (

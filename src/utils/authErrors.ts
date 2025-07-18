@@ -15,7 +15,10 @@ export const AUTH_ERROR_CODES = {
   SESSION_EXPIRED: 'session_expired',
   EMAIL_ALREADY_EXISTS: 'email_address_already_exists',
   SIGNUP_DISABLED: 'signup_disabled',
-  PASSWORD_RECOVERY_FAILED: 'password_recovery_failed'
+  PASSWORD_RECOVERY_FAILED: 'password_recovery_failed',
+  OTP_EXPIRED: 'otp_expired',
+  ACCESS_DENIED: 'access_denied',
+  EMAIL_LINK_INVALID: 'email_link_invalid'
 } as const;
 
 // User-friendly error messages
@@ -63,6 +66,18 @@ export const AUTH_ERROR_MESSAGES = {
   [AUTH_ERROR_CODES.PASSWORD_RECOVERY_FAILED]: {
     title: 'Password Reset Failed',
     description: 'Unable to send password reset email. Please try again or contact support.'
+  },
+  [AUTH_ERROR_CODES.OTP_EXPIRED]: {
+    title: 'Reset Link Expired',
+    description: 'The password reset link has expired. Please request a new password reset email.'
+  },
+  [AUTH_ERROR_CODES.ACCESS_DENIED]: {
+    title: 'Access Denied',
+    description: 'The reset link is invalid or has been used already. Please request a new password reset.'
+  },
+  [AUTH_ERROR_CODES.EMAIL_LINK_INVALID]: {
+    title: 'Invalid Reset Link',
+    description: 'The password reset link is invalid or has expired. Please request a new password reset email.'
   }
 };
 
@@ -70,6 +85,53 @@ export const AUTH_ERROR_MESSAGES = {
 export const DEFAULT_ERROR_MESSAGE = {
   title: 'Something Went Wrong',
   description: 'An unexpected error occurred. Please try again or contact support if the problem persists.'
+};
+
+/**
+ * Parses URL hash parameters for auth errors
+ * @param hash - The URL hash string
+ * @returns Parsed error parameters
+ */
+export const parseAuthErrorFromUrl = (hash: string = window.location.hash): {
+  error?: string;
+  error_code?: string;
+  error_description?: string;
+} => {
+  const params = new URLSearchParams(hash.replace('#', ''));
+  return {
+    error: params.get('error') || undefined,
+    error_code: params.get('error_code') || undefined,
+    error_description: params.get('error_description') || undefined
+  };
+};
+
+/**
+ * Maps URL error parameters to user-friendly messages
+ * @param urlError - Error parameters from URL
+ * @returns User-friendly error message object
+ */
+export const mapUrlAuthError = (urlError: {
+  error?: string;
+  error_code?: string;
+  error_description?: string;
+}): { title: string; description: string } | null => {
+  if (!urlError.error) return null;
+
+  // Handle OTP expired error
+  if (urlError.error_code === 'otp_expired' || urlError.error === 'access_denied') {
+    if (urlError.error_description?.includes('expired')) {
+      return AUTH_ERROR_MESSAGES[AUTH_ERROR_CODES.OTP_EXPIRED];
+    }
+    return AUTH_ERROR_MESSAGES[AUTH_ERROR_CODES.ACCESS_DENIED];
+  }
+
+  // Handle other URL errors
+  if (urlError.error === 'access_denied') {
+    return AUTH_ERROR_MESSAGES[AUTH_ERROR_CODES.ACCESS_DENIED];
+  }
+
+  // Generic email link invalid
+  return AUTH_ERROR_MESSAGES[AUTH_ERROR_CODES.EMAIL_LINK_INVALID];
 };
 
 /**
