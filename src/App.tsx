@@ -23,6 +23,7 @@ import SystemsPage from "./pages/SystemsPage";
 import NotFound from "./pages/NotFound";
 import JoinTeamPage from "./pages/JoinTeamPage";
 import PipelinePage from "./pages/PipelinePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ function App() {
               
               {/* Public routes without authentication */}
               <Route path="/join/:token" element={<JoinTeamPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Routes>
           </BrowserRouter>
         </AuthProvider>

@@ -1,16 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { User } from '@supabase/supabase-js';
+import { AuthService, AuthUser } from '@/services/authService';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  getUserName: (userId?: string) => string;
-  updateUserName: (name: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string) => Promise<boolean>;
+  signOut: () => Promise<boolean>;
+  getUserName: () => string;
+  updateUserName: (name: string) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<boolean>;
+  updatePassword: (newPassword: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,194 +26,265 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
-    
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change event:', event, 'Session:', !!session);
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        // Log auth events for debugging
-        if (event === 'SIGNED_IN') {
-          console.log('User signed in:', session?.user?.email);
-        } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed for user:', session?.user?.email);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    const checkInitialSession = async () => {
+    // Get initial session
+    const initializeAuth = async () => {
       try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting initial session:', error);
-        }
-        
-        console.log('Initial session check:', !!initialSession);
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
+        const currentUser = await AuthService.getCurrentUser();
+        setUser(currentUser);
       } catch (error) {
-        console.error('Error during initial session check:', error);
+        console.error('Failed to initialize auth:', error);
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
-    checkInitialSession();
+    initializeAuth();
 
-    return () => {
-      console.log('Cleaning up auth subscription');
-      subscription.unsubscribe();
-    };
+    // Listen for auth changes
+    const { data: { subscription } } = AuthService.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          user_metadata: session.user.user_metadata
+        });
+      } else {
+        setUser(null);
+      }
+      
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<boolean> => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const response = await AuthService.signIn(email, password);
       
-      if (error) {
-        console.error('Sign in error:', error);
-        throw error;
+      if (response.success) {
+        toast({
+          title: "Welcome back!",
+          description: "You have been signed in successfully.",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Sign In Failed",
+          description: response.error || "Please check your credentials and try again.",
+          variant: "destructive",
+        });
+        return false;
       }
-      
-      console.log('Sign in successful for:', email);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signUp = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
-      
-      if (error) {
-        console.error('Sign up error:', error);
-        throw error;
-      }
-      
-      console.log('Sign up successful for:', email);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    setLoading(true);
-    try {
-      // Check if we have a session before trying to sign out
-      if (!session) {
-        console.log('No session to sign out, clearing state manually');
-        // Manually clear state if no session exists
-        setSession(null);
-        setUser(null);
-        return;
-      }
-
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        // Handle specific auth session missing error
-        if (error.message === 'Auth session missing!') {
-          console.log('Session already missing, clearing state manually');
-          // Manually clear state since session is already gone
-          setSession(null);
-          setUser(null);
-          return;
-        }
-        console.error('Sign out error:', error);
-        throw error;
-      }
-      
-      console.log('Sign out successful');
-      
-      // Manually clear state to ensure immediate UI update
-      setSession(null);
-      setUser(null);
     } catch (error: any) {
-      // Handle auth session missing error gracefully
-      if (error.message === 'Auth session missing!') {
-        console.log('Session already missing during sign out, clearing state');
-        setSession(null);
-        setUser(null);
-        return;
-      }
-      console.error('Unexpected sign out error:', error);
-      throw error;
+      console.error('Sign in error:', error);
+      toast({
+        title: "Sign In Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const getUserName = (userId?: string) => {
-    // If no userId is provided, use the current user
-    const targetUser = userId ? undefined : user;
-    
-    if (targetUser) {
-      // Try to get name from user metadata
-      const metadata = targetUser.user_metadata;
-      if (metadata && metadata.name) {
-        return metadata.name;
+  const signUp = async (email: string, password: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const response = await AuthService.signUp(email, password);
+      
+      if (response.success) {
+        if (response.needsEmailConfirmation) {
+          toast({
+            title: "Account Created!",
+            description: "Please check your email to verify your account before signing in.",
+          });
+        } else {
+          toast({
+            title: "Welcome!",
+            description: "Your account has been created successfully.",
+          });
+        }
+        return true;
+      } else {
+        toast({
+          title: "Sign Up Failed",
+          description: response.error || "Please check your information and try again.",
+          variant: "destructive",
+        });
+        return false;
       }
-      // Fallback to email
-      if (targetUser.email) {
-        return targetUser.email.split('@')[0];
-      }
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      toast({
+        title: "Sign Up Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
     }
-    
-    // For other users or if current user has no name/email
-    if (userId) {
-      // Return a shortened version of the ID for now
-      // This will be replaced by the useUserData hook
-      return `User ${userId.substring(0, 8)}...`;
-    }
-    
-    // Final fallback
-    return 'Unknown User';
   };
 
-  const updateUserName = async (name: string) => {
-    if (!user) throw new Error('No user logged in');
-    
-    const { error } = await supabase.auth.updateUser({
-      data: { name }
-    });
-    
-    if (error) throw error;
+  const signOut = async (): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const response = await AuthService.signOut();
+      
+      if (response.success) {
+        toast({
+          title: "Signed Out",
+          description: "You have been signed out successfully.",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Sign Out Failed",
+          description: response.error || "Failed to sign out. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Sign out error:', error);
+      toast({
+        title: "Sign Out Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getUserName = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return user?.id || 'User';
+  };
+
+  const updateUserName = async (name: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const response = await AuthService.updateUserMetadata({ full_name: name });
+      
+      if (response.success) {
+        toast({
+          title: "Profile Updated",
+          description: "Your name has been updated successfully.",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Update Failed",
+          description: response.error || "Failed to update your name. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Update user name error:', error);
+      toast({
+        title: "Update Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (email: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const response = await AuthService.resetPasswordForEmail(email);
+      
+      if (response.success) {
+        toast({
+          title: "Reset Link Sent",
+          description: "Check your email for the password reset link.",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Reset Failed",
+          description: response.error || "Failed to send reset email. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      toast({
+        title: "Reset Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePassword = async (newPassword: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const response = await AuthService.updatePassword(newPassword);
+      
+      if (response.success) {
+        toast({
+          title: "Password Updated",
+          description: "Your password has been updated successfully.",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Update Failed",
+          description: response.error || "Failed to update password. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Update password error:', error);
+      toast({
+        title: "Update Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <AuthContext.Provider value={{ 
       user, 
-      session, 
       loading, 
       signIn, 
       signUp, 
       signOut, 
       getUserName, 
-      updateUserName 
+      updateUserName,
+      resetPassword,
+      updatePassword 
     }}>
       {children}
     </AuthContext.Provider>
