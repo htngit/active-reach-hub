@@ -1,4 +1,26 @@
 
+/**
+ * Template Selection Modal Component with Intelligent Caching
+ * 
+ * Features:
+ * - Displays relevant message templates based on contact labels
+ * - Intelligent caching with metadata verification for optimal performance
+ * - Real-time cache invalidation when templates or labels change
+ * - Cache statistics and debugging tools in development mode
+ * - Automatic cache refresh when metadata becomes stale
+ * 
+ * Caching Strategy:
+ * - Templates are cached by label combination to avoid redundant database queries
+ * - Cache entries are validated against user metadata timestamps
+ * - Automatic cache invalidation on template/label changes via Supabase real-time
+ * - Cache statistics tracking for performance monitoring
+ * 
+ * Performance Benefits:
+ * - Reduces database load for frequently accessed template combinations
+ * - Faster template loading for repeat label combinations
+ * - Maintains data consistency through metadata verification
+ */
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,9 +28,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useUserMetadata } from '@/hooks/useUserMetadata';
+import { useTemplateCache } from '@/hooks/useTemplateCache';
 
 interface Contact {
   id: string;
@@ -46,12 +69,14 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [cacheInfo, setCacheInfo] = useState<{ fromCache: boolean; cacheStats?: any }>({ fromCache: false });
   const { user } = useAuth();
   const { 
     validateContactAccess, 
     refreshMetadata, 
     isMetadataStale 
   } = useUserMetadata();
+  const { getTemplatesForContact, getCacheStats, clearCache } = useTemplateCache();
 
   useEffect(() => {
     if (open) {
@@ -59,41 +84,67 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     }
   }, [open, contact, user]);
 
+  /**
+   * Fetches relevant template sets using intelligent caching with metadata verification
+   * 
+   * This function implements a sophisticated caching strategy that:
+   * 1. Checks cache for existing template data based on label combination
+   * 2. Validates cache freshness against user metadata timestamps
+   * 3. Falls back to database query if cache is invalid or missing
+   * 4. Updates cache with fresh data and metadata verification
+   * 5. Provides performance metrics and debugging information
+   * 
+   * Cache Key Strategy:
+   * - Uses sorted label names to create consistent cache keys
+   * - Includes user ID to prevent cross-user data leakage
+   * - Validates against metadata timestamps for data consistency
+   * 
+   * Performance Monitoring:
+   * - Tracks fetch duration and cache hit/miss rates
+   * - Logs cache statistics for performance analysis
+   * - Provides visual indicators for cache usage in development
+   */
   const fetchRelevantTemplateSets = async () => {
     if (!user || !contact.labels || contact.labels.length === 0) {
       setTemplateSets([]);
+      setLabels([]);
+      setCacheInfo({ fromCache: false });
       return;
     }
 
     setLoading(true);
+    const startTime = performance.now();
+    
     try {
-      // First fetch labels to get their IDs
-      const { data: labelsData, error: labelsError } = await supabase
-        .from('labels')
-        .select('id, name')
-        .eq('user_id', user.id)
-        .in('name', contact.labels);
-
-      if (labelsError) throw labelsError;
-      setLabels(labelsData || []);
-
-      const labelIds = labelsData?.map(label => label.id) || [];
-
-      if (labelIds.length === 0) {
-        setTemplateSets([]);
-        return;
+      console.log('🔍 Fetching templates for contact:', contact.name, 'with labels:', contact.labels);
+      
+      // Use cached template fetching with metadata verification
+      const result = await getTemplatesForContact(contact.labels);
+      
+      setTemplateSets(result.templates);
+      setLabels(result.labels);
+      
+      // Update cache info for debugging
+      const stats = getCacheStats();
+      setCacheInfo({ 
+        fromCache: result.fromCache, 
+        cacheStats: stats 
+      });
+      
+      const endTime = performance.now();
+      const duration = (endTime - startTime).toFixed(2);
+      
+      console.log(`✅ Template fetch completed in ${duration}ms`);
+      console.log(`📊 Cache stats - Hit rate: ${stats.hitRate}%, Cache size: ${stats.cacheSize}`);
+      
+      if (result.fromCache) {
+        console.log('🎯 Templates loaded from cache');
+      } else {
+        console.log('💾 Templates fetched from database and cached');
       }
-
-      // Fetch template sets that match the contact's labels
-      const { data: templatesData, error: templatesError } = await supabase
-        .from('message_template_sets')
-        .select('*')
-        .eq('user_id', user.id)
-        .in('associated_label_id', labelIds);
-
-      if (templatesError) throw templatesError;
-      setTemplateSets(templatesData || []);
+      
     } catch (error: any) {
+      console.error('❌ Failed to fetch template sets:', error);
       toast({
         title: "Error",
         description: "Failed to fetch template sets",
@@ -292,13 +343,60 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Select a Follow-Up Template</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Select Template for {contact.name}
+            {cacheInfo.fromCache && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                🎯 Cached
+              </Badge>
+            )}
+          </DialogTitle>
+          {process.env.NODE_ENV === 'development' && cacheInfo.cacheStats && (
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-xs text-muted-foreground">
+                Cache: {cacheInfo.cacheStats.hitRate}% hit rate | {cacheInfo.cacheStats.cacheSize} entries
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    fetchRelevantTemplateSets();
+                    toast({ title: "Templates refreshed", description: "Template data has been refreshed" });
+                  }}
+                  className="h-6 px-2 text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Refresh
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    clearCache();
+                    setCacheInfo({ fromCache: false });
+                    toast({ title: "Cache cleared", description: "Template cache has been cleared" });
+                  }}
+                  className="h-6 px-2 text-xs"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Clear Cache
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogHeader>
         
         {loading ? (
-          <div className="p-4 text-center">Loading templates...</div>
+          <div className="flex justify-center py-8">
+            <div className="text-muted-foreground flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              {cacheInfo.fromCache ? 'Loading from cache...' : 'Fetching templates...'}
+            </div>
+          </div>
         ) : templateSets.length === 0 ? (
           <div className="p-4 text-center text-gray-500">
             There are no templates that match this contact label.
