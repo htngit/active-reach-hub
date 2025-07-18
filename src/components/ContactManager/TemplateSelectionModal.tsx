@@ -59,11 +59,13 @@ interface Label {
 interface TemplateSelectionModalProps {
   contact: Contact;
   children: React.ReactNode;
+  usePreloadedCache?: boolean;
 }
 
 export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   contact,
   children,
+  usePreloadedCache = false,
 }) => {
   const [templateSets, setTemplateSets] = useState<MessageTemplateSet[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -76,7 +78,7 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     refreshMetadata, 
     isMetadataStale 
   } = useUserMetadata();
-  const { getTemplatesForContact, getCacheStats, clearCache } = useTemplateCache();
+  const { getTemplatesForContact, getTemplatesFromCacheOnly, getCacheStats, clearCache, isPreloaded } = useTemplateCache();
 
   useEffect(() => {
     if (open) {
@@ -118,8 +120,16 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
     try {
       console.log('🔍 Fetching templates for contact:', contact.name, 'with labels:', contact.labels);
       
-      // Use cached template fetching with metadata verification
-      const result = await getTemplatesForContact(contact.labels);
+      let result;
+      
+      // Use preloaded cache if available and requested
+      if (usePreloadedCache && isPreloaded) {
+        console.log('⚡ Using preloaded cache for instant template access');
+        result = getTemplatesFromCacheOnly(contact.labels);
+      } else {
+        // Use cached template fetching with metadata verification
+        result = await getTemplatesForContact(contact.labels);
+      }
       
       setTemplateSets(result.templates);
       setLabels(result.labels);

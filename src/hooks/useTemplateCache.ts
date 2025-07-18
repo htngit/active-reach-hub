@@ -50,6 +50,12 @@ interface UseTemplateCacheReturn {
     labels: Label[];
     fromCache: boolean;
   }>;
+  preloadAllUserTemplates: () => Promise<boolean>;
+  getTemplatesFromCacheOnly: (contactLabels: string[]) => {
+    templates: MessageTemplateSet[];
+    labels: Label[];
+    fromCache: boolean;
+  };
   clearCache: () => void;
   getCacheStats: () => {
     cacheSize: number;
@@ -57,6 +63,7 @@ interface UseTemplateCacheReturn {
     hitRate: number;
   };
   isLoading: boolean;
+  isPreloaded: boolean;
 }
 
 /**
@@ -64,12 +71,14 @@ interface UseTemplateCacheReturn {
  */
 export const useTemplateCache = (): UseTemplateCacheReturn => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isPreloaded, setIsPreloaded] = useState(false);
   const { user } = useAuth();
   const { metadata, isMetadataStale } = useUserMetadata();
   
   // Cache storage
   const cacheRef = useRef<Map<string, TemplateCacheEntry>>(new Map());
   const statsRef = useRef({ hits: 0, misses: 0 });
+  const allTemplatesRef = useRef<{ templates: MessageTemplateSet[]; labels: Label[]; timestamp: string } | null>(null);
   
   /**
    * Generates cache key based on contact labels
@@ -161,6 +170,138 @@ export const useTemplateCache = (): UseTemplateCacheReturn => {
   }, [user]);
   
   /**
+   * Preloads all user templates and stores them in cache
+   */
+  const preloadAllUserTemplates = useCallback(async (): Promise<boolean> => {
+    if (!user?.id) {
+      console.warn('⚠️ Cannot preload templates: No user logged in');
+      return false;
+    }
+
+    setIsLoading(true);
+    console.log('🚀 Starting preload of all user templates...');
+    
+    try {
+      // Fetch all user's labels
+      const { data: labelsData, error: labelsError } = await supabase
+        .from('labels')
+        .select('id, name, user_id')
+        .eq('user_id', user.id);
+
+      if (labelsError) throw labelsError;
+      
+      const allLabels = labelsData || [];
+      console.log(`📋 Found ${allLabels.length} labels for user`);
+
+      // Fetch all user's templates
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('message_template_sets')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (templatesError) throw templatesError;
+      
+      const allTemplates = templatesData || [];
+      console.log(`📝 Found ${allTemplates.length} templates for user`);
+
+      // Store all templates in reference for instant access
+      allTemplatesRef.current = {
+        templates: allTemplates,
+        labels: allLabels,
+        timestamp: new Date().toISOString()
+      };
+
+      // Pre-populate cache for common label combinations
+      // Group templates by their associated labels
+      const labelTemplateMap = new Map<string, MessageTemplateSet[]>();
+      
+      allTemplates.forEach(template => {
+        const label = allLabels.find(l => l.id === template.associated_label_id);
+        if (label) {
+          const labelName = label.name;
+          if (!labelTemplateMap.has(labelName)) {
+            labelTemplateMap.set(labelName, []);
+          }
+          labelTemplateMap.get(labelName)!.push(template);
+        }
+      });
+
+      // Create cache entries for each label combination
+      for (const [labelName, templates] of labelTemplateMap.entries()) {
+        const cacheKey = generateCacheKey([labelName]);
+        const relevantLabels = allLabels.filter(l => l.name === labelName);
+        
+        const cacheEntry: TemplateCacheEntry = {
+          templates,
+          labels: relevantLabels,
+          timestamp: new Date().toISOString(),
+          contactLabels: [labelName],
+          cacheVersion: metadata?.cache_version || 0
+        };
+        
+        cacheRef.current.set(cacheKey, cacheEntry);
+      }
+
+      setIsPreloaded(true);
+      console.log(`✅ Successfully preloaded templates for ${labelTemplateMap.size} label combinations`);
+      
+      return true;
+      
+    } catch (error: any) {
+      console.error('❌ Failed to preload templates:', error);
+      toast({
+        title: "Error",
+        description: "Failed to preload templates",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id, generateCacheKey, metadata?.cache_version]);
+
+  /**
+   * Gets templates from cache only (no database fetch)
+   */
+  const getTemplatesFromCacheOnly = useCallback((contactLabels: string[]): {
+    templates: MessageTemplateSet[];
+    labels: Label[];
+    fromCache: boolean;
+  } => {
+    if (!user?.id || contactLabels.length === 0 || !allTemplatesRef.current) {
+      return { templates: [], labels: [], fromCache: false };
+    }
+
+    const { templates: allTemplates, labels: allLabels } = allTemplatesRef.current;
+    
+    // Filter templates that match any of the contact's labels
+    const matchingTemplates: MessageTemplateSet[] = [];
+    const matchingLabels: Label[] = [];
+    
+    contactLabels.forEach(contactLabel => {
+      const label = allLabels.find(l => l.name === contactLabel);
+      if (label) {
+        matchingLabels.push(label);
+        const labelTemplates = allTemplates.filter(t => t.associated_label_id === label.id);
+        matchingTemplates.push(...labelTemplates);
+      }
+    });
+
+    // Remove duplicates
+    const uniqueTemplates = matchingTemplates.filter((template, index, self) => 
+      index === self.findIndex(t => t.id === template.id)
+    );
+    
+    console.log(`🎯 Found ${uniqueTemplates.length} templates from cache for labels: ${contactLabels.join(', ')}`);
+    
+    return {
+      templates: uniqueTemplates,
+      labels: matchingLabels,
+      fromCache: true
+    };
+  }, [user?.id]);
+  
+  /**
    * Gets templates for contact with caching
    */
   const getTemplatesForContact = useCallback(async (contactLabels: string[]): Promise<{
@@ -233,7 +374,9 @@ export const useTemplateCache = (): UseTemplateCacheReturn => {
   const clearCache = useCallback(() => {
     console.log('🗑️ Clearing template cache');
     cacheRef.current.clear();
+    allTemplatesRef.current = null;
     statsRef.current = { hits: 0, misses: 0 };
+    setIsPreloaded(false);
   }, []);
   
   /**
@@ -321,9 +464,12 @@ export const useTemplateCache = (): UseTemplateCacheReturn => {
   
   return {
     getTemplatesForContact,
+    preloadAllUserTemplates,
+    getTemplatesFromCacheOnly,
     clearCache,
     getCacheStats,
-    isLoading
+    isLoading,
+    isPreloaded
   };
 };
 

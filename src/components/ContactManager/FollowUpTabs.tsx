@@ -12,6 +12,7 @@ import { TemplateSelectionModal } from './TemplateSelectionModal';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { ContactLabelFilter } from './ContactLabelFilter';
 import { Contact } from '@/types/contact';
+import { useTemplateCache } from '@/hooks/useTemplateCache';
 
 // Extended contact interface for follow-up specific data
 interface FollowUpContact extends Contact {
@@ -32,9 +33,13 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   const [activeTab, setActiveTab] = useState('needs-approach');
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [templatesPreloaded, setTemplatesPreloaded] = useState(false);
   
   // Use cached contacts instead of direct database queries
   const { contacts, loading: contactsLoading, error: contactsError } = useCachedContacts();
+  
+  // Template cache hook for preloading
+  const { preloadAllUserTemplates, isLoading: templatesLoading, isPreloaded } = useTemplateCache();
 
   useEffect(() => {
     if (!contactsLoading && contacts.length >= 0) {
@@ -45,6 +50,27 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   useEffect(() => {
     fetchLabels();
   }, [user]);
+  
+  // Preload all user templates when component mounts or user changes
+  useEffect(() => {
+    const preloadTemplates = async () => {
+      if (user && !isPreloaded && !templatesPreloaded) {
+        console.log('🚀 FollowUpTabs: Starting template preload...');
+        const success = await preloadAllUserTemplates();
+        if (success) {
+          setTemplatesPreloaded(true);
+          console.log('✅ FollowUpTabs: Templates preloaded successfully');
+          toast({
+            title: "Templates Ready",
+            description: "All templates have been preloaded for faster access",
+            variant: "default",
+          });
+        }
+      }
+    };
+    
+    preloadTemplates();
+  }, [user, preloadAllUserTemplates, isPreloaded, templatesPreloaded]);
   
   const fetchLabels = async () => {
     if (!user) return;
@@ -238,7 +264,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
               </div>
             )}
             <div className="flex gap-1">
-              <TemplateSelectionModal contact={contact}>
+              <TemplateSelectionModal contact={contact} usePreloadedCache={templatesPreloaded || isPreloaded}>
                 <Button variant="outline" size="sm">
                   <MessageCircle className="h-3 w-3 mr-1" />
                   Template Follow Up
@@ -253,6 +279,17 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
 
   if (loading || contactsLoading) {
     return <div className="p-4">Loading follow-up data...</div>;
+  }
+  
+  if (templatesLoading && !templatesPreloaded) {
+    return (
+      <div className="p-4">
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          <span>Preloading templates for faster access...</span>
+        </div>
+      </div>
+    );
   }
 
   if (contactsError) {
