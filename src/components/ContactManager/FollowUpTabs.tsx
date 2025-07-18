@@ -11,15 +11,10 @@ import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { ContactLabelFilter } from './ContactLabelFilter';
+import { Contact } from '@/types/contact';
 
-interface Contact {
-  id: string;
-  name: string;
-  phone_number: string;
-  email?: string;
-  company?: string;
-  status: string;
-  labels?: string[];
+// Extended contact interface for follow-up specific data
+interface FollowUpContact extends Contact {
   last_activity?: string;
 }
 
@@ -28,10 +23,10 @@ interface FollowUpTabsProps {
 }
 
 export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) => {
-  const [needsApproach, setNeedsApproach] = useState<Contact[]>([]);
-  const [stale3Days, setStale3Days] = useState<Contact[]>([]);
-  const [stale7Days, setStale7Days] = useState<Contact[]>([]);
-  const [stale30Days, setStale30Days] = useState<Contact[]>([]);
+  const [needsApproach, setNeedsApproach] = useState<FollowUpContact[]>([]);
+  const [stale3Days, setStale3Days] = useState<FollowUpContact[]>([]);
+  const [stale7Days, setStale7Days] = useState<FollowUpContact[]>([]);
+  const [stale30Days, setStale30Days] = useState<FollowUpContact[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('needs-approach');
@@ -90,6 +85,9 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     if (!user || contactsLoading) return;
 
     try {
+      // Define milliseconds per day constant
+      const msPerDay = 24 * 60 * 60 * 1000;
+      
       // Filter contacts that are not "Paid"
       let activeContacts = contacts.filter(contact => contact.status !== 'Paid');
       
@@ -124,37 +122,57 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      const needsApproachList: Contact[] = [];
-      const stale3DaysList: Contact[] = [];
-      const stale7DaysList: Contact[] = [];
-      const stale30DaysList: Contact[] = [];
+      const needsApproachList: FollowUpContact[] = [];
+      const stale3DaysList: FollowUpContact[] = [];
+      const stale7DaysList: FollowUpContact[] = [];
+      const stale30DaysList: FollowUpContact[] = [];
+      
+      console.log('🔍 Processing follow-up contacts:', {
+        totalActiveContacts: activeContacts.length,
+        contactsWithActivities: contactsWithActivities.size,
+        selectedLabels: selectedLabels.length
+      });
 
       activeContacts.forEach(contact => {
         const hasActivity = contactsWithActivities.has(contact.id);
         
         if (!hasActivity) {
           // No activities logged yet - use "Need Approach" tab
+          console.log(`📝 Contact "${contact.name}" has no activities - adding to Need Approach`);
           needsApproachList.push({ ...contact, last_activity: null });
         } else {
-            // Has activity - use last activity for staleness calculation with created_at baseline
+            // Has activity - use last activity for staleness calculation
             const lastActivity = lastActivityMap.get(contact.id);
             const lastActivityDate = new Date(lastActivity);
-            const contactCreatedDate = new Date(contact.created_at);
             
             const daysSinceLastActivity = Math.floor((now.getTime() - lastActivityDate.getTime()) / msPerDay);
-            const daysSinceCreated = Math.floor((now.getTime() - contactCreatedDate.getTime()) / msPerDay);
+            
+            // Use created_at if available, otherwise use a reasonable baseline
+            let daysSinceCreated = 0;
+            if (contact.created_at) {
+              const contactCreatedDate = new Date(contact.created_at);
+              daysSinceCreated = Math.floor((now.getTime() - contactCreatedDate.getTime()) / msPerDay);
+            }
 
             // Contact must have been created long enough AND last activity must be stale for the period
-            if (daysSinceLastActivity >= 30 && daysSinceCreated >= 30) {
+            // If no created_at, only check activity staleness
+            if (daysSinceLastActivity >= 30 && (daysSinceCreated >= 30 || !contact.created_at)) {
               stale30DaysList.push({ ...contact, last_activity: lastActivity });
-            } else if (daysSinceLastActivity >= 7 && daysSinceCreated >= 7) {
+            } else if (daysSinceLastActivity >= 7 && (daysSinceCreated >= 7 || !contact.created_at)) {
               stale7DaysList.push({ ...contact, last_activity: lastActivity });
-            } else if (daysSinceLastActivity >= 3 && daysSinceCreated >= 3) {
+            } else if (daysSinceLastActivity >= 3 && (daysSinceCreated >= 3 || !contact.created_at)) {
               stale3DaysList.push({ ...contact, last_activity: lastActivity });
             }
           }
       });
 
+      console.log('📊 Follow-up categorization results:', {
+        needsApproach: needsApproachList.length,
+        stale3Days: stale3DaysList.length,
+        stale7Days: stale7DaysList.length,
+        stale30Days: stale30DaysList.length
+      });
+      
       setNeedsApproach(needsApproachList);
       setStale3Days(stale3DaysList);
       setStale7Days(stale7DaysList);
@@ -171,7 +189,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     }
   };
 
-  const ContactCard = ({ contact }: { contact: Contact }) => (
+  const ContactCard = ({ contact }: { contact: FollowUpContact }) => (
     <Card className="hover:shadow-md transition-shadow mb-2">
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
