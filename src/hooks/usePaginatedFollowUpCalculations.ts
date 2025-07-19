@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Contact } from '@/types/contact';
-import { useOptimisticFollowUpCalculations } from './useOptimisticFollowUpCalculations';
+import { useWorkerFollowUpCalculations } from './useWorkerFollowUpCalculations';
 import { useCachedContacts } from './useCachedContacts';
 
 /**
@@ -55,7 +55,7 @@ interface PaginatedFollowUpResult {
 /**
  * Hook for paginated follow-up calculations
  * Implements lazy loading with only 50 contacts calculated per page
- * Uses existing useOptimisticFollowUpCalculations and useCachedContacts
+ * Uses existing useWorkerFollowUpCalculations and useCachedContacts
  */
 export const usePaginatedFollowUpCalculations = (
   contacts: Contact[],
@@ -88,12 +88,14 @@ export const usePaginatedFollowUpCalculations = (
   
   // Get total counts using full calculation (but only for counting)
   const {
-    needsApproach: fullNeedsApproach,
-    stale3Days: fullStale3Days,
-    stale7Days: fullStale7Days,
-    stale30Days: fullStale30Days,
+    calculations: {
+      needsApproach: fullNeedsApproach,
+      stale3Days: fullStale3Days,
+      stale7Days: fullStale7Days,
+      stale30Days: fullStale30Days
+    },
     loading: fullCalculationLoading
-  } = useOptimisticFollowUpCalculations(filteredContacts, selectedLabels);
+  } = useWorkerFollowUpCalculations(filteredContacts, selectedLabels);
   
   // Update total counts when full calculation completes
   useEffect(() => {
