@@ -34,10 +34,10 @@ export const PersonalSettings = () => {
         
         if (data && !error) {
           setUsername(data.username || '');
-          setName(data.full_name || user?.user_metadata?.name || '');
+          setName(data.full_name || user?.user_metadata?.full_name || '');
         } else {
           // Fallback to user metadata if profile data is not available
-          setName(user?.user_metadata?.name || '');
+          setName(user?.user_metadata?.full_name || '');
         }
       }
     };
@@ -294,18 +294,6 @@ export const PersonalSettings = () => {
           <div>
             <label className="text-sm font-medium">Current Email</label>
             <p className="text-sm text-gray-600">{user?.email}</p>
-            {!user?.email_confirmed_at && (
-              <div className="flex items-center gap-1 mt-1">
-                <AlertCircle className="h-4 w-4 text-orange-500" />
-                <span className="text-sm text-orange-600">Not verified</span>
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="text-sm font-medium">Account Created</label>
-            <p className="text-sm text-gray-600">
-              {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
-            </p>
           </div>
         </CardContent>
       </Card>

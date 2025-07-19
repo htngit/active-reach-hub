@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTeamData } from '@/hooks/useTeamData';
 
 const ProductPage: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { teams, loading: teamsLoading } = useTeamData();
   
   // Show loading state while auth or teams are loading

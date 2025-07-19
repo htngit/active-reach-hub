@@ -13,7 +13,7 @@ export const EmailVerificationBanner = () => {
   const [isDismissed, setIsDismissed] = useState(false);
 
   // Don't show if user is not logged in, email is verified, or banner is dismissed
-  if (!user || user.email_confirmed_at || isDismissed) {
+  if (!user || isDismissed) {
     return null;
   }
 

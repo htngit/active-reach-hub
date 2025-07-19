@@ -6,7 +6,7 @@ import { useUserFetching } from './useUserFetching';
 import { UserData } from '@/types/userData';
 
 export const useUserData = () => {
-  const { user, getUserName } = useAuth();
+  const { user } = useAuth();
   const {
     userCache,
     addToCache,
@@ -22,7 +22,7 @@ export const useUserData = () => {
     if (user) {
       initializeCache(user.id, {
         id: user.id,
-        name: user.user_metadata?.name || null,
+        name: user.user_metadata?.full_name || null,
         email: user.email,
         full_name: null,
         username: null,
@@ -77,7 +77,7 @@ export const useUserData = () => {
   const getUserNameById = useCallback((userId: string): string => {
     // If it's the current user, use the auth context function
     if (user && user.id === userId) {
-      return getUserName();
+      return user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
     }
 
     // If in cache, use cached data
@@ -103,7 +103,7 @@ export const useUserData = () => {
     
     // Use a more user-friendly display name instead of showing the ID
     return `User ${userId.substring(0, 4)}`;
-  }, [user, getUserName, getCachedUser, isInCache, fetchUserData]);
+  }, [user, getCachedUser, isInCache, fetchUserData]);
 
   return {
     userCache,
