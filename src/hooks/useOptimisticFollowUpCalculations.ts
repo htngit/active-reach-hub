@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Contact } from '@/types/contact';
 import { toast } from 'sonner';
+import { useCalculationCache } from './useCalculationCache';
+import { useIdleCalculationTimer } from './useIdleCalculationTimer';
 
 // Import OptimisticActivity interface from useOptimisticActivities
 interface OptimisticActivity {
@@ -49,7 +51,19 @@ export const useOptimisticFollowUpCalculations = (
   const [loading, setLoading] = useState(false);
   const [isCalculationReady, setIsCalculationReady] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [forceRecalculation, setForceRecalculation] = useState(false);
   const { user } = useAuth();
+  const { getCachedCalculations, setCachedCalculations, applyOptimisticUpdate, cacheInfo } = useCalculationCache();
+  
+  const {
+    shouldCalculate,
+    lastCalculationTime,
+    isIdle,
+    timeUntilNextCalculation,
+    markCalculationDone,
+    forceCalculation,
+    getCalculationStatus
+  } = useIdleCalculationTimer();
 
   // Check if contacts is valid
   const isValidContacts = contacts && Array.isArray(contacts);
@@ -139,8 +153,23 @@ export const useOptimisticFollowUpCalculations = (
   /**
    * Fetch activities when active contacts change
    */
+  const prevFetchDeps = useRef(null);
+  const [isFetching, setIsFetching] = useState(false);
   useEffect(() => {
+    if (prevFetchDeps.current) {
+      if (prevFetchDeps.current.getActiveContacts !== getActiveContacts) console.log('⚠️ Dep change: getActiveContacts');
+      if (prevFetchDeps.current.fetchActivitiesForContacts !== fetchActivitiesForContacts) console.log('⚠️ Dep change: fetchActivitiesForContacts');
+      if (prevFetchDeps.current.isValidContacts !== isValidContacts) console.log('⚠️ Dep change: isValidContacts');
+    }
+    prevFetchDeps.current = { getActiveContacts, fetchActivitiesForContacts, isValidContacts };
+    console.log('🔄 [useEffect] Triggered - fetchActivitiesForContacts', {
+      isValidContacts,
+      activeContactsLength: getActiveContacts.length,
+      timestamp: new Date().toLocaleTimeString()
+    });
+    
     if (!isValidContacts) {
+      console.log('❌ [useEffect] Invalid contacts, setting calculation not ready');
       setIsCalculationReady(false);
       return;
     }
@@ -148,17 +177,21 @@ export const useOptimisticFollowUpCalculations = (
     const activeContacts = getActiveContacts;
     const contactIds = activeContacts.map(c => c.id);
     
-    if (contactIds.length > 0) {
+    if (contactIds.length > 0 && !isFetching) {
+      console.log('📊 [useEffect] Starting activity fetch for', contactIds.length, 'contacts');
+      setIsFetching(true);
       setIsCalculationReady(false);
-      fetchActivitiesForContacts(contactIds);
-    } else {
-      // No contacts to process, calculation is ready
+      fetchActivitiesForContacts(contactIds).finally(() => setIsFetching(false));
+    } else if (contactIds.length === 0) {
+      console.log('✅ [useEffect] No contacts to process, marking calculation ready');
       setIsCalculationReady(true);
+    } else {
+      console.log('🚫 [useEffect] Skipping fetch - already fetching');
     }
-  }, [getActiveContacts, fetchActivitiesForContacts, isValidContacts]);
+  }, [getActiveContacts, fetchActivitiesForContacts, isValidContacts, isFetching]);
 
   /**
-   * Calculate follow-up categories using activity data
+   * Calculate follow-up categories using activity data with caching
    */
   const calculateFollowUps = useMemo((): FollowUpCalculations => {
     if (!isValidContacts || !isCalculationReady) {
@@ -173,6 +206,42 @@ export const useOptimisticFollowUpCalculations = (
     
     // Ensure activityData is complete for all active contacts
     const activeContacts = getActiveContacts;
+    const contactIds = activeContacts.map(c => c.id);
+    
+    // Check idle timer first - skip calculation if not needed
+    if (!shouldCalculate && !forceRecalculation) {
+      console.log('⏰ Skipping calculation - not idle yet (last calculation:', new Date(lastCalculationTime || 0).toLocaleString(), ')');
+      
+      // Try to get cached calculation
+      const cachedCalculations = getCachedCalculations(contactIds, selectedLabels);
+      if (cachedCalculations) {
+        console.log('📋 Using cached calculations (idle skip)');
+        setIsCalculating(false);
+        return cachedCalculations;
+      }
+      
+      // If no cache available, return empty results to avoid calculation
+      setIsCalculating(false);
+      return {
+        needsApproach: [],
+        stale3Days: [],
+        stale7Days: [],
+        stale30Days: [],
+      };
+    }
+
+    // Check cache first (unless forced recalculation)
+    if (!forceRecalculation) {
+      const cachedCalculations = getCachedCalculations(contactIds, selectedLabels);
+      if (cachedCalculations) {
+        console.log('📋 Using cached calculations, skipping re-calculation');
+        setIsCalculating(false);
+        // Mark calculation as done since we're using valid cache
+        markCalculationDone();
+        return cachedCalculations;
+      }
+    }
+    
     const hasCompleteActivityData = activeContacts.every(contact => 
       Object.prototype.hasOwnProperty.call(activityData, contact.id)
     );
@@ -182,7 +251,8 @@ export const useOptimisticFollowUpCalculations = (
       activeContactsCount: activeContacts.length,
       activityDataKeys: Object.keys(activityData).length,
       hasCompleteActivityData,
-      isCalculationReady
+      isCalculationReady,
+      forceRecalculation
     });
     
     if (!hasCompleteActivityData) {
@@ -274,18 +344,51 @@ export const useOptimisticFollowUpCalculations = (
       total: result.needsApproach.length + result.stale3Days.length + result.stale7Days.length + result.stale30Days.length
     });
     
+    // Cache the calculated results
+    setCachedCalculations(contactIds, selectedLabels, result);
+    
+    // Mark calculation as done
+    markCalculationDone();
+    
+    // Reset force recalculation flag
+    if (forceRecalculation) {
+      setForceRecalculation(false);
+    }
+    
     // Set calculating state to false when calculation is complete
     setIsCalculating(false);
     
     return result;
-  }, [getActiveContacts, activityData, optimisticActivities, isValidContacts, isCalculationReady]);
+  }, [isValidContacts, isCalculationReady, getActiveContacts, activityData, optimisticActivities, forceRecalculation, getCachedCalculations, setCachedCalculations, selectedLabels]);
 
   // Update state when calculations change and data is ready
+  const prevCalcDeps = useRef(null);
   useEffect(() => {
-    if (isValidContacts && isCalculationReady) {
-      setCalculations(calculateFollowUps);
+    if (prevCalcDeps.current) {
+      if (prevCalcDeps.current.isValidContacts !== isValidContacts) console.log('⚠️ Calc dep change: isValidContacts');
+      if (prevCalcDeps.current.isCalculationReady !== isCalculationReady) console.log('⚠️ Calc dep change: isCalculationReady');
+      if (prevCalcDeps.current.shouldCalculate !== shouldCalculate) console.log('⚠️ Calc dep change: shouldCalculate');
+      if (prevCalcDeps.current.isIdle !== isIdle) console.log('⚠️ Calc dep change: isIdle');
+      if (prevCalcDeps.current.lastCalculationTime !== lastCalculationTime) console.log('⚠️ Calc dep change: lastCalculationTime');
     }
-  }, [calculateFollowUps, isValidContacts, isCalculationReady]);
+    prevCalcDeps.current = { isValidContacts, isCalculationReady, shouldCalculate, isIdle, lastCalculationTime };
+    console.log('🔄 [useEffect] Calculation update triggered', {
+      isValidContacts,
+      isCalculationReady,
+      shouldCalculate,
+      isIdle,
+      lastCalculationTime: lastCalculationTime ? new Date(lastCalculationTime).toLocaleTimeString() : 'never',
+      timestamp: new Date().toLocaleTimeString()
+    });
+    
+    // Only update calculations if we should calculate (idle timer check)
+    if (isValidContacts && isCalculationReady && shouldCalculate) {
+      console.log('✅ [useEffect] Updating calculations (shouldCalculate=true)...');
+      setCalculations(calculateFollowUps);
+    } else if (isValidContacts && isCalculationReady && !shouldCalculate) {
+      console.log('⏰ [useEffect] Skipping calculation update - not idle yet');
+    }
+  }, [isValidContacts, isCalculationReady, shouldCalculate, isIdle, lastCalculationTime]);
 
   // Removed problematic useEffect that caused race condition
   // isCalculating state is now managed directly within calculateFollowUps
@@ -353,10 +456,10 @@ export const useOptimisticFollowUpCalculations = (
 
   /**
    * Add optimistic activity to specific contact and sync to backend
+   * Also applies optimistic update to cached calculations
    */
   const addOptimisticActivityToContact = useCallback((contactId: string, activity: Omit<OptimisticActivity, 'id' | 'isOptimistic' | 'localTimestamp' | 'contact_id'>) => {
     if (!isValidContacts || !user) {
-
       return null;
     }
     
@@ -369,8 +472,6 @@ export const useOptimisticFollowUpCalculations = (
       user_id: user.id
     };
 
-
-
     // Add to optimistic state immediately for instant UI feedback
     setOptimisticActivities(prev => {
       const existingActivities = prev[contactId] || [];
@@ -381,6 +482,31 @@ export const useOptimisticFollowUpCalculations = (
         [contactId]: updatedActivities
       };
     });
+
+    // Apply optimistic update to cached calculations
+    // Find which category the contact belongs to and remove it
+    const activeContacts = getActiveContacts;
+    const contactIds = activeContacts.map(c => c.id);
+    
+    // Determine which category to remove the contact from
+    let categoryToUpdate: keyof FollowUpCalculations | null = null;
+    if (calculations.needsApproach.some(c => c.id === contactId)) {
+      categoryToUpdate = 'needsApproach';
+    } else if (calculations.stale3Days.some(c => c.id === contactId)) {
+      categoryToUpdate = 'stale3Days';
+    } else if (calculations.stale7Days.some(c => c.id === contactId)) {
+      categoryToUpdate = 'stale7Days';
+    } else if (calculations.stale30Days.some(c => c.id === contactId)) {
+      categoryToUpdate = 'stale30Days';
+    }
+    
+    if (categoryToUpdate) {
+      const updatedCalculations = applyOptimisticUpdate(contactIds, selectedLabels, contactId, categoryToUpdate);
+      if (updatedCalculations) {
+        setCalculations(updatedCalculations);
+        console.log(`🚀 Optimistic update: Removed contact from ${categoryToUpdate}`);
+      }
+    }
 
     // Sync to backend database
     syncActivityToBackend(optimisticActivity);
@@ -394,7 +520,7 @@ export const useOptimisticFollowUpCalculations = (
     }, 30000);
 
     return optimisticActivity;
-  }, [isValidContacts, user, syncActivityToBackend]);
+  }, [isValidContacts, user, syncActivityToBackend, getActiveContacts, calculations, applyOptimisticUpdate, selectedLabels]);
 
   // Refresh function to manually trigger data refresh
   const refreshFollowUpData = useCallback(() => {
@@ -402,10 +528,13 @@ export const useOptimisticFollowUpCalculations = (
     const contactIds = activeContacts.map(c => c.id);
     
     if (contactIds.length > 0) {
+      // Force recalculation and clear cache
+      setForceRecalculation(true);
+      forceCalculation(); // Reset idle timer
       setIsCalculationReady(false);
       fetchActivitiesForContacts(contactIds);
     }
-  }, [getActiveContacts, fetchActivitiesForContacts]);
+  }, [getActiveContacts, fetchActivitiesForContacts, forceCalculation]);
 
 
 
@@ -417,5 +546,13 @@ export const useOptimisticFollowUpCalculations = (
     loading: finalLoadingState,
     addOptimisticActivityToContact,
     refreshFollowUpData,
+    cacheInfo: {
+      ...cacheInfo,
+      isFromCache: !shouldCalculate,
+      timestamp: lastCalculationTime || Date.now(),
+      calculationStatus: getCalculationStatus(),
+      timeUntilNextCalculation,
+      isIdle
+    }
   };
 };

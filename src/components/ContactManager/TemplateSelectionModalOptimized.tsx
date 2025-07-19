@@ -98,13 +98,15 @@ interface TemplateSelectionModalOptimizedProps {
   children: ReactNode;
   preloadedTemplates?: TransformedTemplateSet[];
   onEngagementCreated?: () => void;
+  onTemplateUsed?: (templateTitle: string, variationNumber: number, contactId: string) => void;
 }
 
-export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOptimizedProps> = ({
-  contact,
-  children,
-  preloadedTemplates = [],
+export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOptimizedProps> = ({ 
+  contact, 
+  children, 
+  preloadedTemplates,
   onEngagementCreated,
+  onTemplateUsed 
 }) => {
   const [open, setOpen] = useState(false);
   const [templateSets, setTemplateSets] = useState<TransformedTemplateSet[]>([]);
@@ -392,6 +394,27 @@ export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOpt
         });
 
       if (error) throw error;
+
+      // Create activity record for proper logging
+      const { error: activityError } = await supabase
+        .from('activities')
+        .insert({
+          contact_id: contact.id,
+          user_id: user?.id || '',
+          type: 'Template Follow-up',
+          details: `Template message: ${customMessage.substring(0, 100)}${customMessage.length > 100 ? '...' : ''}`,
+          timestamp: new Date().toISOString()
+        });
+
+      if (activityError) {
+        console.warn('Failed to log activity:', activityError);
+        // Don't fail the whole operation for activity logging
+      }
+
+      // Trigger optimistic activity callback for immediate UI update
+      if (onTemplateUsed) {
+        onTemplateUsed('Template Follow-up', 1, contact.id);
+      }
 
       toast({
         title: "Message Sent",

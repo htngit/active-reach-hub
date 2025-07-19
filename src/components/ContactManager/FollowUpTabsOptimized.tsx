@@ -19,8 +19,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, Building, Clock, MessageCircle, RefreshCw } from 'lucide-react';
+import { Phone, Mail, Building, Clock, MessageCircle, RefreshCw, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TemplateSelectionModalOptimized } from './TemplateSelectionModalOptimized';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { ContactLabelFilter } from './ContactLabelFilter';
@@ -47,6 +48,11 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
   const contactsPerPage = 50; // Max 50 contacts per page
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('needs-approach');
+  
+  // Debug logging for tab changes
+  useEffect(() => {
+    console.log('🔄 [FollowUpTabsOptimized] Active tab changed to:', activeTab);
+  }, [activeTab]);
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [cacheStats, setCacheStats] = useState({ cacheSize: 0, hitRate: 0, lastRefresh: null as string | null });
@@ -61,10 +67,19 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
     stale7Days,
     stale30Days,
     loading: followUpLoading,
-    refreshFollowUpData
+    refreshFollowUpData,
+    addOptimisticActivityToContact,
+    cacheInfo
   } = useOptimisticFollowUpCalculations(contacts, selectedLabels);
 
-  // Debug logging removed - using hook's internal logging
+  // Debug logging for component re-renders
+  console.log('🔄 [FollowUpTabsOptimized] Component rendered', {
+    activeTab,
+    contactsLength: contacts?.length || 0,
+    selectedLabelsLength: selectedLabels.length,
+    followUpLoading,
+    cacheInfo
+  });
   
 
   
@@ -95,6 +110,34 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
   }, [user, contacts]);
 
 
+
+  // Callback to handle template usage with optimistic activity logging
+  const handleTemplateUsed = useCallback(async (templateTitle: string, variationNumber: number, contactId: string) => {
+    try {
+      // Add optimistic activity for immediate UI feedback - this will update cache and UI instantly
+      if (addOptimisticActivityToContact) {
+        await addOptimisticActivityToContact(contactId, {
+          type: 'Template Follow-up',
+          details: `Template: "${templateTitle}" (Variation ${variationNumber})`,
+          timestamp: new Date().toISOString(),
+          user_id: user?.id || ''
+        });
+      }
+      
+      // Show success message
+      toast({
+        title: "Template sent successfully",
+        description: `Message sent using template: ${templateTitle}`,
+      });
+    } catch (error) {
+      console.error('Error handling template usage:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update contact activity",
+        variant: "destructive",
+      });
+    }
+  }, [addOptimisticActivityToContact, user]);
 
   // Callback to refresh categorization after engagement creation
   const handleEngagementCreated = useCallback(() => {
@@ -205,9 +248,10 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
             )}
             <div className="flex gap-1">
               <TemplateSelectionModalOptimized 
-              contact={contact}
-              onEngagementCreated={handleEngagementCreated}
-            >
+                contact={contact}
+                onEngagementCreated={handleEngagementCreated}
+                onTemplateUsed={(templateTitle, variationNumber) => handleTemplateUsed(templateTitle, variationNumber, contact.id)}
+              >
                 <Button variant="outline" size="sm">
                   <MessageCircle className="h-3 w-3 mr-1" />
                   Template Follow Up
@@ -240,15 +284,74 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
             <span>Last Refresh: {new Date(cacheStats.lastRefresh).toLocaleTimeString()}</span>
           )}
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRefreshCache}
-          className="flex items-center gap-1"
-        >
-          <RefreshCw className="h-3 w-3" />
-          Refresh Cache
-        </Button>
+        <div className="flex items-center gap-2">
+          {cacheInfo && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded flex items-center gap-2 cursor-help">
+                    <span className={`inline-block w-2 h-2 rounded-full ${
+                      cacheInfo.calculationStatus === 'fresh' ? 'bg-green-500' :
+                      cacheInfo.calculationStatus === 'idle' ? 'bg-yellow-500' :
+                      cacheInfo.calculationStatus === 'stale' ? 'bg-red-500' :
+                      'bg-gray-500'
+                    }`}></span>
+                    <span>
+                      Status: {cacheInfo.calculationStatus === 'fresh' ? 'Fresh' :
+                              cacheInfo.calculationStatus === 'idle' ? 'Idle' :
+                              cacheInfo.calculationStatus === 'stale' ? 'Stale' :
+                              'Never'}
+                      {cacheInfo.timeUntilNextCalculation > 0 && (
+                        <span className="ml-1 text-orange-600">
+                          | Next calc in: {Math.round(cacheInfo.timeUntilNextCalculation / 1000 / 60)}m
+                        </span>
+                      )}
+                      {cacheInfo.isIdle && (
+                        <span className="ml-1 text-red-600">| Ready to calculate</span>
+                      )}
+                    </span>
+                    <Info className="h-3 w-3 ml-1" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <div className="text-sm">
+                    <p className="font-semibold mb-1">Idle Calculation Timer</p>
+                    <p className="mb-2">Calculations only run when:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>First time loading</li>
+                      <li>After 1 hour of idle time</li>
+                      <li>Manual refresh is triggered</li>
+                    </ul>
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span>Fresh: Recently calculated</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                        <span>Idle: Waiting for 1 hour</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                        <span>Stale: Ready to recalculate</span>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleRefreshCache}
+            disabled={followUpLoading}
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className={`h-3 w-3 ${followUpLoading ? 'animate-spin' : ''}`} />
+            Refresh Cache
+          </Button>
+        </div>
       </div>
       
       <ContactLabelFilter
