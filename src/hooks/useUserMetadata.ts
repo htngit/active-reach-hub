@@ -46,7 +46,8 @@ interface UseUserMetadataReturn {
   metadata: UserMetadata | null;
   isLoading: boolean;
   error: string | null;
-  validateContactAccess: (contactId: string) => Promise<MetadataValidationResult>;
+  validateBulkContactAccess: (contactIds: string[]) => boolean;
+  validateSingleContactAccess: (contactId: string) => boolean;
   refreshMetadata: () => Promise<boolean>;
   checkCacheValidity: (cacheTimestamp: string) => boolean;
   getMetadataAge: () => number;
@@ -142,85 +143,41 @@ export const useUserMetadata = (): UseUserMetadataReturn => {
   }, [user?.id, fetchMetadata]);
 
   /**
-   * Validates contact access using metadata
+   * Validates bulk contact access using metadata (optimized for multiple contacts)
    */
-  const validateContactAccess = useCallback(async (contactId: string): Promise<MetadataValidationResult> => {
-    const startTime = performance.now();
-    
-    try {
-      if (!user?.id) {
-        return {
-          isValid: false,
-          hasAccess: false,
-          isCacheStale: false,
-          metadata: null,
-          error: 'User not authenticated'
-        };
-      }
-
-      if (!contactId) {
-        return {
-          isValid: false,
-          hasAccess: false,
-          isCacheStale: false,
-          metadata: null,
-          error: 'Contact ID is required'
-        };
-      }
-
-      // Get current metadata
-      let currentMetadata = metadata;
-      if (!currentMetadata) {
-        currentMetadata = await fetchMetadata();
-      }
-
-      if (!currentMetadata) {
-        return {
-          isValid: false,
-          hasAccess: false,
-          isCacheStale: false,
-          metadata: null,
-          error: 'Failed to load metadata'
-        };
-      }
-
-      // Check if metadata is stale (older than 5 minutes)
-      const metadataAge = Date.now() - new Date(currentMetadata.updated_at).getTime();
-      const isStale = metadataAge > 5 * 60 * 1000; // 5 minutes
-
-      // If stale, refresh metadata
-      if (isStale) {
-        console.log('⚠️ Metadata is stale, refreshing...');
-        const refreshed = await refreshMetadata();
-        if (refreshed) {
-          currentMetadata = await fetchMetadata();
-        }
-      }
-
-      // Validate contact access
-      const hasAccess = currentMetadata?.contact_ids?.includes(contactId) || false;
-
-      const endTime = performance.now();
-      console.log(`🔍 Contact access validation completed in ${(endTime - startTime).toFixed(2)}ms`);
-
-      return {
-        isValid: true,
-        hasAccess,
-        isCacheStale: isStale,
-        metadata: currentMetadata,
-        error: hasAccess ? undefined : 'Contact access denied'
-      };
-    } catch (err: any) {
-      console.error('Contact access validation error:', err);
-      return {
-        isValid: false,
-        hasAccess: false,
-        isCacheStale: false,
-        metadata: null,
-        error: err.message
-      };
+  const validateBulkContactAccess = useCallback((contactIds: string[]): boolean => {
+    if (!metadata || !contactIds.length) {
+      return false;
     }
-  }, [user?.id, metadata, fetchMetadata, refreshMetadata]);
+
+    // Check if all contacts are in user's authorized contact list
+    const unauthorizedContacts = contactIds.filter(id => !metadata.contact_ids?.includes(id));
+    
+    if (unauthorizedContacts.length > 0) {
+      console.warn('❌ Unauthorized contact access:', unauthorizedContacts);
+      return false;
+    }
+
+    console.log('✅ Bulk contact access validated for', contactIds.length, 'contacts');
+    return true;
+  }, [metadata]);
+
+  /**
+   * Validates single contact access using metadata (fast local check)
+   */
+  const validateSingleContactAccess = useCallback((contactId: string): boolean => {
+    if (!metadata || !contactId) {
+      return false;
+    }
+
+    const hasAccess = metadata.contact_ids?.includes(contactId) || false;
+    
+    if (!hasAccess) {
+      console.warn('❌ Contact access denied:', contactId);
+    }
+
+    return hasAccess;
+  }, [metadata]);
 
   /**
    * Checks if cache is valid based on metadata timestamp
@@ -293,7 +250,8 @@ export const useUserMetadata = (): UseUserMetadataReturn => {
     metadata,
     isLoading,
     error,
-    validateContactAccess,
+    validateBulkContactAccess,
+    validateSingleContactAccess,
     refreshMetadata,
     checkCacheValidity,
     getMetadataAge,

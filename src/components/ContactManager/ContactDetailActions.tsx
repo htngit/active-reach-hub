@@ -145,7 +145,7 @@ export const ContactDetailActions: React.FC<ContactDetailActionsProps> = ({
   const { user } = useAuth();
   const { 
     metadata, 
-    validateContactAccess, 
+    validateSingleContactAccess, 
     refreshMetadata, 
     isMetadataStale 
   } = useUserMetadata();
@@ -158,41 +158,26 @@ export const ContactDetailActions: React.FC<ContactDetailActionsProps> = ({
     try {
       console.log('🔍 Starting metadata validation...');
       
-      // Validate contact access using metadata
-      const validationResult = await validateContactAccess(contact.id);
+      // Validate contact access using metadata (fast local check)
+      const hasAccess = validateSingleContactAccess(contact.id);
       
-      if (!validationResult.isValid) {
-        console.error('❌ Metadata validation failed:', validationResult.error);
-        toast.error('System validation failed. Please try again.');
-        return false;
-      }
-      
-      if (!validationResult.hasAccess) {
+      if (!hasAccess) {
         console.error('❌ Contact access denied:', {
           contactId: contact.id,
-          contactName: contact.name,
-          error: validationResult.error
+          contactName: contact.name
         });
         toast.error('Access denied: Contact not found in your authorized list.');
         return false;
       }
       
-      if (validationResult.isCacheStale) {
-        console.log('⚠️ Cache was stale, metadata refreshed automatically');
-        toast.info('Data refreshed for accuracy.');
-      }
-      
-      console.log('✅ Metadata validation passed:', {
+      console.log('✅ Contact access validated:', {
         contactId: contact.id,
-        hasAccess: validationResult.hasAccess,
-        cacheStale: validationResult.isCacheStale,
-        metadataAge: validationResult.metadata ? 
-          Date.now() - new Date(validationResult.metadata.updated_at).getTime() : 'unknown'
+        hasAccess: true
       });
       
       return true;
     } catch (error) {
-      console.error('❌ Metadata validation failed:', error);
+      console.error('❌ Contact validation failed:', error);
       toast.error('System validation error. Please refresh and try again.');
       return false;
     }

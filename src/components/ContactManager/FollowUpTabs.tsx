@@ -301,7 +301,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-4 md:px-0">
       <ContactLabelFilter
         availableLabels={availableLabels}
         selectedLabels={selectedLabels}
@@ -310,34 +310,35 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
       />
       
       <Tabs defaultValue="needs-approach" onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-4 h-12">
+      <TabsList className="grid w-full grid-cols-4 h-12 mx-2 md:mx-0">
         <TabsTrigger
           value="needs-approach"
-          className={`transition-all duration-300 ${activeTab === 'needs-approach' ? 'text-base px-4 py-2' : 'text-sm px-2 py-1'}`}
+          className={`transition-all duration-300 text-xs md:text-sm px-1 md:px-2 py-1 ${activeTab === 'needs-approach' ? 'md:text-base md:px-4 md:py-2' : ''}`}
         >
-          Needs Approach ({needsApproach.length})
+          <span className="hidden sm:inline">Needs Approach</span>
+          <span className="sm:hidden">New</span> ({needsApproach.length})
         </TabsTrigger>
         <TabsTrigger
           value="stale-3"
-          className={`transition-all duration-300 ${activeTab === 'stale-3' ? 'text-base px-4 py-2' : 'text-sm px-2 py-1'}`}
+          className={`transition-all duration-300 text-xs md:text-sm px-1 md:px-2 py-1 ${activeTab === 'stale-3' ? 'md:text-base md:px-4 md:py-2' : ''}`}
         >
           {'>'} 3d ({stale3Days.length})
         </TabsTrigger>
         <TabsTrigger
           value="stale-7"
-          className={`transition-all duration-300 ${activeTab === 'stale-7' ? 'text-base px-4 py-2' : 'text-sm px-2 py-1'}`}
+          className={`transition-all duration-300 text-xs md:text-sm px-1 md:px-2 py-1 ${activeTab === 'stale-7' ? 'md:text-base md:px-4 md:py-2' : ''}`}
         >
           {'>'} 7d ({stale7Days.length})
         </TabsTrigger>
         <TabsTrigger
           value="stale-30"
-          className={`transition-all duration-300 ${activeTab === 'stale-30' ? 'text-base px-4 py-2' : 'text-sm px-2 py-1'}`}
+          className={`transition-all duration-300 text-xs md:text-sm px-1 md:px-2 py-1 ${activeTab === 'stale-30' ? 'md:text-base md:px-4 md:py-2' : ''}`}
         >
           {'>'} 30d ({stale30Days.length})
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="needs-approach" className="space-y-4">
+      <TabsContent value="needs-approach" className="space-y-4 px-2 md:px-0">
         <div className="text-sm text-gray-600 mb-4">
           Contacts that have never been approached
         </div>
@@ -350,7 +351,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         )}
       </TabsContent>
 
-      <TabsContent value="stale-3" className="space-y-4">
+      <TabsContent value="stale-3" className="space-y-4 px-2 md:px-0">
         <div className="text-sm text-gray-600 mb-4">
           Contacts last contacted more than 3 days ago
         </div>
@@ -363,7 +364,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         )}
       </TabsContent>
 
-      <TabsContent value="stale-7" className="space-y-4">
+      <TabsContent value="stale-7" className="space-y-4 px-2 md:px-0">
         <div className="text-sm text-gray-600 mb-4">
           Contacts last contacted more than 7 days ago
         </div>
@@ -376,7 +377,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
         )}
       </TabsContent>
 
-      <TabsContent value="stale-30" className="space-y-4">
+      <TabsContent value="stale-30" className="space-y-4 px-2 md:px-0">
         <div className="text-sm text-gray-600 mb-4">
           Contacts last contacted more than 30 days ago
         </div>

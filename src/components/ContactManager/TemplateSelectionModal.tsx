@@ -74,7 +74,7 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   const [cacheInfo, setCacheInfo] = useState<{ fromCache: boolean; cacheStats?: any }>({ fromCache: false });
   const { user } = useAuth();
   const { 
-    validateContactAccess, 
+    validateSingleContactAccess, 
     refreshMetadata, 
     isMetadataStale 
   } = useUserMetadata();
@@ -206,58 +206,23 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   };
 
   /**
-   * Performs metadata validation for template selection
+   * Performs simple contact access validation (fast local check)
    */
-  const performMetadataValidation = async (): Promise<boolean> => {
-    try {
-      console.log('🔍 Starting metadata validation for template selection...');
-      
-      // Validate contact access using metadata
-      const validationResult = await validateContactAccess(contact.id);
-      
-      if (!validationResult.isValid) {
-        console.error('❌ Metadata validation failed:', validationResult.error);
-        toast({
-          title: "Validation Failed",
-          description: "System validation failed. Please try again.",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      if (!validationResult.hasAccess) {
-        console.error('❌ Contact access denied:', {
-          contactId: contact.id,
-          contactName: contact.name,
-          error: validationResult.error
-        });
-        toast({
-          title: "Access Denied",
-          description: "Contact not found in your authorized list.",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      if (validationResult.isCacheStale) {
-        console.log('⚠️ Cache was stale, metadata refreshed automatically');
-        toast({
-          title: "Data Refreshed",
-          description: "Data refreshed for accuracy."
-        });
-      }
-      
-      console.log('✅ Metadata validation passed for template selection');
-      return true;
-    } catch (error) {
-      console.error('❌ Metadata validation failed:', error);
+  const performContactValidation = (): boolean => {
+    const hasAccess = validateSingleContactAccess(contact.id);
+    
+    if (!hasAccess) {
+      console.error('❌ Contact access denied:', contact.id);
       toast({
-        title: "Validation Error",
-        description: "System validation error. Please refresh and try again.",
+        title: "Access Denied",
+        description: "Contact not found in your authorized list.",
         variant: "destructive"
       });
       return false;
     }
+    
+    console.log('✅ Contact access validated for template selection');
+    return true;
   };
 
   const handleTemplateSelect = async (templateSet: MessageTemplateSet) => {
@@ -278,10 +243,10 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
         }
       }
       
-      // Perform metadata validation before template selection
-      const isValid = await performMetadataValidation();
+      // Perform simple contact validation (fast local check)
+      const isValid = performContactValidation();
       if (!isValid) {
-        return; // Error already shown in performMetadataValidation
+        return; // Error already shown in performContactValidation
       }
       
       // Select random variation
