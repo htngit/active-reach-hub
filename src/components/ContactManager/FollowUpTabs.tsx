@@ -13,6 +13,7 @@ import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { ContactLabelFilter } from './ContactLabelFilter';
 import { Contact } from '@/types/contact';
 import { useTemplateCache } from '@/hooks/useTemplateCache';
+import { useOptimisticFollowUpCalculations } from '@/hooks/useOptimisticFollowUpCalculations';
 
 // Extended contact interface for follow-up specific data
 interface FollowUpContact extends Contact {
@@ -24,11 +25,6 @@ interface FollowUpTabsProps {
 }
 
 export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) => {
-  const [needsApproach, setNeedsApproach] = useState<FollowUpContact[]>([]);
-  const [stale3Days, setStale3Days] = useState<FollowUpContact[]>([]);
-  const [stale7Days, setStale7Days] = useState<FollowUpContact[]>([]);
-  const [stale30Days, setStale30Days] = useState<FollowUpContact[]>([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('needs-approach');
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
@@ -40,12 +36,17 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   
   // Template cache hook for preloading
   const { preloadAllUserTemplates, isLoading: templatesLoading, isPreloaded } = useTemplateCache();
+  
+  // Use optimistic follow-up calculations for instant updates
+  const { 
+    needsApproach, 
+    stale3Days, 
+    stale7Days, 
+    stale30Days,
+    addOptimisticActivityToContact 
+  } = useOptimisticFollowUpCalculations(contacts, selectedLabels);
 
-  useEffect(() => {
-    if (!contactsLoading && contacts.length >= 0) {
-      fetchFollowUpContacts();
-    }
-  }, [contacts, contactsLoading, user, selectedLabels]);
+  // Remove the old fetchFollowUpContacts useEffect since we're using optimistic calculations
   
   useEffect(() => {
     fetchLabels();
@@ -107,112 +108,17 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     fetchLabels();
   };
 
-  const fetchFollowUpContacts = async () => {
-    if (!user || contactsLoading) return;
-
-    try {
-      // Define milliseconds per day constant
-      const msPerDay = 24 * 60 * 60 * 1000;
-      
-      // Filter contacts that are not "Paid"
-      let activeContacts = contacts.filter(contact => contact.status !== 'Paid');
-      
-      // Apply label filter if any labels are selected
-      if (selectedLabels.length > 0) {
-        activeContacts = activeContacts.filter(contact => 
-          contact.labels && selectedLabels.some(label => contact.labels.includes(label))
-        );
-      }
-
-      // Get all activities to determine if contact has any activity
-      const { data: activities, error: activitiesError } = await supabase
-        .from('activities')
-        .select('contact_id, timestamp')
-        .eq('user_id', user.id)
-        .order('timestamp', { ascending: false });
-
-      if (activitiesError) throw activitiesError;
-
-      // Create a set of contact_ids that have activities
-      const contactsWithActivities = new Set();
-      const lastActivityMap = new Map();
-      activities?.forEach(activity => {
-        contactsWithActivities.add(activity.contact_id);
-        if (!lastActivityMap.has(activity.contact_id)) {
-          lastActivityMap.set(activity.contact_id, activity.timestamp);
-        }
-      });
-
-      const now = new Date();
-      const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-      const needsApproachList: FollowUpContact[] = [];
-      const stale3DaysList: FollowUpContact[] = [];
-      const stale7DaysList: FollowUpContact[] = [];
-      const stale30DaysList: FollowUpContact[] = [];
-      
-      console.log('🔍 Processing follow-up contacts:', {
-        totalActiveContacts: activeContacts.length,
-        contactsWithActivities: contactsWithActivities.size,
-        selectedLabels: selectedLabels.length
-      });
-
-      activeContacts.forEach(contact => {
-        const hasActivity = contactsWithActivities.has(contact.id);
-        
-        if (!hasActivity) {
-          // No activities logged yet - use "Need Approach" tab
-          console.log(`📝 Contact "${contact.name}" has no activities - adding to Need Approach`);
-          needsApproachList.push({ ...contact, last_activity: null });
-        } else {
-            // Has activity - use last activity for staleness calculation
-            const lastActivity = lastActivityMap.get(contact.id);
-            const lastActivityDate = new Date(lastActivity);
-            
-            const daysSinceLastActivity = Math.floor((now.getTime() - lastActivityDate.getTime()) / msPerDay);
-            
-            // Use created_at if available, otherwise use a reasonable baseline
-            let daysSinceCreated = 0;
-            if (contact.created_at) {
-              const contactCreatedDate = new Date(contact.created_at);
-              daysSinceCreated = Math.floor((now.getTime() - contactCreatedDate.getTime()) / msPerDay);
-            }
-
-            // Contact must have been created long enough AND last activity must be stale for the period
-            // If no created_at, only check activity staleness
-            if (daysSinceLastActivity >= 30 && (daysSinceCreated >= 30 || !contact.created_at)) {
-              stale30DaysList.push({ ...contact, last_activity: lastActivity });
-            } else if (daysSinceLastActivity >= 7 && (daysSinceCreated >= 7 || !contact.created_at)) {
-              stale7DaysList.push({ ...contact, last_activity: lastActivity });
-            } else if (daysSinceLastActivity >= 3 && (daysSinceCreated >= 3 || !contact.created_at)) {
-              stale3DaysList.push({ ...contact, last_activity: lastActivity });
-            }
-          }
-      });
-
-      console.log('📊 Follow-up categorization results:', {
-        needsApproach: needsApproachList.length,
-        stale3Days: stale3DaysList.length,
-        stale7Days: stale7DaysList.length,
-        stale30Days: stale30DaysList.length
-      });
-      
-      setNeedsApproach(needsApproachList);
-      setStale3Days(stale3DaysList);
-      setStale7Days(stale7DaysList);
-      setStale30Days(stale30DaysList);
-    } catch (error: any) {
-      console.error('Error fetching follow-up contacts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch follow-up contacts",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  // Template message handler with optimistic activity logging
+  const handleTemplateMessage = (contact: FollowUpContact, templateTitle: string, variationNumber: number) => {
+    // Add optimistic activity immediately for instant UI update
+    addOptimisticActivityToContact(contact.id, {
+      contact_id: contact.id,
+      type: 'WhatsApp Follow-Up via Template',
+      details: `Template: "${templateTitle}" (Variation ${variationNumber})`,
+      timestamp: new Date().toISOString(),
+    });
+    
+    console.log('⚡ Optimistic activity added for contact:', contact.name);
   };
 
   const ContactCard = ({ contact }: { contact: FollowUpContact }) => (
@@ -264,7 +170,13 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
               </div>
             )}
             <div className="flex gap-1">
-              <TemplateSelectionModal contact={contact} usePreloadedCache={templatesPreloaded || isPreloaded}>
+              <TemplateSelectionModal 
+                contact={contact} 
+                usePreloadedCache={templatesPreloaded || isPreloaded}
+                onTemplateUsed={(templateTitle, variationNumber) => 
+                  handleTemplateMessage(contact, templateTitle, variationNumber)
+                }
+              >
                 <Button variant="outline" size="sm">
                   <MessageCircle className="h-3 w-3 mr-1" />
                   Template Follow Up
@@ -277,7 +189,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
     </Card>
   );
 
-  if (loading || contactsLoading) {
+  if (contactsLoading) {
     return <div className="p-4">Loading follow-up data...</div>;
   }
   

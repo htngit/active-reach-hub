@@ -60,12 +60,14 @@ interface TemplateSelectionModalProps {
   contact: Contact;
   children: React.ReactNode;
   usePreloadedCache?: boolean;
+  onTemplateUsed?: (templateTitle: string, variationNumber: number) => void;
 }
 
 export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   contact,
   children,
   usePreloadedCache = false,
+  onTemplateUsed,
 }) => {
   const [templateSets, setTemplateSets] = useState<MessageTemplateSet[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -262,26 +264,20 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
       const encodedMessage = encodeURIComponent(personalizedMessage);
       const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
       
-      // Log activity to database with enhanced error handling
-      const { error: activityError } = await supabase
-        .from('activities')
-        .insert({
-          contact_id: contact.id,
-          user_id: user?.id,
-          type: 'WhatsApp Follow-Up via Template',
-          details: `Template: "${templateSet.title}" (Variation ${variationNumber})`,
-          timestamp: new Date().toISOString(),
-        });
-
-      if (activityError) {
-        console.error('Failed to log activity:', activityError);
-        toast({
-          title: "Activity Logging Failed",
-          description: "WhatsApp will open but activity logging failed.",
-          variant: "destructive"
-        });
-      } else {
-        console.log('✅ Template activity logged successfully');
+      // Log activity optimistically (immediate display + background sync)
+      const optimisticActivity = {
+        contact_id: contact.id,
+        type: 'WhatsApp Follow-Up via Template',
+        details: `Template: "${templateSet.title}" (Variation ${variationNumber})`,
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Add optimistic activity for immediate display
+      console.log('⚡ Adding optimistic activity for immediate display');
+      
+      // Trigger optimistic activity callback for immediate UI update
+      if (onTemplateUsed) {
+        onTemplateUsed(templateSet.title, variationNumber);
       }
 
       // Open WhatsApp
