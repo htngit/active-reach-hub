@@ -6,14 +6,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, Building, Clock, MessageCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Phone, Mail, Building, Clock, MessageCircle, Zap, Database } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TemplateSelectionModal } from './TemplateSelectionModal';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { ContactLabelFilter } from './ContactLabelFilter';
 import { Contact } from '@/types/contact';
 import { useTemplateCache } from '@/hooks/useTemplateCache';
-import { useOptimisticFollowUpCalculations } from '@/hooks/useOptimisticFollowUpCalculations';
+import { useWorkerFollowUpCalculations } from '@/hooks/useWorkerFollowUpCalculations';
 
 // Extended contact interface for follow-up specific data
 interface FollowUpContact extends Contact {
@@ -37,16 +38,33 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   // Template cache hook for preloading
   const { preloadAllUserTemplates, isLoading: templatesLoading, isPreloaded } = useTemplateCache();
   
-  // Use optimistic follow-up calculations for instant updates
+  // Use new worker-based follow-up calculations for better performance
   const { 
-    needsApproach, 
-    stale3Days, 
-    stale7Days, 
-    stale30Days,
-    addOptimisticActivityToContact 
-  } = useOptimisticFollowUpCalculations(contacts, selectedLabels);
+    calculations: { needsApproach, stale3Days, stale7Days, stale30Days },
+    loading: calculationsLoading,
+    calculating,
+    progress,
+    cacheStats,
+    addOptimisticActivity,
+    clearCache,
+    forceRecalculation,
+    isReady
+  } = useWorkerFollowUpCalculations(contacts, selectedLabels);
 
-  // Remove the old fetchFollowUpContacts useEffect since we're using optimistic calculations
+  // Show cache stats in development
+  const showCacheStats = process.env.NODE_ENV === 'development';
+  
+  // Performance monitoring
+  useEffect(() => {
+    if (showCacheStats && cacheStats.hitRate > 0) {
+      console.log('📊 Follow-up Cache Stats:', {
+        hitRate: `${(cacheStats.hitRate * 100).toFixed(1)}%`,
+        hits: cacheStats.hits,
+        misses: cacheStats.misses,
+        totalEntries: cacheStats.totalEntries
+      });
+    }
+  }, [cacheStats, showCacheStats]);
   
   useEffect(() => {
     fetchLabels();
@@ -111,7 +129,7 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   // Template message handler with optimistic activity logging
   const handleTemplateMessage = (contact: FollowUpContact, templateTitle: string, variationNumber: number) => {
     // Add optimistic activity immediately for instant UI update
-    addOptimisticActivityToContact(contact.id, {
+    addOptimisticActivity(contact.id, {
       type: 'WhatsApp Follow-Up via Template',
       details: `Template: "${templateTitle}" (Variation ${variationNumber})`,
       timestamp: new Date().toISOString(),
@@ -202,6 +220,33 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
       </div>
     );
   }
+  
+  // Show calculation progress for large datasets
+  if (calculationsLoading || !isReady) {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Database className="h-4 w-4 animate-pulse" />
+          <span>Processing follow-up calculations...</span>
+        </div>
+        {calculating && (
+          <div className="space-y-2">
+            <Progress value={progress} className="w-full" />
+            <div className="text-sm text-gray-600">
+              {progress.toFixed(0)}% complete
+            </div>
+          </div>
+        )}
+        {showCacheStats && cacheStats.totalEntries > 0 && (
+          <div className="text-xs text-gray-500 flex items-center gap-2">
+            <Zap className="h-3 w-3" />
+            Cache: {cacheStats.hits} hits, {cacheStats.misses} misses
+            ({(cacheStats.hitRate * 100).toFixed(1)}% hit rate)
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (contactsError) {
     return (
@@ -213,12 +258,28 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
 
   return (
     <div className="space-y-4 px-4 md:px-0">
-      <ContactLabelFilter
-        availableLabels={availableLabels}
-        selectedLabels={selectedLabels}
-        onToggleLabel={toggleLabelFilter}
-        onLabelsChanged={handleLabelsChanged}
-      />
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <ContactLabelFilter
+          availableLabels={availableLabels}
+          selectedLabels={selectedLabels}
+          onToggleLabel={toggleLabelFilter}
+          onLabelsChanged={handleLabelsChanged}
+        />
+        
+        {/* Performance indicators */}
+        {showCacheStats && isReady && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Zap className="h-3 w-3" />
+            <span>Cache: {(cacheStats.hitRate * 100).toFixed(0)}% hit rate</span>
+            {calculating && (
+              <div className="flex items-center gap-1">
+                <div className="animate-spin rounded-full h-2 w-2 border border-blue-600 border-t-transparent"></div>
+                <span>Updating...</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       
       <Tabs defaultValue="needs-approach" onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-4 h-12 mx-2 md:mx-0">
