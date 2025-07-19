@@ -3,6 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Contact } from '@/types/contact';
 
+// Import OptimisticActivity interface from useOptimisticActivities
+interface OptimisticActivity {
+  id: string;
+  type: string;
+  details?: string;
+  timestamp: string;
+  contact_id: string;
+  user_id: string;
+  isOptimistic: true;
+  localTimestamp: number;
+}
+
 interface FollowUpContact extends Contact {
   last_activity?: string;
 }
@@ -32,25 +44,17 @@ export const useOptimisticFollowUpCalculations = (
     stale30Days: [],
   });
   const [activityData, setActivityData] = useState<ActivityData>({});
-  const [optimisticActivities, setOptimisticActivities] = useState<{[contactId: string]: any[]}>({});
+  const [optimisticActivities, setOptimisticActivities] = useState<{[contactId: string]: OptimisticActivity[]}>({});
   const { user } = useAuth();
 
-  // Early return if contacts is not available
-  if (!contacts || !Array.isArray(contacts)) {
-    return {
-      needsApproach: [],
-      stale3Days: [],
-      stale7Days: [],
-      stale30Days: [],
-      addOptimisticActivityToContact: () => null,
-    };
-  }
+  // Check if contacts is valid
+  const isValidContacts = contacts && Array.isArray(contacts);
 
   /**
    * Fetch activities for all active contacts
    */
   const fetchActivitiesForContacts = useCallback(async (contactIds: string[]) => {
-    if (!user || contactIds.length === 0) return;
+    if (!user || contactIds.length === 0 || !isValidContacts) return;
 
     try {
       const { data: activitiesData, error } = await supabase
@@ -84,12 +88,13 @@ export const useOptimisticFollowUpCalculations = (
     } catch (error) {
       console.error('Error in fetchActivitiesForContacts:', error);
     }
-  }, [user]);
+  }, [user, isValidContacts]);
 
   /**
    * Get active contacts based on filters
    */
   const getActiveContacts = useMemo(() => {
+    if (!isValidContacts) return [];
     let activeContacts = contacts.filter(contact => contact.status !== 'Paid');
     
     // Apply label filter
@@ -100,24 +105,35 @@ export const useOptimisticFollowUpCalculations = (
     }
     
     return activeContacts;
-  }, [contacts, selectedLabels]);
+  }, [contacts, selectedLabels, isValidContacts]);
 
   /**
    * Fetch activities when active contacts change
    */
   useEffect(() => {
+    if (!isValidContacts) return;
+    
     const activeContacts = getActiveContacts;
     const contactIds = activeContacts.map(c => c.id);
     
     if (contactIds.length > 0) {
       fetchActivitiesForContacts(contactIds);
     }
-  }, [getActiveContacts, fetchActivitiesForContacts]);
+  }, [getActiveContacts, fetchActivitiesForContacts, isValidContacts]);
 
   /**
    * Calculate follow-up categories using activity data
    */
   const calculateFollowUps = useMemo((): FollowUpCalculations => {
+    if (!isValidContacts) {
+      return {
+        needsApproach: [],
+        stale3Days: [],
+        stale7Days: [],
+        stale30Days: [],
+      };
+    }
+    
     const msPerDay = 24 * 60 * 60 * 1000;
     const now = new Date();
     
@@ -189,7 +205,7 @@ export const useOptimisticFollowUpCalculations = (
       stale7Days: stale7DaysList,
       stale30Days: stale30DaysList,
     };
-  }, [getActiveContacts, activityData, optimisticActivities]);
+  }, [getActiveContacts, activityData, optimisticActivities, isValidContacts]);
 
   // Update state when calculations change
   useEffect(() => {
@@ -199,7 +215,9 @@ export const useOptimisticFollowUpCalculations = (
   /**
    * Add optimistic activity to specific contact
    */
-  const addOptimisticActivityToContact = useCallback((contactId: string, activity: any) => {
+  const addOptimisticActivityToContact = useCallback((contactId: string, activity: Omit<OptimisticActivity, 'id' | 'isOptimistic' | 'localTimestamp' | 'contact_id'>) => {
+    if (!isValidContacts) return null;
+    
     const optimisticActivity = {
       ...activity,
       id: `optimistic-${Date.now()}-${Math.random()}`,
@@ -208,10 +226,14 @@ export const useOptimisticFollowUpCalculations = (
       contact_id: contactId
     };
 
-    setOptimisticActivities(prev => ({
-      ...prev,
-      [contactId]: [...(prev[contactId] || []), optimisticActivity]
-    }));
+    setOptimisticActivities(prev => {
+      const existingActivities = prev[contactId] || [];
+      const updatedActivities: OptimisticActivity[] = [...existingActivities, optimisticActivity as OptimisticActivity];
+      return {
+        ...prev,
+        [contactId]: updatedActivities
+      };
+    });
 
     // Auto-remove optimistic activity after 30 seconds
     setTimeout(() => {
@@ -222,7 +244,7 @@ export const useOptimisticFollowUpCalculations = (
     }, 30000);
 
     return optimisticActivity;
-  }, []);
+  }, [isValidContacts]);
 
   return {
     ...calculations,
