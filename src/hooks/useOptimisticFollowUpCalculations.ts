@@ -46,34 +46,56 @@ export const useOptimisticFollowUpCalculations = (
   });
   const [activityData, setActivityData] = useState<ActivityData>({});
   const [optimisticActivities, setOptimisticActivities] = useState<{[contactId: string]: OptimisticActivity[]}>({});
+  const [loading, setLoading] = useState(false);
+  const [isCalculationReady, setIsCalculationReady] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
   const { user } = useAuth();
 
   // Check if contacts is valid
   const isValidContacts = contacts && Array.isArray(contacts);
 
   /**
-   * Fetch activities for all active contacts
+   * Fetch activities for all active contacts in batches to avoid URL length limits
    */
   const fetchActivitiesForContacts = useCallback(async (contactIds: string[]) => {
     if (!user || contactIds.length === 0 || !isValidContacts) return;
 
-    try {
-      const { data: activitiesData, error } = await supabase
-        .from('activities')
-        .select('contact_id, timestamp')
-        .in('contact_id', contactIds)
-        .order('timestamp', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching activities:', error);
-        return;
+    setLoading(true);
+
+    try {
+      const batchSize = 50; // Limit batch size to avoid URL length issues
+      const allActivitiesData: any[] = [];
+      
+      // Process contacts in batches
+      for (let i = 0; i < contactIds.length; i += batchSize) {
+        const batch = contactIds.slice(i, i + batchSize);
+        
+
+        
+        const { data: batchData, error } = await supabase
+          .from('activities')
+          .select('contact_id, timestamp')
+          .in('contact_id', batch)
+          .order('timestamp', { ascending: false });
+
+        if (error) {
+
+          continue; // Continue with next batch even if one fails
+        }
+
+        if (batchData) {
+          allActivitiesData.push(...batchData);
+        }
       }
+
+
 
       // Process activities data
       const newActivityData: ActivityData = {};
       
       contactIds.forEach(contactId => {
-        const contactActivities = activitiesData?.filter(a => a.contact_id === contactId) || [];
+        const contactActivities = allActivitiesData.filter(a => a.contact_id === contactId) || [];
         const hasActivity = contactActivities.length > 0;
         const lastActivityTimestamp = hasActivity 
           ? new Date(contactActivities[0].timestamp).getTime()
@@ -86,8 +108,14 @@ export const useOptimisticFollowUpCalculations = (
       });
 
       setActivityData(newActivityData);
+      // Mark calculation as ready after activity data is processed
+      setIsCalculationReady(true);
     } catch (error) {
-      console.error('Error in fetchActivitiesForContacts:', error);
+      console.error('💥 [GET] Exception in fetchActivitiesForContacts:', error instanceof Error ? error.message : String(error));
+      // Even on error, mark as ready to prevent infinite loading
+      setIsCalculationReady(true);
+    } finally {
+      setLoading(false);
     }
   }, [user, isValidContacts]);
 
@@ -112,13 +140,20 @@ export const useOptimisticFollowUpCalculations = (
    * Fetch activities when active contacts change
    */
   useEffect(() => {
-    if (!isValidContacts) return;
+    if (!isValidContacts) {
+      setIsCalculationReady(false);
+      return;
+    }
     
     const activeContacts = getActiveContacts;
     const contactIds = activeContacts.map(c => c.id);
     
     if (contactIds.length > 0) {
+      setIsCalculationReady(false);
       fetchActivitiesForContacts(contactIds);
+    } else {
+      // No contacts to process, calculation is ready
+      setIsCalculationReady(true);
     }
   }, [getActiveContacts, fetchActivitiesForContacts, isValidContacts]);
 
@@ -126,7 +161,8 @@ export const useOptimisticFollowUpCalculations = (
    * Calculate follow-up categories using activity data
    */
   const calculateFollowUps = useMemo((): FollowUpCalculations => {
-    if (!isValidContacts) {
+    if (!isValidContacts || !isCalculationReady) {
+      setIsCalculating(false);
       return {
         needsApproach: [],
         stale3Days: [],
@@ -135,16 +171,44 @@ export const useOptimisticFollowUpCalculations = (
       };
     }
     
+    // Ensure activityData is complete for all active contacts
+    const activeContacts = getActiveContacts;
+    const hasCompleteActivityData = activeContacts.every(contact => 
+      Object.prototype.hasOwnProperty.call(activityData, contact.id)
+    );
+    
+    // Debug logging for calculation readiness
+    console.log('🧮 Calculation Check:', {
+      activeContactsCount: activeContacts.length,
+      activityDataKeys: Object.keys(activityData).length,
+      hasCompleteActivityData,
+      isCalculationReady
+    });
+    
+    if (!hasCompleteActivityData) {
+      console.log('⏳ Waiting for complete activity data...');
+      setIsCalculating(false);
+      return {
+        needsApproach: [],
+        stale3Days: [],
+        stale7Days: [],
+        stale30Days: [],
+      };
+    }
+    
+    // Set calculating state to true at the start of actual calculation
+    setIsCalculating(true);
+    console.log('✅ Starting calculation with complete data');
+    
     const msPerDay = 24 * 60 * 60 * 1000;
     const now = new Date();
     
-    const activeContacts = getActiveContacts;
     const needsApproachList: FollowUpContact[] = [];
     const stale3DaysList: FollowUpContact[] = [];
     const stale7DaysList: FollowUpContact[] = [];
     const stale30DaysList: FollowUpContact[] = [];
 
-    activeContacts.forEach(contact => {
+    getActiveContacts.forEach(contact => {
       const contactActivity = activityData[contact.id];
       const optimisticContactActivities = optimisticActivities[contact.id] || [];
       
@@ -161,6 +225,7 @@ export const useOptimisticFollowUpCalculations = (
         // Check optimistic activities for more recent timestamp
         if (optimisticContactActivities.length > 0) {
           const latestOptimistic = Math.max(...optimisticContactActivities.map(a => a.localTimestamp));
+          
           if (!lastActivityTimestamp || latestOptimistic > lastActivityTimestamp) {
             lastActivityTimestamp = latestOptimistic;
           }
@@ -192,26 +257,38 @@ export const useOptimisticFollowUpCalculations = (
       }
     });
 
-    console.log('⚡ Optimistic follow-up calculation:', {
-      needsApproach: needsApproachList.length,
-      stale3Days: stale3DaysList.length,
-      stale7Days: stale7DaysList.length,
-      stale30Days: stale30DaysList.length,
-      totalOptimisticActivities: Object.values(optimisticActivities).reduce((sum, activities) => sum + activities.length, 0)
-    });
 
-    return {
+
+    const result = {
       needsApproach: needsApproachList,
       stale3Days: stale3DaysList,
       stale7Days: stale7DaysList,
       stale30Days: stale30DaysList,
     };
-  }, [getActiveContacts, activityData, optimisticActivities, isValidContacts]);
+    
+    console.log('🎯 Calculation completed:', {
+      needsApproach: result.needsApproach.length,
+      stale3Days: result.stale3Days.length,
+      stale7Days: result.stale7Days.length,
+      stale30Days: result.stale30Days.length,
+      total: result.needsApproach.length + result.stale3Days.length + result.stale7Days.length + result.stale30Days.length
+    });
+    
+    // Set calculating state to false when calculation is complete
+    setIsCalculating(false);
+    
+    return result;
+  }, [getActiveContacts, activityData, optimisticActivities, isValidContacts, isCalculationReady]);
 
-  // Update state when calculations change
+  // Update state when calculations change and data is ready
   useEffect(() => {
-    setCalculations(calculateFollowUps);
-  }, [calculateFollowUps]);
+    if (isValidContacts && isCalculationReady) {
+      setCalculations(calculateFollowUps);
+    }
+  }, [calculateFollowUps, isValidContacts, isCalculationReady]);
+
+  // Removed problematic useEffect that caused race condition
+  // isCalculating state is now managed directly within calculateFollowUps
 
   /**
    * Sync optimistic activity to backend database
@@ -219,21 +296,24 @@ export const useOptimisticFollowUpCalculations = (
   const syncActivityToBackend = useCallback(async (optimisticActivity: OptimisticActivity) => {
     if (!user) return;
     
+
+    
     try {
-      console.log('🔄 Syncing template activity to backend:', optimisticActivity);
+      const insertData = {
+        contact_id: optimisticActivity.contact_id,
+        user_id: optimisticActivity.user_id,
+        type: optimisticActivity.type,
+        details: optimisticActivity.details,
+        timestamp: optimisticActivity.timestamp,
+      };
       
-      const { error: activityError } = await supabase
+      const { data: insertedData, error: activityError } = await supabase
         .from('activities')
-        .insert({
-          contact_id: optimisticActivity.contact_id,
-          user_id: optimisticActivity.user_id,
-          type: optimisticActivity.type,
-          details: optimisticActivity.details,
-          timestamp: optimisticActivity.timestamp,
-        });
+        .insert(insertData)
+        .select();
 
       if (activityError) {
-        console.error('❌ Failed to sync template activity:', activityError);
+
         toast.error('Failed to log activity to database');
         
         // Mark as failed in optimistic state
@@ -246,14 +326,15 @@ export const useOptimisticFollowUpCalculations = (
           )
         }));
       } else {
-        console.log('✅ Template activity synced successfully to database');
+
         toast.success('Activity logged successfully');
         
         // Refresh activity data to get latest from database
         const activeContacts = getActiveContacts;
         const contactIds = activeContacts.map(c => c.id);
+        
         if (contactIds.length > 0) {
-          fetchActivitiesForContacts(contactIds);
+          await fetchActivitiesForContacts(contactIds);
         }
         
         // Remove from optimistic state after successful sync and data refresh
@@ -265,7 +346,7 @@ export const useOptimisticFollowUpCalculations = (
         }, 1000); // Short delay to show success and allow data refresh
       }
     } catch (error) {
-      console.error('❌ Error syncing template activity:', error);
+      console.error('💥 [POST] Exception syncing activity:', error instanceof Error ? error.message : String(error));
       toast.error('Failed to log activity');
     }
   }, [user, getActiveContacts, fetchActivitiesForContacts]);
@@ -274,7 +355,10 @@ export const useOptimisticFollowUpCalculations = (
    * Add optimistic activity to specific contact and sync to backend
    */
   const addOptimisticActivityToContact = useCallback((contactId: string, activity: Omit<OptimisticActivity, 'id' | 'isOptimistic' | 'localTimestamp' | 'contact_id'>) => {
-    if (!isValidContacts || !user) return null;
+    if (!isValidContacts || !user) {
+
+      return null;
+    }
     
     const optimisticActivity: OptimisticActivity = {
       ...activity,
@@ -285,12 +369,13 @@ export const useOptimisticFollowUpCalculations = (
       user_id: user.id
     };
 
-    console.log('➕ Adding optimistic template activity:', optimisticActivity);
+
 
     // Add to optimistic state immediately for instant UI feedback
     setOptimisticActivities(prev => {
       const existingActivities = prev[contactId] || [];
       const updatedActivities: OptimisticActivity[] = [...existingActivities, optimisticActivity];
+      
       return {
         ...prev,
         [contactId]: updatedActivities
@@ -311,8 +396,26 @@ export const useOptimisticFollowUpCalculations = (
     return optimisticActivity;
   }, [isValidContacts, user, syncActivityToBackend]);
 
+  // Refresh function to manually trigger data refresh
+  const refreshFollowUpData = useCallback(() => {
+    const activeContacts = getActiveContacts;
+    const contactIds = activeContacts.map(c => c.id);
+    
+    if (contactIds.length > 0) {
+      setIsCalculationReady(false);
+      fetchActivitiesForContacts(contactIds);
+    }
+  }, [getActiveContacts, fetchActivitiesForContacts]);
+
+
+
+  // Calculate final loading state
+  const finalLoadingState = loading || !isCalculationReady || isCalculating;
+
   return {
     ...calculations,
+    loading: finalLoadingState,
     addOptimisticActivityToContact,
+    refreshFollowUpData,
   };
 };

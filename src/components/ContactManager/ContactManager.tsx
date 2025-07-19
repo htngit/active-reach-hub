@@ -5,9 +5,12 @@ import { ContactDetail } from './ContactDetail';
 import { AddContactForm } from './AddContactForm';
 import { MessageTemplates } from './MessageTemplates';
 import { FollowUpTabs } from './FollowUpTabs';
+import { FollowUpTabsPaginated } from './FollowUpTabsPaginated';
 import { EmailVerificationBanner } from '../Auth/EmailVerificationBanner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, MessageSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Users, Calendar, MessageSquare, Zap, Settings } from 'lucide-react';
 
 interface Contact {
   id: string;
@@ -29,6 +32,9 @@ export const ContactManager = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  
+  // Feature flag for paginated follow-ups (default: true for better performance)
+  const [usePaginatedFollowUps, setUsePaginatedFollowUps] = useState(true);
 
   const handleContactSelect = (contact: Contact) => {
     setSelectedContact(contact);
@@ -105,7 +111,42 @@ export const ContactManager = () => {
             </TabsContent>
 
             <TabsContent value="follow-up" className="max-w-full">
-              <FollowUpTabs onSelectContact={handleContactSelect} />
+              <div className="space-y-4">
+                {/* Performance Mode Toggle */}
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <h3 className="font-medium">Performance Mode</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {usePaginatedFollowUps 
+                          ? 'Optimized for large contact lists (50 contacts per page)' 
+                          : 'Standard mode (all contacts loaded)'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={usePaginatedFollowUps ? 'default' : 'secondary'}>
+                      {usePaginatedFollowUps ? 'Optimized' : 'Standard'}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUsePaginatedFollowUps(!usePaginatedFollowUps)}
+                    >
+                      <Settings className="h-4 w-4 mr-1" />
+                      Switch
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Follow-up Component */}
+                {usePaginatedFollowUps ? (
+                  <FollowUpTabsPaginated onSelectContact={handleContactSelect} />
+                ) : (
+                  <FollowUpTabs onSelectContact={handleContactSelect} />
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="templates" className="max-w-full">

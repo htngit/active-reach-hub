@@ -112,7 +112,6 @@ export const FollowUpTabs: React.FC<FollowUpTabsProps> = ({ onSelectContact }) =
   const handleTemplateMessage = (contact: FollowUpContact, templateTitle: string, variationNumber: number) => {
     // Add optimistic activity immediately for instant UI update
     addOptimisticActivityToContact(contact.id, {
-      contact_id: contact.id,
       type: 'WhatsApp Follow-Up via Template',
       details: `Template: "${templateTitle}" (Variation ${variationNumber})`,
       timestamp: new Date().toISOString(),

@@ -61,6 +61,8 @@ interface TemplateSelectionModalProps {
   children: React.ReactNode;
   usePreloadedCache?: boolean;
   onTemplateUsed?: (templateTitle: string, variationNumber: number) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
@@ -68,12 +70,18 @@ export const TemplateSelectionModal: React.FC<TemplateSelectionModalProps> = ({
   children,
   usePreloadedCache = false,
   onTemplateUsed,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
 }) => {
   const [templateSets, setTemplateSets] = useState<MessageTemplateSet[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [cacheInfo, setCacheInfo] = useState<{ fromCache: boolean; cacheStats?: any }>({ fromCache: false });
+  
+  // Use external open state if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange || setInternalOpen;
   const { user } = useAuth();
   const { 
     validateSingleContactAccess, 

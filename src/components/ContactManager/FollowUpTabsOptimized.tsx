@@ -28,6 +28,7 @@ import { Contact } from '@/types/contact';
 import { useTemplateCacheDB } from '@/hooks/useTemplateCacheDB';
 import { type CatchError, getErrorMessage } from '@/utils/errorTypes';
 import { Pagination } from './Pagination';
+import { useOptimisticFollowUpCalculations } from '@/hooks/useOptimisticFollowUpCalculations';
 
 // Extended contact interface for follow-up specific data
 interface FollowUpContact extends Contact {
@@ -39,11 +40,6 @@ interface FollowUpTabsOptimizedProps {
 }
 
 export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ onSelectContact }) => {
-  const [needsApproach, setNeedsApproach] = useState<FollowUpContact[]>([]);
-  const [stale3Days, setStale3Days] = useState<FollowUpContact[]>([]);
-  const [stale7Days, setStale7Days] = useState<FollowUpContact[]>([]);
-  const [stale30Days, setStale30Days] = useState<FollowUpContact[]>([]);
-  const [loading, setLoading] = useState(true);
   const [needsApproachCurrentPage, setNeedsApproachCurrentPage] = useState(1);
   const [stale3DaysCurrentPage, setStale3DaysCurrentPage] = useState(1);
   const [stale7DaysCurrentPage, setStale7DaysCurrentPage] = useState(1);
@@ -55,11 +51,22 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [cacheStats, setCacheStats] = useState({ cacheSize: 0, hitRate: 0, lastRefresh: null as string | null });
   
-  // Templates loading state (removed preloaded templates due to type conflicts)
-  const [templatesLoading, setTemplatesLoading] = useState(true);
-  
   // Use cached contacts instead of direct database queries
   const { contacts, loading: contactsLoading, error: contactsError } = useCachedContacts();
+  
+  // Use optimistic follow-up calculations
+  const {
+    needsApproach,
+    stale3Days,
+    stale7Days,
+    stale30Days,
+    loading: followUpLoading,
+    refreshFollowUpData
+  } = useOptimisticFollowUpCalculations(contacts, selectedLabels);
+
+  // Debug logging removed - using hook's internal logging
+  
+
   
   // Database cache hook (no blocking preload)
   const { refreshCacheInBackground, getCacheStats, getAllTemplates } = useTemplateCacheDB();
@@ -87,95 +94,13 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
     }
   }, [user, contacts]);
 
-  const fetchFollowUpContacts = useCallback(async () => {
-    if (!user || contactsLoading) return;
 
-    try {
-      setLoading(true);
-      
-      // Filter contacts based on selected labels if any
-      let filteredContacts = contacts;
-      if (selectedLabels.length > 0) {
-        filteredContacts = contacts.filter(contact => 
-          contact.labels && contact.labels.some(label => selectedLabels.includes(label))
-        );
-      }
-
-      // Get engagements for all contacts to determine last activity
-      const contactIds = filteredContacts.map(c => c.id);
-      
-      let engagementsData: { contact_id: string; created_at: string }[] = [];
-      if (contactIds.length > 0) {
-        const { data, error } = await supabase
-          .from('engagements')
-          .select('contact_id, created_at')
-          .in('contact_id', contactIds)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        engagementsData = data || [];
-      }
-
-      // Create a map of contact_id to last engagement date
-      const lastEngagementMap = new Map<string, string>();
-      engagementsData.forEach(engagement => {
-        if (!lastEngagementMap.has(engagement.contact_id)) {
-          lastEngagementMap.set(engagement.contact_id, engagement.created_at);
-        }
-      });
-
-      // Categorize contacts
-      const now = new Date();
-      const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-      const needsApproachList: FollowUpContact[] = [];
-      const stale3DaysList: FollowUpContact[] = [];
-      const stale7DaysList: FollowUpContact[] = [];
-      const stale30DaysList: FollowUpContact[] = [];
-
-      filteredContacts.forEach(contact => {
-        const lastEngagement = lastEngagementMap.get(contact.id);
-        const contactWithActivity: FollowUpContact = {
-          ...contact,
-          last_activity: lastEngagement || null
-        };
-
-        if (!lastEngagement) {
-          needsApproachList.push(contactWithActivity);
-        } else {
-          const lastEngagementDate = new Date(lastEngagement);
-          if (lastEngagementDate < thirtyDaysAgo) {
-            stale30DaysList.push(contactWithActivity);
-          } else if (lastEngagementDate < sevenDaysAgo) {
-            stale7DaysList.push(contactWithActivity);
-          } else if (lastEngagementDate < threeDaysAgo) {
-            stale3DaysList.push(contactWithActivity);
-          }
-        }
-      });
-
-      setNeedsApproach(needsApproachList);
-      setStale3Days(stale3DaysList);
-      setStale7Days(stale7DaysList);
-      setStale30Days(stale30DaysList);
-      setNeedsApproachCurrentPage(1);
-      setStale3DaysCurrentPage(1);
-      setStale7DaysCurrentPage(1);
-      setStale30DaysCurrentPage(1);
-    } catch (error: CatchError) {
-      console.error('Error fetching follow-up contacts:', getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
-  }, [user, contacts, contactsLoading, selectedLabels]);
 
   // Callback to refresh categorization after engagement creation
   const handleEngagementCreated = useCallback(() => {
     // Force refresh of contact categorization
-    fetchFollowUpContacts();
-  }, [fetchFollowUpContacts]);
+    refreshFollowUpData();
+  }, [refreshFollowUpData]);
 
   const paginateNeedsApproach = (pageNumber: number) => setNeedsApproachCurrentPage(pageNumber);
   const paginateStale3Days = (pageNumber: number) => setStale3DaysCurrentPage(pageNumber);
@@ -190,16 +115,7 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
     );
   };
 
-  useEffect(() => {
-    if (!contactsLoading) {
-      if (contacts.length > 0) {
-        fetchFollowUpContacts();
-      } else {
-        // No contacts available, stop loading
-        setLoading(false);
-      }
-    }
-  }, [contacts, contactsLoading, user, selectedLabels, fetchFollowUpContacts]);
+
   
   useEffect(() => {
     fetchLabels();
@@ -305,16 +221,12 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
   );
 
   // Show loading only for contacts, not for templates
-  if (loading || contactsLoading) {
+  if (followUpLoading || contactsLoading) {
     return <div className="p-4">Loading follow-up data...</div>;
   }
 
   if (contactsError) {
-    return (
-      <div className="p-4">
-        <div className="text-red-600">Error loading contacts: {contactsError}</div>
-      </div>
-    );
+    return <div className="p-4 text-red-500">Error loading contacts: {contactsError.message}</div>;
   }
 
   return (
@@ -376,11 +288,25 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
 
         <TabsContent value="needs-approach" className="space-y-4">
           <div className="text-sm text-gray-600 mb-4">
-            Contacts that have never been approached
+            Contacts that need initial approach ({needsApproach.length} total)
+            {selectedLabels.length > 0 && (
+              <div className="text-xs text-orange-600 mt-1 p-2 bg-orange-50 rounded flex items-center justify-between">
+                <span>⚠️ FILTERED BY LABELS: {selectedLabels.join(', ')} - Showing only contacts with these labels</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setSelectedLabels([])} 
+                  className="ml-2 h-6 px-2 text-xs"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+
           </div>
           {needsApproach.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No contacts need initial approach!
+              Great! All contacts have been approached.
             </div>
           ) : (
             <>
@@ -405,7 +331,20 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
 
         <TabsContent value="stale-3" className="space-y-4">
           <div className="text-sm text-gray-600 mb-4">
-            Contacts last contacted more than 3 days ago
+            Contacts last contacted more than 3 days ago ({stale3Days.length} total)
+            {selectedLabels.length > 0 && (
+              <div className="text-xs text-orange-600 mt-1 p-2 bg-orange-50 rounded flex items-center justify-between">
+                <span>⚠️ FILTERED BY LABELS: {selectedLabels.join(', ')}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setSelectedLabels([])} 
+                  className="ml-2 h-6 px-2 text-xs"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
           {stale3Days.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -434,7 +373,20 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
 
         <TabsContent value="stale-7" className="space-y-4">
           <div className="text-sm text-gray-600 mb-4">
-            Contacts last contacted more than 7 days ago
+            Contacts last contacted more than 7 days ago ({stale7Days.length} total)
+            {selectedLabels.length > 0 && (
+              <div className="text-xs text-orange-600 mt-1 p-2 bg-orange-50 rounded flex items-center justify-between">
+                <span>⚠️ FILTERED BY LABELS: {selectedLabels.join(', ')}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setSelectedLabels([])} 
+                  className="ml-2 h-6 px-2 text-xs"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
           {stale7Days.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -463,7 +415,20 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
 
         <TabsContent value="stale-30" className="space-y-4">
           <div className="text-sm text-gray-600 mb-4">
-            Contacts last contacted more than 30 days ago
+            Contacts last contacted more than 30 days ago ({stale30Days.length} total)
+            {selectedLabels.length > 0 && (
+              <div className="text-xs text-orange-600 mt-1 p-2 bg-orange-50 rounded flex items-center justify-between">
+                <span>⚠️ FILTERED BY LABELS: {selectedLabels.join(', ')}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setSelectedLabels([])} 
+                  className="ml-2 h-6 px-2 text-xs"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
           {stale30Days.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
