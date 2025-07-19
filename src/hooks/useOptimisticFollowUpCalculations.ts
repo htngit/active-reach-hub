@@ -249,19 +249,26 @@ export const useOptimisticFollowUpCalculations = (
         console.log('✅ Template activity synced successfully to database');
         toast.success('Activity logged successfully');
         
-        // Remove from optimistic state after successful sync
+        // Refresh activity data to get latest from database
+        const activeContacts = getActiveContacts;
+        const contactIds = activeContacts.map(c => c.id);
+        if (contactIds.length > 0) {
+          fetchActivitiesForContacts(contactIds);
+        }
+        
+        // Remove from optimistic state after successful sync and data refresh
         setTimeout(() => {
           setOptimisticActivities(prev => ({
             ...prev,
             [optimisticActivity.contact_id]: (prev[optimisticActivity.contact_id] || []).filter(a => a.id !== optimisticActivity.id)
           }));
-        }, 1000); // Short delay to show success
+        }, 1000); // Short delay to show success and allow data refresh
       }
     } catch (error) {
       console.error('❌ Error syncing template activity:', error);
       toast.error('Failed to log activity');
     }
-  }, [user]);
+  }, [user, getActiveContacts, fetchActivitiesForContacts]);
 
   /**
    * Add optimistic activity to specific contact and sync to backend
