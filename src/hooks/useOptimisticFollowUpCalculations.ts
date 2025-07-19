@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Contact } from '@/types/contact';
+import { toast } from 'sonner';
 
 // Import OptimisticActivity interface from useOptimisticActivities
 interface OptimisticActivity {
@@ -213,29 +214,86 @@ export const useOptimisticFollowUpCalculations = (
   }, [calculateFollowUps]);
 
   /**
-   * Add optimistic activity to specific contact
+   * Sync optimistic activity to backend database
+   */
+  const syncActivityToBackend = useCallback(async (optimisticActivity: OptimisticActivity) => {
+    if (!user) return;
+    
+    try {
+      console.log('🔄 Syncing template activity to backend:', optimisticActivity);
+      
+      const { error: activityError } = await supabase
+        .from('activities')
+        .insert({
+          contact_id: optimisticActivity.contact_id,
+          user_id: optimisticActivity.user_id,
+          type: optimisticActivity.type,
+          details: optimisticActivity.details,
+          timestamp: optimisticActivity.timestamp,
+        });
+
+      if (activityError) {
+        console.error('❌ Failed to sync template activity:', activityError);
+        toast.error('Failed to log activity to database');
+        
+        // Mark as failed in optimistic state
+        setOptimisticActivities(prev => ({
+          ...prev,
+          [optimisticActivity.contact_id]: (prev[optimisticActivity.contact_id] || []).map(opt => 
+            opt.id === optimisticActivity.id 
+              ? { ...opt, api_call_status: 'failed' }
+              : opt
+          )
+        }));
+      } else {
+        console.log('✅ Template activity synced successfully to database');
+        toast.success('Activity logged successfully');
+        
+        // Remove from optimistic state after successful sync
+        setTimeout(() => {
+          setOptimisticActivities(prev => ({
+            ...prev,
+            [optimisticActivity.contact_id]: (prev[optimisticActivity.contact_id] || []).filter(a => a.id !== optimisticActivity.id)
+          }));
+        }, 1000); // Short delay to show success
+      }
+    } catch (error) {
+      console.error('❌ Error syncing template activity:', error);
+      toast.error('Failed to log activity');
+    }
+  }, [user]);
+
+  /**
+   * Add optimistic activity to specific contact and sync to backend
    */
   const addOptimisticActivityToContact = useCallback((contactId: string, activity: Omit<OptimisticActivity, 'id' | 'isOptimistic' | 'localTimestamp' | 'contact_id'>) => {
-    if (!isValidContacts) return null;
+    if (!isValidContacts || !user) return null;
     
-    const optimisticActivity = {
+    const optimisticActivity: OptimisticActivity = {
       ...activity,
       id: `optimistic-${Date.now()}-${Math.random()}`,
       isOptimistic: true,
       localTimestamp: Date.now(),
-      contact_id: contactId
+      contact_id: contactId,
+      user_id: user.id
     };
 
+    console.log('➕ Adding optimistic template activity:', optimisticActivity);
+
+    // Add to optimistic state immediately for instant UI feedback
     setOptimisticActivities(prev => {
       const existingActivities = prev[contactId] || [];
-      const updatedActivities: OptimisticActivity[] = [...existingActivities, optimisticActivity as OptimisticActivity];
+      const updatedActivities: OptimisticActivity[] = [...existingActivities, optimisticActivity];
       return {
         ...prev,
         [contactId]: updatedActivities
       };
     });
 
-    // Auto-remove optimistic activity after 30 seconds
+    // Sync to backend database
+    syncActivityToBackend(optimisticActivity);
+
+    // Fallback: Auto-remove optimistic activity after 30 seconds if sync fails
     setTimeout(() => {
       setOptimisticActivities(prev => ({
         ...prev,
@@ -244,7 +302,7 @@ export const useOptimisticFollowUpCalculations = (
     }, 30000);
 
     return optimisticActivity;
-  }, [isValidContacts]);
+  }, [isValidContacts, user, syncActivityToBackend]);
 
   return {
     ...calculations,
