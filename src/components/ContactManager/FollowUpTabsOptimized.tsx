@@ -12,7 +12,7 @@
  * - Optimal user experience
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,6 +26,8 @@ import { useCachedContacts } from '@/hooks/useCachedContacts';
 import { ContactLabelFilter } from './ContactLabelFilter';
 import { Contact } from '@/types/contact';
 import { useTemplateCacheDB } from '@/hooks/useTemplateCacheDB';
+import { type CatchError, getErrorMessage } from '@/utils/errorTypes';
+import { Pagination } from './Pagination';
 
 // Extended contact interface for follow-up specific data
 interface FollowUpContact extends Contact {
@@ -42,42 +44,32 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
   const [stale7Days, setStale7Days] = useState<FollowUpContact[]>([]);
   const [stale30Days, setStale30Days] = useState<FollowUpContact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [needsApproachCurrentPage, setNeedsApproachCurrentPage] = useState(1);
+  const [stale3DaysCurrentPage, setStale3DaysCurrentPage] = useState(1);
+  const [stale7DaysCurrentPage, setStale7DaysCurrentPage] = useState(1);
+  const [stale30DaysCurrentPage, setStale30DaysCurrentPage] = useState(1);
+  const contactsPerPage = 50; // Max 50 contacts per page
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('needs-approach');
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [cacheStats, setCacheStats] = useState({ cacheSize: 0, hitRate: 0, lastRefresh: null as string | null });
   
+  // Templates loading state (removed preloaded templates due to type conflicts)
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  
   // Use cached contacts instead of direct database queries
   const { contacts, loading: contactsLoading, error: contactsError } = useCachedContacts();
   
   // Database cache hook (no blocking preload)
-  const { refreshCacheInBackground, getCacheStats } = useTemplateCacheDB();
+  const { refreshCacheInBackground, getCacheStats, getAllTemplates } = useTemplateCacheDB();
 
-  useEffect(() => {
-    if (!contactsLoading && contacts.length >= 0) {
-      fetchFollowUpContacts();
-    }
-  }, [contacts, contactsLoading, user, selectedLabels]);
-  
-  useEffect(() => {
-    fetchLabels();
-  }, [user]);
-  
-  // Load cache stats and start background refresh (non-blocking)
-  useEffect(() => {
-    if (user) {
-      // Load cache stats
-      getCacheStats().then(setCacheStats);
-      
-      // Start background cache refresh (non-blocking)
-      refreshCacheInBackground().catch(error => {
-        console.error('Background cache refresh failed:', error);
-      });
-    }
-  }, [user, getCacheStats, refreshCacheInBackground]);
-  
-  const fetchLabels = async () => {
+  // Template loading is now handled by TemplateSelectionModalOptimized component
+  // using its internal cache mechanism for better performance
+
+
+
+  const fetchLabels = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -90,24 +82,12 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
       });
       
       setAvailableLabels(Array.from(allContactLabels).sort());
-    } catch (error: any) {
-      console.error('Error fetching labels:', error);
+    } catch (error: CatchError) {
+      console.error('Error fetching labels:', getErrorMessage(error));
     }
-  };
+  }, [user, contacts]);
 
-  const toggleLabelFilter = (label: string) => {
-    setSelectedLabels(prev => 
-      prev.includes(label) 
-        ? prev.filter(l => l !== label)
-        : [...prev, label]
-    );
-  };
-
-  const handleLabelsChanged = (labels: string[]) => {
-    setSelectedLabels(labels);
-  };
-
-  const fetchFollowUpContacts = async () => {
+  const fetchFollowUpContacts = useCallback(async () => {
     if (!user || contactsLoading) return;
 
     try {
@@ -124,7 +104,7 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
       // Get engagements for all contacts to determine last activity
       const contactIds = filteredContacts.map(c => c.id);
       
-      let engagementsData: any[] = [];
+      let engagementsData: { contact_id: string; created_at: string }[] = [];
       if (contactIds.length > 0) {
         const { data, error } = await supabase
           .from('engagements')
@@ -159,40 +139,86 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
         const lastEngagement = lastEngagementMap.get(contact.id);
         const contactWithActivity: FollowUpContact = {
           ...contact,
-          last_activity: lastEngagement
+          last_activity: lastEngagement || null
         };
 
         if (!lastEngagement) {
-          // Never been contacted - needs approach
           needsApproachList.push(contactWithActivity);
         } else {
-          const lastActivityDate = new Date(lastEngagement);
-          
-          if (lastActivityDate < thirtyDaysAgo) {
+          const lastEngagementDate = new Date(lastEngagement);
+          if (lastEngagementDate < thirtyDaysAgo) {
             stale30DaysList.push(contactWithActivity);
-          } else if (lastActivityDate < sevenDaysAgo) {
+          } else if (lastEngagementDate < sevenDaysAgo) {
             stale7DaysList.push(contactWithActivity);
-          } else if (lastActivityDate < threeDaysAgo) {
+          } else if (lastEngagementDate < threeDaysAgo) {
             stale3DaysList.push(contactWithActivity);
           }
         }
       });
-      
+
       setNeedsApproach(needsApproachList);
       setStale3Days(stale3DaysList);
       setStale7Days(stale7DaysList);
       setStale30Days(stale30DaysList);
-    } catch (error: any) {
-      console.error('Error fetching follow-up contacts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch follow-up contacts",
-        variant: "destructive",
-      });
+      setNeedsApproachCurrentPage(1);
+      setStale3DaysCurrentPage(1);
+      setStale7DaysCurrentPage(1);
+      setStale30DaysCurrentPage(1);
+    } catch (error: CatchError) {
+      console.error('Error fetching follow-up contacts:', getErrorMessage(error));
     } finally {
       setLoading(false);
     }
+  }, [user, contacts, contactsLoading, selectedLabels]);
+
+  // Callback to refresh categorization after engagement creation
+  const handleEngagementCreated = useCallback(() => {
+    // Force refresh of contact categorization
+    fetchFollowUpContacts();
+  }, [fetchFollowUpContacts]);
+
+  const paginateNeedsApproach = (pageNumber: number) => setNeedsApproachCurrentPage(pageNumber);
+  const paginateStale3Days = (pageNumber: number) => setStale3DaysCurrentPage(pageNumber);
+  const paginateStale7Days = (pageNumber: number) => setStale7DaysCurrentPage(pageNumber);
+  const paginateStale30Days = (pageNumber: number) => setStale30DaysCurrentPage(pageNumber);
+
+  const toggleLabelFilter = (label: string) => {
+    setSelectedLabels(prev => 
+      prev.includes(label) 
+        ? prev.filter(l => l !== label)
+        : [...prev, label]
+    );
   };
+
+  useEffect(() => {
+    if (!contactsLoading) {
+      if (contacts.length > 0) {
+        fetchFollowUpContacts();
+      } else {
+        // No contacts available, stop loading
+        setLoading(false);
+      }
+    }
+  }, [contacts, contactsLoading, user, selectedLabels, fetchFollowUpContacts]);
+  
+  useEffect(() => {
+    fetchLabels();
+  }, [fetchLabels]);
+  
+  // Templates are now loaded on-demand by TemplateSelectionModalOptimized
+  
+  // Load cache stats and start background refresh (non-blocking)
+  useEffect(() => {
+    if (user) {
+      // Load cache stats
+      getCacheStats().then(setCacheStats);
+      
+      // Start background cache refresh (non-blocking)
+      refreshCacheInBackground().catch(error => {
+        console.error('Background cache refresh failed:', error);
+      });
+    }
+  }, [user, getCacheStats, refreshCacheInBackground]);
 
   const handleRefreshCache = async () => {
     try {
@@ -262,7 +288,10 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
               </div>
             )}
             <div className="flex gap-1">
-              <TemplateSelectionModalOptimized contact={contact}>
+              <TemplateSelectionModalOptimized 
+              contact={contact}
+              onEngagementCreated={handleEngagementCreated}
+            >
                 <Button variant="outline" size="sm">
                   <MessageCircle className="h-3 w-3 mr-1" />
                   Template Follow Up
@@ -314,7 +343,7 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
         availableLabels={availableLabels}
         selectedLabels={selectedLabels}
         onToggleLabel={toggleLabelFilter}
-        onLabelsChanged={handleLabelsChanged}
+        onLabelsChanged={() => {}}
       />
       
       <Tabs defaultValue="needs-approach" onValueChange={setActiveTab} className="w-full">
@@ -354,7 +383,23 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
               No contacts need initial approach!
             </div>
           ) : (
-            needsApproach.map(contact => <ContactCard key={contact.id} contact={contact} />)
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {needsApproach.slice((needsApproachCurrentPage - 1) * contactsPerPage, needsApproachCurrentPage * contactsPerPage).map(contact => (
+                  <ContactCard key={contact.id} contact={contact} />
+                ))}
+              </div>
+              {needsApproach.length > contactsPerPage && (
+                <div className="flex justify-center mt-4">
+                  <Pagination
+                    contactsPerPage={contactsPerPage}
+                    totalContacts={needsApproach.length}
+                    paginate={paginateNeedsApproach}
+                    currentPage={needsApproachCurrentPage}
+                  />
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -367,7 +412,23 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
               No stale contacts in this timeframe!
             </div>
           ) : (
-            stale3Days.map(contact => <ContactCard key={contact.id} contact={contact} />)
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {stale3Days.slice((stale3DaysCurrentPage - 1) * contactsPerPage, stale3DaysCurrentPage * contactsPerPage).map(contact => (
+                  <ContactCard key={contact.id} contact={contact} />
+                ))}
+              </div>
+              {stale3Days.length > contactsPerPage && (
+                <div className="flex justify-center mt-4">
+                  <Pagination
+                    contactsPerPage={contactsPerPage}
+                    totalContacts={stale3Days.length}
+                    paginate={paginateStale3Days}
+                    currentPage={stale3DaysCurrentPage}
+                  />
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -380,7 +441,23 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
               No stale contacts in this timeframe!
             </div>
           ) : (
-            stale7Days.map(contact => <ContactCard key={contact.id} contact={contact} />)
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {stale7Days.slice((stale7DaysCurrentPage - 1) * contactsPerPage, stale7DaysCurrentPage * contactsPerPage).map(contact => (
+                  <ContactCard key={contact.id} contact={contact} />
+                ))}
+              </div>
+              {stale7Days.length > contactsPerPage && (
+                <div className="flex justify-center mt-4">
+                  <Pagination
+                    contactsPerPage={contactsPerPage}
+                    totalContacts={stale7Days.length}
+                    paginate={paginateStale7Days}
+                    currentPage={stale7DaysCurrentPage}
+                  />
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -393,7 +470,23 @@ export const FollowUpTabsOptimized: React.FC<FollowUpTabsOptimizedProps> = ({ on
               No stale contacts in this timeframe!
             </div>
           ) : (
-            stale30Days.map(contact => <ContactCard key={contact.id} contact={contact} />)
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {stale30Days.slice((stale30DaysCurrentPage - 1) * contactsPerPage, stale30DaysCurrentPage * contactsPerPage).map(contact => (
+                  <ContactCard key={contact.id} contact={contact} />
+                ))}
+              </div>
+              {stale30Days.length > contactsPerPage && (
+                <div className="flex justify-center mt-4">
+                  <Pagination
+                    contactsPerPage={contactsPerPage}
+                    totalContacts={stale30Days.length}
+                    paginate={paginateStale30Days}
+                    currentPage={stale30DaysCurrentPage}
+                  />
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>

@@ -15,11 +15,13 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserMetadata } from './useUserMetadata';
 import { toast } from '@/hooks/use-toast';
+import { type CatchError, getErrorMessage } from '@/utils/errorTypes';
 
-interface MessageTemplateSet {
+export interface MessageTemplateSet {
   id: string;
   title: string;
   associated_label_id: string;
@@ -31,7 +33,7 @@ interface MessageTemplateSet {
   updated_at: string;
 }
 
-interface Label {
+export interface Label {
   id: string;
   name: string;
   user_id: string;
@@ -51,6 +53,7 @@ interface UseTemplateCacheDBReturn {
     fromCache: boolean;
     loadTime: number;
   }>;
+  getAllTemplates: () => Promise<MessageTemplateSet[]>;
   refreshCacheInBackground: () => Promise<void>;
   clearCache: () => Promise<void>;
   getCacheStats: () => Promise<{
@@ -115,12 +118,12 @@ export const useTemplateCacheDB = (): UseTemplateCacheDBReturn => {
       }
       
       // Check metadata version
-      if (metadata && data.metadata_version < metadata.cache_version) {
+      if (metadata && parseInt(data.metadata_version) < metadata.cache_version) {
         // Cache invalidated by metadata change
         return null;
       }
       
-      return data.cache_data as CacheData;
+      return data.cache_data as unknown as CacheData;
       
     } catch (error) {
       console.error('Error getting cache from DB:', error);
@@ -140,8 +143,9 @@ export const useTemplateCacheDB = (): UseTemplateCacheDBReturn => {
         .upsert({
           user_id: user.id,
           cache_key: cacheKey,
-          cache_data: cacheData,
-          metadata_version: metadata?.cache_version || 1
+          cache_data: cacheData as unknown as Json,
+          metadata_version: String(metadata?.cache_version || 1),
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
         });
       
       if (error) {
@@ -195,8 +199,8 @@ export const useTemplateCacheDB = (): UseTemplateCacheDBReturn => {
         labels: matchingLabels
       };
       
-    } catch (error: any) {
-      console.error('Error fetching templates from database:', error);
+    } catch (error: CatchError) {
+      console.error('Error fetching templates from database:', getErrorMessage(error));
       throw error;
     }
   }, [user?.id]);
@@ -266,8 +270,8 @@ export const useTemplateCacheDB = (): UseTemplateCacheDBReturn => {
         loadTime
       };
       
-    } catch (error: any) {
-      console.error('Error getting templates for contact:', error);
+    } catch (error: CatchError) {
+      console.error('Error getting templates for contact:', getErrorMessage(error));
       toast({
         title: "Error",
         description: "Failed to load templates",
@@ -303,7 +307,7 @@ export const useTemplateCacheDB = (): UseTemplateCacheDBReturn => {
         if (recentCacheEntries && recentCacheEntries.length > 0) {
           // Refresh the most used cache entries
           for (const entry of recentCacheEntries.slice(0, 5)) {
-            const cacheData = entry.cache_data as CacheData;
+            const cacheData = entry.cache_data as unknown as CacheData;
             if (cacheData.contactLabels) {
               try {
                 const { templates, labels } = await fetchTemplatesFromDatabase(cacheData.contactLabels);
@@ -358,6 +362,27 @@ export const useTemplateCacheDB = (): UseTemplateCacheDBReturn => {
   }, [user?.id]);
   
   /**
+   * Gets all user templates for preloading
+   */
+  const getAllTemplates = useCallback(async (): Promise<MessageTemplateSet[]> => {
+    if (!user?.id) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('message_template_sets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching all templates:', error);
+      return [];
+    }
+  }, [user?.id]);
+
+  /**
    * Gets cache statistics
    */
   const getCacheStats = useCallback(async (): Promise<{
@@ -409,6 +434,7 @@ export const useTemplateCacheDB = (): UseTemplateCacheDBReturn => {
   
   return {
     getTemplatesForContact,
+    getAllTemplates,
     refreshCacheInBackground,
     clearCache,
     getCacheStats,

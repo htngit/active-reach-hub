@@ -12,7 +12,7 @@
  * - Optimal user experience
  */
 
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, useCallback, ReactNode } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -30,11 +30,35 @@ import { Separator } from '@/components/ui/separator';
 import { MessageCircle, Send, Clock, Database, Zap } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Contact } from '@/types/contact';
-import { useTemplateCacheDB } from '@/hooks/useTemplateCacheDB';
+import { useTemplateCacheDB, type MessageTemplateSet } from '@/hooks/useTemplateCacheDB';
+
+// Utility function to extract variables from template content
+const extractVariables = (content: string): string[] => {
+  const variableRegex = /\{\{(\w+)\}\}/g;
+  const variables: string[] = [];
+  let match;
+  
+  while ((match = variableRegex.exec(content)) !== null) {
+    if (!variables.includes(match[1])) {
+      variables.push(match[1]);
+    }
+  }
+  
+  return variables;
+};
+
+// Local Label interface for Supabase data (without user_id)
+interface LocalLabel {
+  id: string;
+  name: string;
+  color: string | null;
+}
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { type CatchError, getErrorMessage } from '@/utils/errorTypes';
 
-interface MessageTemplateSet {
+// Interface for transformed template set to match component expectations
+interface TransformedTemplateSet {
   id: string;
   name: string;
   description?: string;
@@ -50,24 +74,41 @@ interface MessageTemplateSet {
   updated_at: string;
 }
 
-interface Label {
+// Supabase query result types - sesuai dengan skema database sebenarnya
+interface SupabaseTemplateSet {
   id: string;
-  name: string;
-  color?: string;
+  title: string; // menggunakan 'title' bukan 'name'
+  associated_label_id: string;
+  template_variation_1: string;
+  template_variation_2: string;
+  template_variation_3: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  // Joined data dari labels table
+  labels?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
 }
 
 interface TemplateSelectionModalOptimizedProps {
   contact: Contact;
   children: ReactNode;
+  preloadedTemplates?: TransformedTemplateSet[];
+  onEngagementCreated?: () => void;
 }
 
 export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOptimizedProps> = ({
   contact,
   children,
+  preloadedTemplates = [],
+  onEngagementCreated,
 }) => {
   const [open, setOpen] = useState(false);
-  const [templateSets, setTemplateSets] = useState<MessageTemplateSet[]>([]);
-  const [labels, setLabels] = useState<Label[]>([]);
+  const [templateSets, setTemplateSets] = useState<TransformedTemplateSet[]>([]);
+  const [labels, setLabels] = useState<LocalLabel[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [customMessage, setCustomMessage] = useState<string>('');
@@ -76,102 +117,133 @@ export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOpt
   
   // Database cache hook
   const { 
-    getTemplatesFromCache, 
+    getTemplatesForContact, 
     getCacheStats, 
     refreshCacheInBackground 
   } = useTemplateCacheDB();
 
-  useEffect(() => {
-    if (open && user) {
-      fetchRelevantTemplateSets();
-    }
-  }, [open, user, contact]);
-
-  const fetchRelevantTemplateSets = async () => {
-    if (!user || !contact) return;
-
-    try {
-      setLoading(true);
-      
-      // Try to get templates from cache first (instant)
-      setLoadingSource('cache');
-      const cacheResult = await getTemplatesFromCache(contact.labels || []);
-      
-      if (cacheResult.success && cacheResult.data) {
-        setTemplateSets(cacheResult.data.templateSets || []);
-        setLabels(cacheResult.data.labels || []);
-        setLoadingSource(null);
-        setLoading(false);
-        
-        // Start background refresh for next time (non-blocking)
-        refreshCacheInBackground().catch(console.error);
-        return;
-      }
-      
-      // Fallback to database if cache miss
-      setLoadingSource('database');
-      await fetchFromDatabase();
-      
-    } catch (error: any) {
-      console.error('Error fetching templates:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load templates",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      setLoadingSource(null);
-    }
+  // Adapter function to convert MessageTemplateSet to TransformedTemplateSet
+  const adaptMessageTemplateSet = (templateSet: MessageTemplateSet): TransformedTemplateSet => {
+    return {
+      id: templateSet.id,
+      name: templateSet.title, // Map title to name
+      description: undefined, // MessageTemplateSet doesn't have description
+      templates: [
+        templateSet.template_variation_1 && {
+          id: `${templateSet.id}_var1`,
+          name: 'Variation 1',
+          content: templateSet.template_variation_1,
+          type: 'sms' as const,
+          variables: undefined
+        },
+        templateSet.template_variation_2 && {
+          id: `${templateSet.id}_var2`,
+          name: 'Variation 2',
+          content: templateSet.template_variation_2,
+          type: 'sms' as const,
+          variables: undefined
+        },
+        templateSet.template_variation_3 && {
+          id: `${templateSet.id}_var3`,
+          name: 'Variation 3',
+          content: templateSet.template_variation_3,
+          type: 'sms' as const,
+          variables: undefined
+        }
+      ].filter((template): template is NonNullable<typeof template> => Boolean(template)),
+      labels: [], // MessageTemplateSet doesn't have direct labels
+      created_at: templateSet.created_at,
+      updated_at: templateSet.updated_at
+    };
   };
 
-  const fetchFromDatabase = async () => {
+  // Declare fetchFromDatabase first to avoid hoisting issues
+  const fetchFromDatabase = useCallback(async () => {
     if (!user) return;
 
     try {
       // Get contact labels for filtering
       const contactLabels = contact.labels || [];
       
-      let query = supabase
+      const query = supabase
         .from('message_template_sets')
         .select(`
           id,
-          name,
-          description,
-          templates:message_templates(
+          title,
+          associated_label_id,
+          template_variation_1,
+          template_variation_2,
+          template_variation_3,
+          user_id,
+          created_at,
+          updated_at,
+          labels:labels!associated_label_id(
             id,
             name,
-            content,
-            type,
-            variables
-          ),
-          labels:message_template_set_labels(
-            label:labels(
-              id,
-              name,
-              color
-            )
-          ),
-          created_at,
-          updated_at
+            color
+          )
         `)
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
       const { data: templateSetsData, error: templateSetsError } = await query;
       
-      if (templateSetsError) throw templateSetsError;
+      if (templateSetsError) {
+        console.error('Error fetching template sets:', templateSetsError);
+        setTemplateSets([]);
+        setLabels([]);
+        return;
+      }
 
-      // Transform the data to match our interface
-      const transformedTemplateSets: MessageTemplateSet[] = (templateSetsData || []).map(set => ({
-        id: set.id,
-        name: set.name,
-        description: set.description,
-        templates: set.templates || [],
-        labels: (set.labels || []).map((l: any) => l.label?.name).filter(Boolean),
-        created_at: set.created_at,
-        updated_at: set.updated_at,
-      }));
+      // Ensure templateSetsData is not null and has proper type
+      if (!templateSetsData || !Array.isArray(templateSetsData)) {
+        setTemplateSets([]);
+        setLabels([]);
+        return;
+      }
+
+      // Transform the data to match our interface with proper typing
+      const transformedTemplateSets: TransformedTemplateSet[] = templateSetsData.map(set => {
+        // Create templates from variations
+        const templates = [];
+        if (set.template_variation_1) {
+          templates.push({
+            id: `${set.id}_var1`,
+            name: 'Variation 1',
+            content: set.template_variation_1,
+            type: 'sms' as const,
+            variables: extractVariables(set.template_variation_1)
+          });
+        }
+        if (set.template_variation_2) {
+          templates.push({
+            id: `${set.id}_var2`,
+            name: 'Variation 2',
+            content: set.template_variation_2,
+            type: 'sms' as const,
+            variables: extractVariables(set.template_variation_2)
+          });
+        }
+        if (set.template_variation_3) {
+          templates.push({
+            id: `${set.id}_var3`,
+            name: 'Variation 3',
+            content: set.template_variation_3,
+            type: 'sms' as const,
+            variables: extractVariables(set.template_variation_3)
+          });
+        }
+
+        return {
+          id: set.id,
+          name: set.title, // menggunakan title sebagai name
+          description: undefined, // tidak ada description di database
+          templates,
+          labels: set.labels ? [set.labels.name] : [], // single label dari join
+          created_at: set.created_at,
+          updated_at: set.updated_at,
+        };
+      });
 
       // Filter template sets based on contact labels if any
       let filteredTemplateSets = transformedTemplateSets;
@@ -198,21 +270,95 @@ export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOpt
       setTemplateSets(filteredTemplateSets);
       setLabels(labelsData || []);
       
-    } catch (error: any) {
-      console.error('Database fetch error:', error);
+    } catch (error: CatchError) {
+      console.error('Database fetch error:', getErrorMessage(error));
       throw error;
     }
-  };
+  }, [user, contact]);
+
+  const fetchRelevantTemplateSets = useCallback(async () => {
+    if (!user || !contact) return;
+
+    try {
+      setLoading(true);
+      
+      // Use preloaded templates for instant filtering (0ms loading)
+      if (preloadedTemplates.length > 0) {
+        const contactLabels = contact.labels || [];
+        
+        // Filter templates based on contact labels
+        let relevantTemplates = preloadedTemplates;
+        if (contactLabels.length > 0) {
+          relevantTemplates = preloadedTemplates.filter(templateSet => 
+            templateSet.labels.some(label => contactLabels.includes(label))
+          );
+        }
+        
+        // If no matching templates, show all templates
+        if (relevantTemplates.length === 0) {
+          relevantTemplates = preloadedTemplates;
+        }
+        
+        setTemplateSets(relevantTemplates);
+        setLoading(false);
+        return;
+      }
+      
+      // Fallback to cache/database if no preloaded templates
+      setLoadingSource('cache');
+      const cacheResult = await getTemplatesForContact(contact.labels || []);
+      
+      if (cacheResult.templates && cacheResult.templates.length > 0) {
+        // Convert MessageTemplateSet[] to TransformedTemplateSet[] using adapter
+        const adaptedTemplateSets = cacheResult.templates.map(adaptMessageTemplateSet);
+        setTemplateSets(adaptedTemplateSets);
+        // Convert Label[] to LocalLabel[]
+        const localLabels: LocalLabel[] = (cacheResult.labels || []).map(label => ({
+          id: label.id,
+          name: label.name,
+          color: null // Label from cache doesn't have color property
+        }));
+        setLabels(localLabels);
+        setLoadingSource(null);
+        setLoading(false);
+        
+        // Start background refresh for next time (non-blocking)
+        refreshCacheInBackground().catch(console.error);
+        return;
+      }
+      
+      // Final fallback to database if cache miss
+      setLoadingSource('database');
+      await fetchFromDatabase();
+      
+    } catch (error: CatchError) {
+      console.error('Error fetching templates:', getErrorMessage(error));
+      toast({
+        title: "Error",
+        description: "Failed to load templates",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setLoadingSource(null);
+    }
+  }, [user, contact, preloadedTemplates, getTemplatesForContact, refreshCacheInBackground, fetchFromDatabase]);
+
+  useEffect(() => {
+    if (open && user) {
+      fetchRelevantTemplateSets();
+    }
+  }, [open, user, contact, fetchRelevantTemplateSets]);
 
   const replaceVariables = (content: string, contact: Contact): string => {
     let processedContent = content;
     
-    // Replace common variables
-    processedContent = processedContent.replace(/\{\{name\}\}/g, contact.name || '');
-    processedContent = processedContent.replace(/\{\{first_name\}\}/g, contact.name?.split(' ')[0] || '');
-    processedContent = processedContent.replace(/\{\{company\}\}/g, contact.company || '');
-    processedContent = processedContent.replace(/\{\{phone\}\}/g, contact.phone_number || '');
-    processedContent = processedContent.replace(/\{\{email\}\}/g, contact.email || '');
+    // Replace common variables with proper string conversion and null checking
+    processedContent = processedContent.replace(/\{\{name\}\}/g, String(contact.name || ''));
+    processedContent = processedContent.replace(/\{\{first_name\}\}/g, String(contact.name?.split(' ')[0] || ''));
+    processedContent = processedContent.replace(/\{\{company\}\}/g, String(contact.company || ''));
+    processedContent = processedContent.replace(/\{\{phone\}\}/g, String(contact.phone_number || ''));
+    processedContent = processedContent.replace(/\{\{email\}\}/g, String(contact.email || ''));
     
     return processedContent;
   };
@@ -239,10 +385,10 @@ export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOpt
         .from('engagements')
         .insert({
           contact_id: contact.id,
-          user_id: user?.id,
-          type: 'template_message',
-          content: customMessage,
-          status: 'sent'
+          created_by: user?.id || '',
+          name: 'Template Follow-up',
+          description: customMessage,
+          status: 'Active'
         });
 
       if (error) throw error;
@@ -253,11 +399,16 @@ export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOpt
         variant: "default",
       });
 
+      // Trigger categorization refresh
+      if (onEngagementCreated) {
+        onEngagementCreated();
+      }
+
       setOpen(false);
       setSelectedTemplate('');
       setCustomMessage('');
-    } catch (error: any) {
-      console.error('Error sending message:', error);
+    } catch (error: CatchError) {
+      console.error('Error sending message:', getErrorMessage(error));
       toast({
         title: "Error",
         description: "Failed to send message",
@@ -401,7 +552,7 @@ export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOpt
                   className="min-h-[300px] resize-none"
                 />
                 <p className="text-xs text-gray-500">
-                  Available variables: {{name}}, {{first_name}}, {{company}}, {{phone}}, {{email}}
+                  Available variables: {'{'}{'{'} name {'}'}{'}'},  {'{'}{'{'} first_name {'}'}{'}'},  {'{'}{'{'} company {'}'}{'}'},  {'{'}{'{'} phone {'}'}{'}'},  {'{'}{'{'} email {'}'}{'}'}  
                 </p>
               </div>
               
@@ -410,7 +561,7 @@ export const TemplateSelectionModalOptimized: React.FC<TemplateSelectionModalOpt
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Preview</label>
                   <div className="p-3 bg-gray-50 rounded border text-sm">
-                    {customMessage}
+                    {replaceVariables(customMessage, contact)}
                   </div>
                 </div>
               )}

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useCachedContacts } from '@/hooks/useCachedContacts';
@@ -10,6 +10,7 @@ import { ContactCacheControls } from './ContactCacheControls';
 import { ContactSearchBar } from './ContactSearchBar';
 import { ContactLabelFilter } from './ContactLabelFilter';
 import { ContactCard } from './ContactCard';
+import { Pagination } from './Pagination';
 import { ContactEmptyState } from './ContactEmptyState';
 import { LabelManager } from './LabelManager';
 import { ActionsDropdown } from './ActionsDropdown';
@@ -40,6 +41,8 @@ export const ContactList: React.FC<ContactListProps> = ({
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const contactsPerPage = 50; // Max 50 contacts per page
   const { user } = useAuth();
   const { getUserNameById } = useUserData();
   
@@ -56,7 +59,7 @@ export const ContactList: React.FC<ContactListProps> = ({
   // Use team data hook
   const { teams, loading: teamsLoading } = useTeamData();
 
-  const fetchLabels = async () => {
+  const fetchLabels = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -68,10 +71,10 @@ export const ContactList: React.FC<ContactListProps> = ({
       if (error) throw error;
       
       setAvailableLabels(data?.map(label => label.name) || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching labels:', error);
     }
-  };
+  }, [user]);
 
   const handleLabelsChanged = () => {
     fetchLabels();
@@ -80,7 +83,7 @@ export const ContactList: React.FC<ContactListProps> = ({
 
   useEffect(() => {
     fetchLabels();
-  }, [user]);
+  }, [user, fetchLabels]);
 
   // Filter contacts based on search term and selected labels only - RLS handles access
   useEffect(() => {
@@ -112,6 +115,7 @@ export const ContactList: React.FC<ContactListProps> = ({
 
     console.log('Final filtered contacts:', filtered.length);
     setFilteredContacts(filtered);
+  setCurrentPage(1); // Reset to first page on filter change
   }, [contacts, selectedLabels, searchTerm, user]);
 
   const toggleLabelFilter = (label: string) => {
@@ -164,9 +168,9 @@ export const ContactList: React.FC<ContactListProps> = ({
       setSelectionMode(false);
       refreshContacts();
       if (onContactsDeleted) onContactsDeleted();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting contacts:', error);
-      toast.error(error.message || 'Failed to delete contacts');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete contacts');
     }
   };
 
@@ -186,6 +190,14 @@ export const ContactList: React.FC<ContactListProps> = ({
     return `${ownerName} (Team Member)`;
   };
 
+  // Get current contacts for pagination
+  const indexOfLastContact = currentPage * contactsPerPage;
+  const indexOfFirstContact = indexOfLastContact - contactsPerPage;
+  const currentContacts = filteredContacts.slice(indexOfFirstContact, indexOfLastContact);
+
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
   if (loading || teamsLoading) {
     return (
       <div className="p-4 text-center">
@@ -195,7 +207,7 @@ export const ContactList: React.FC<ContactListProps> = ({
     );
   }
 
-  const hasFilters = searchTerm || selectedLabels.length > 0;
+  const hasFilters = !!searchTerm || selectedLabels.length > 0;
 
   return (
     <div className="space-y-4 max-w-full overflow-hidden">
@@ -318,28 +330,43 @@ export const ContactList: React.FC<ContactListProps> = ({
         onLabelsChanged={handleLabelsChanged}
       />
 
-      {/* Contact Cards */}
-      <div className="space-y-2">
-        {filteredContacts.map(contact => (
-          <ContactCard
-            key={contact.id}
-            contact={contact}
-            currentUserId={user?.id}
-            onSelectContact={onSelectContact}
-            getOwnerDisplay={getOwnerDisplay}
-            selectionMode={selectionMode}
-            isSelected={selectedContacts.some(c => c.id === contact.id)}
-            onToggleSelect={toggleContactSelection}
-          />
-        ))}
-      </div>
+              {currentContacts.length === 0 && !hasFilters && (
+                <ContactEmptyState
+                  loading={loading}
+                  error={error}
+                  hasFilters={!!hasFilters}
+                  onRefresh={refreshContacts}
+                />
+              )}
 
-      <ContactEmptyState
-        loading={Boolean(loading)}
-        error={error}
-        hasFilters={Boolean(hasFilters)}
-        onRefresh={refreshContacts}
-      />
+              {currentContacts.length === 0 && hasFilters && (
+                <p className="text-center text-gray-500">No contacts found matching your filters.</p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {currentContacts.map(contact => (
+                  <ContactCard
+                    key={contact.id}
+                    contact={contact}
+                    onSelectContact={onSelectContact}
+                    selectionMode={selectionMode}
+                    onToggleSelect={toggleContactSelection}
+                    isSelected={selectedContacts.some(c => c.id === contact.id)}
+                    getOwnerDisplay={getOwnerDisplay}
+                  />
+                ))}
+              </div>
+
+              {filteredContacts.length > contactsPerPage && (
+                <div className="flex justify-center mt-4">
+                  <Pagination
+                    contactsPerPage={contactsPerPage}
+                    totalContacts={filteredContacts.length}
+                    paginate={paginate}
+                    currentPage={currentPage}
+                  />
+                </div>
+              )}
     </div>
   );
 };

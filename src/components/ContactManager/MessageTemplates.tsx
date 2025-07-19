@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,9 @@ interface MessageTemplateSet {
   template_variation_1: string;
   template_variation_2: string;
   template_variation_3: string;
+  user_id: string;
   created_at: string;
+  updated_at: string;
 }
 
 interface Label {
@@ -41,12 +43,7 @@ export const MessageTemplates: React.FC = () => {
   });
   const { user } = useAuth();
 
-  useEffect(() => {
-    fetchTemplateSets();
-    fetchLabels();
-  }, [user]);
-
-  const fetchTemplateSets = async () => {
+  const fetchTemplateSets = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -58,7 +55,7 @@ export const MessageTemplates: React.FC = () => {
 
       if (error) throw error;
       setTemplateSets(data || []);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to fetch template sets",
@@ -67,9 +64,9 @@ export const MessageTemplates: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const fetchLabels = async () => {
+  const fetchLabels = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -80,10 +77,15 @@ export const MessageTemplates: React.FC = () => {
 
       if (error) throw error;
       setLabels(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching labels:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchTemplateSets();
+    fetchLabels();
+  }, [user, fetchTemplateSets, fetchLabels]);
 
   const resetForm = () => {
     setFormData({
@@ -169,7 +171,7 @@ export const MessageTemplates: React.FC = () => {
       setEditingId(null);
       resetForm();
       fetchTemplateSets();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save template set",
@@ -197,7 +199,7 @@ export const MessageTemplates: React.FC = () => {
       });
 
       fetchTemplateSets();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to delete template set",
