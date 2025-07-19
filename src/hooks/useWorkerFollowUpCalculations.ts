@@ -159,8 +159,14 @@ export const useWorkerFollowUpCalculations = (
   const generateCacheKey = useCallback((contactIds: string[], labels: string[]) => {
     const sortedContactIds = [...contactIds].sort();
     const sortedLabels = [...labels].sort();
-    return `followup_${user?.id}_${sortedContactIds.join(',')}_${sortedLabels.join(',')}`;
-  }, [user?.id]);
+    
+    // Include optimistic activities in cache key to ensure cache invalidation
+    const optimisticHash = Object.keys(optimisticActivities).length > 0 
+      ? `_opt_${Object.keys(optimisticActivities).sort().join(',')}_${Object.values(optimisticActivities).flat().length}`
+      : '';
+    
+    return `followup_${user?.id}_${sortedContactIds.join(',')}_${sortedLabels.join(',')}${optimisticHash}`;
+  }, [user?.id, optimisticActivities]);
 
   // Generate activity cache key
   const generateActivityCacheKey = useCallback((contactIds: string[]) => {
@@ -307,10 +313,15 @@ export const useWorkerFollowUpCalculations = (
     // Try to get from cache first
     try {
       const cachedCalculations = await followUpCache.get<FollowUpCalculations>(cacheKey);
-      if (cachedCalculations && Object.keys(optimisticActivities).length === 0) {
+      const hasOptimisticActivities = Object.keys(optimisticActivities).length > 0;
+      
+      if (cachedCalculations && !hasOptimisticActivities) {
+        console.log('📋 Using cached calculations');
         setCalculations(cachedCalculations);
         setCacheStats(prev => ({ ...prev, hits: prev.hits + 1, hitRate: (prev.hits + 1) / (prev.hits + prev.misses + 1) }));
         return;
+      } else if (hasOptimisticActivities) {
+        console.log('⚡ Optimistic activities detected, forcing recalculation:', Object.keys(optimisticActivities));
       }
     } catch (error) {
       console.warn('Cache read failed:', error);
@@ -383,7 +394,40 @@ export const useWorkerFollowUpCalculations = (
     }
   }, [getActiveContacts, selectedLabels, activityData, optimisticActivities]);
 
-  // Periodic cache cleanup
+  /**
+   * Auto-cleanup old optimistic activities (older than 5 minutes)
+   */
+  const cleanupOldOptimisticActivities = useCallback(() => {
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    
+    setOptimisticActivities(prev => {
+      const newState = { ...prev };
+      let hasChanges = false;
+      
+      Object.keys(newState).forEach(contactId => {
+        const filteredActivities = newState[contactId].filter(activity => 
+          activity.localTimestamp > fiveMinutesAgo
+        );
+        
+        if (filteredActivities.length !== newState[contactId].length) {
+          hasChanges = true;
+          if (filteredActivities.length === 0) {
+            delete newState[contactId];
+          } else {
+            newState[contactId] = filteredActivities;
+          }
+        }
+      });
+      
+      if (hasChanges) {
+        console.log('🧹 Auto-cleaned old optimistic activities');
+      }
+      
+      return newState;
+    });
+  }, []);
+
+  // Periodic cache cleanup and optimistic activities cleanup
   useEffect(() => {
     const cleanup = async () => {
       try {
@@ -398,25 +442,43 @@ export const useWorkerFollowUpCalculations = (
           totalEntries: followUpStats.total + activityStats.total
         }));
         
-        console.log('Cache cleanup completed:', { followUpStats, activityStats });
+        // Also cleanup old optimistic activities
+        cleanupOldOptimisticActivities();
+        
+        console.log('🧹 Cache cleanup completed');
       } catch (error) {
         console.warn('Cache cleanup failed:', error);
       }
     };
 
-    const interval = setInterval(cleanup, 10 * 60 * 1000); // Every 10 minutes
+    // Run cleanup every 5 minutes
+    const interval = setInterval(cleanup, 5 * 60 * 1000);
+    
     return () => clearInterval(interval);
-  }, []);
+  }, [cleanupOldOptimisticActivities]);
 
   /**
    * Add optimistic activity
    */
-  const addOptimisticActivity = useCallback((activity: OptimisticActivity) => {
+  const addOptimisticActivity = useCallback((contactId: string, activityData: Partial<OptimisticActivity>) => {
+    const activity: OptimisticActivity = {
+      id: `optimistic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      contact_id: contactId,
+      user_id: user?.id || '',
+      isOptimistic: true,
+      localTimestamp: Date.now(),
+      ...activityData,
+      timestamp: activityData.timestamp || new Date().toISOString(),
+      type: activityData.type || 'Follow-Up',
+    };
+    
     setOptimisticActivities(prev => ({
       ...prev,
-      [activity.contact_id]: [...(prev[activity.contact_id] || []), activity]
+      [contactId]: [...(prev[contactId] || []), activity]
     }));
-  }, []);
+    
+    console.log('✅ Optimistic activity added:', activity);
+  }, [user?.id]);
 
   /**
    * Remove optimistic activity
@@ -426,6 +488,23 @@ export const useWorkerFollowUpCalculations = (
       ...prev,
       [contactId]: (prev[contactId] || []).filter(a => a.id !== activityId)
     }));
+  }, []);
+
+  /**
+   * Clear optimistic activities for a contact
+   */
+  const clearOptimisticActivities = useCallback((contactId?: string) => {
+    if (contactId) {
+      setOptimisticActivities(prev => {
+        const newState = { ...prev };
+        delete newState[contactId];
+        return newState;
+      });
+      console.log('🧹 Cleared optimistic activities for contact:', contactId);
+    } else {
+      setOptimisticActivities({});
+      console.log('🧹 Cleared all optimistic activities');
+    }
   }, []);
 
   /**
@@ -478,8 +557,10 @@ export const useWorkerFollowUpCalculations = (
     cacheStats,
     addOptimisticActivity,
     removeOptimisticActivity,
+    clearOptimisticActivities,
     clearCache,
     forceRecalculation,
+    optimisticActivities,
     isReady: !loading && !calculating
   };
 };

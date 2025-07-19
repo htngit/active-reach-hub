@@ -155,6 +155,8 @@ function calculateFollowUps(
       }
 
       // Categorize based on staleness
+      // Only add to stale categories if the contact meets the criteria
+      // Contacts with recent activity (< 3 days) should not appear in any category
       if (daysSinceLastActivity >= 30 && (daysSinceCreated >= 30 || !contact.created_at)) {
         stale30DaysList.push({ ...contact, last_activity: lastActivityTimestamp.toString() });
       } else if (daysSinceLastActivity >= 7 && (daysSinceCreated >= 7 || !contact.created_at)) {
@@ -162,6 +164,7 @@ function calculateFollowUps(
       } else if (daysSinceLastActivity >= 3 && (daysSinceCreated >= 3 || !contact.created_at)) {
         stale3DaysList.push({ ...contact, last_activity: lastActivityTimestamp.toString() });
       }
+      // Contacts with daysSinceLastActivity < 3 are considered "fresh" and don't appear in any follow-up category
     }
     
     processed++;
